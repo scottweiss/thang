@@ -25,6 +25,7 @@ import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel }
 import { phraseGainAccents } from '../../theory/phrase-articulation';
 import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
 import { placePeak, moodPeakPosition, shouldPlacePeak } from '../../theory/phrase-peak';
+import { inverseDensityMultiplier, shouldApplyInverseDensity } from '../../theory/inverse-density';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -564,7 +565,11 @@ export class MelodyLayer extends CachingLayer {
     const sectionDensity = shouldApplyDensityContour(progress)
       ? densityContour(state.section, progress, section.densityMult)
       : section.densityMult;
-    const effectiveDensity = density * sectionDensity;
+    // Inverse density: more melody when chord holds, less on chord changes
+    const inverseMult = shouldApplyInverseDensity(mood)
+      ? inverseDensityMultiplier(state.ticksSinceChordChange, mood)
+      : 1.0;
+    const effectiveDensity = density * sectionDensity * inverseMult;
     const noteProbability = {
       ambient: effectiveDensity * 0.3,
       downtempo: effectiveDensity * 0.3,
