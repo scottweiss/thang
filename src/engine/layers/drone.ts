@@ -6,6 +6,7 @@ import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 import { anticipationWeight, anticipationGhostNote, shouldAnticipate } from '../../theory/harmonic-anticipation';
+import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -38,6 +39,21 @@ export class DroneLayer implements Layer {
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+        );
+      }
+    }
+
+    // Tension space: reverb tracks real-time tension
+    if (shouldApplyTensionSpace(this.name)) {
+      const tsMult = tensionSpaceMultiplier(state.tension?.overall ?? 0.5, state.mood);
+      if (Math.abs(tsMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.room\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.room(${(parseFloat(val) * tsMult).toFixed(2)})`
+        );
+        result = result.replace(
+          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.roomsize(${(parseFloat(val) * tsMult).toFixed(1)})`
         );
       }
     }

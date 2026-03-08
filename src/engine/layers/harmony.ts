@@ -19,6 +19,7 @@ import { chorusDepth, shouldApplyChorus } from '../../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../../theory/density-balance';
 import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../../theory/tension-brightness';
+import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -100,6 +101,21 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+        );
+      }
+    }
+
+    // Tension space: reverb tracks real-time tension
+    if (shouldApplyTensionSpace(this.name)) {
+      const tsMult = tensionSpaceMultiplier(state.tension?.overall ?? 0.5, state.mood);
+      if (Math.abs(tsMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.room\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.room(${(parseFloat(val) * tsMult).toFixed(2)})`
+        );
+        result = result.replace(
+          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.roomsize(${(parseFloat(val) * tsMult).toFixed(1)})`
         );
       }
     }

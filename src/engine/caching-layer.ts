@@ -18,6 +18,7 @@ import { chorusDepth, shouldApplyChorus } from '../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../theory/density-balance';
 import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../theory/tension-brightness';
+import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../theory/tension-space';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -56,6 +57,9 @@ export abstract class CachingLayer implements Layer {
 
     // Spatial depth: reverb breathes with section progress
     result = this.applySpatialDepth(result, state);
+
+    // Tension space: reverb tracks real-time tension (stacks on spatial depth)
+    result = this.applyTensionSpace(result, state);
 
     // Delay evolution: echo intensity builds with section
     result = this.applyDelayEvolution(result, state);
@@ -267,6 +271,29 @@ export abstract class CachingLayer implements Layer {
       );
     }
 
+    return result;
+  }
+
+  /**
+   * Scale reverb by real-time tension for spatial responsiveness.
+   * High tension = drier (closer), low tension = wetter (distant).
+   */
+  private applyTensionSpace(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTensionSpace(this.name)) return pattern;
+
+    const tension = state.tension?.overall ?? 0.5;
+    const mult = tensionSpaceMultiplier(tension, state.mood);
+    if (Math.abs(mult - 1.0) < 0.03) return pattern;
+
+    let result = pattern;
+    result = result.replace(
+      /\.room\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.room(${(parseFloat(val) * mult).toFixed(2)})`
+    );
+    result = result.replace(
+      /\.roomsize\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.roomsize(${(parseFloat(val) * mult).toFixed(1)})`
+    );
     return result;
   }
 
