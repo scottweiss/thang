@@ -30,6 +30,7 @@ import { shouldApplyResultant, resultantGainMask } from '../../theory/resultant-
 import { shouldApplyHeterophony, selectVariation, rhythmicVariant, ornamentalVariant, octaveVariant, shadowVariant } from '../../theory/heterophony';
 import { shouldApplyOstinato, selectOstinatoType, generateOstinato, ostinatoLength } from '../../theory/ostinato';
 import { shouldApplyStretto, strettoEntry, transposeForStretto, strettoOffset, strettoInterval } from '../../theory/stretto';
+import { shouldApplyTintinnabuli, generateTVoice, selectPosition } from '../../theory/tintinnabuli';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -94,6 +95,19 @@ export class ArpLayer extends CachingLayer {
 
     // Build arp notes from chord tones across octaves
     let baseNotes = chord.notes;
+
+    // Tintinnabuli: arp becomes a T-voice shadowing melody with tonic triad tones (Arvo Pärt)
+    if (state.activeMotif && state.activeMotif.length >= 3 &&
+        shouldApplyTintinnabuli(state.tick, mood, section)) {
+      const quality: 'maj' | 'min' = chord.quality === 'min' || chord.quality === 'min7' || chord.quality === 'min9'
+        ? 'min' : 'maj';
+      const pos = selectPosition(mood, section, state.tick);
+      const tVoice = generateTVoice(state.activeMotif, state.scale.root, quality, pos);
+      const validT = tVoice.filter(n => n !== '~' && n.match(/^[A-G]/));
+      if (validT.length >= 2) {
+        baseNotes = [...chord.notes.slice(0, 2), ...validT.slice(0, 4)];
+      }
+    }
 
     // Heterophony: arp shadows the melody with variation instead of independent pattern
     if (state.activeMotif && state.activeMotif.length >= 3 &&
