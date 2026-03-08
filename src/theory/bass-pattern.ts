@@ -112,3 +112,89 @@ export function generateBassPattern(
 export function bassFollowsChord(mood: Mood): boolean {
   return MOOD_BASS[mood].followChord;
 }
+
+/**
+ * Per-mood probability of using bass approach notes.
+ * Moods with active bass benefit most; pedal moods don't approach.
+ */
+const MOOD_APPROACH_PROB: Partial<Record<Mood, number>> = {
+  downtempo: 0.35,
+  lofi: 0.3,
+  trance: 0.4,
+  syro: 0.5,
+  blockhead: 0.35,
+  disco: 0.45,
+};
+
+/**
+ * Whether the bass should use approach notes toward the next chord.
+ *
+ * @param mood               Current mood
+ * @param ticksSinceChange   Ticks since the last chord change
+ * @param hasNextHint        Whether a next chord hint is available
+ */
+export function shouldBassApproach(
+  mood: Mood,
+  ticksSinceChange: number,
+  hasNextHint: boolean
+): boolean {
+  if (!hasNextHint) return false;
+  if (!MOOD_BASS[mood].followChord) return false;
+  // Only approach when we've been on the current chord for at least 2 ticks
+  if (ticksSinceChange < 2) return false;
+  return Math.random() < (MOOD_APPROACH_PROB[mood] ?? 0);
+}
+
+/** Chromatic note names in order. */
+const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_TO_PITCH: Record<string, number> = {
+  'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+  'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+  'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+};
+
+/**
+ * Generate 1-2 approach notes walking toward the next chord's root.
+ * Uses chromatic or scale-step motion from the current root.
+ *
+ * @param currentRoot  Current chord root (e.g., 'C')
+ * @param nextRoot     Next chord root (e.g., 'F')
+ * @param octave       Bass octave
+ * @returns Array of 1-2 approach note strings, or empty if same root
+ */
+export function bassApproachNotes(
+  currentRoot: string,
+  nextRoot: string,
+  octave: number
+): string[] {
+  const fromPitch = NOTE_TO_PITCH[currentRoot];
+  const toPitch = NOTE_TO_PITCH[nextRoot];
+  if (fromPitch === undefined || toPitch === undefined) return [];
+  if (fromPitch === toPitch) return [];
+
+  // Find shortest path direction
+  let interval = (toPitch - fromPitch + 12) % 12;
+  if (interval > 6) interval -= 12;
+
+  const direction = interval > 0 ? 1 : -1;
+  const absInterval = Math.abs(interval);
+
+  if (absInterval <= 2) {
+    // Very close — single chromatic step
+    const step1 = ((fromPitch + direction + 12) % 12);
+    return [`${CHROMATIC[step1]}${octave}`];
+  }
+
+  // Two approach notes: walk chromatically from 2 semitones away
+  const step1Pitch = ((toPitch - 2 * direction + 12) % 12);
+  const step2Pitch = ((toPitch - 1 * direction + 12) % 12);
+
+  // Handle octave wrapping for approach from below
+  const step1Oct = (direction > 0 && step1Pitch > toPitch) ? octave - 1 : octave;
+  const step2Oct = (direction > 0 && step2Pitch > toPitch) ? octave - 1 : octave;
+
+  return [
+    `${CHROMATIC[step1Pitch]}${step1Oct}`,
+    `${CHROMATIC[step2Pitch]}${step2Oct}`,
+  ];
+}

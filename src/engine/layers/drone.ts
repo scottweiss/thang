@@ -1,6 +1,6 @@
 import { Layer } from '../layer';
 import { GenerativeState, NoteName, Section } from '../../types';
-import { generateBassPattern, bassFollowsChord } from '../../theory/bass-pattern';
+import { generateBassPattern, bassFollowsChord, shouldBassApproach, bassApproachNotes } from '../../theory/bass-pattern';
 import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } from '../../theory/pedal-point';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
@@ -192,6 +192,7 @@ export class DroneLayer implements Layer {
       case 'downtempo': {
         // Warm FM bass — harmonicity 1 creates growl, slow FM sweep adds movement
         const dtBass = generateBassPattern(root, fifth, 'downtempo', 2);
+        this.injectApproachNotes(dtBass, state, root, 2);
         return `note("${dtBass.join(' ')}")
           .sound("sine")
           .fm(${(1 + brightness * 1.5).toFixed(1)})
@@ -216,6 +217,7 @@ export class DroneLayer implements Layer {
       case 'lofi': {
         // Warm sub bass — triangle + light FM for subtle tape saturation feel
         const lofiBass = generateBassPattern(root, fifth, 'lofi', 4);
+        this.injectApproachNotes(lofiBass, state, root, 2);
         return `note("${lofiBass.join(' ')}")
           .sound("triangle")
           .fm(${(0.3 + brightness * 0.5).toFixed(1)})
@@ -239,6 +241,7 @@ export class DroneLayer implements Layer {
       case 'trance': {
         // Acid-tinged pulsing bass — higher FM and resonance for squelch
         const tranceBass = generateBassPattern(root, fifth, 'trance', 4);
+        this.injectApproachNotes(tranceBass, state, root, 2);
         return `note("${tranceBass.join(' ')}")
           .sound("sawtooth")
           .fm(${(0.5 + brightness * 1).toFixed(1)})
@@ -304,6 +307,7 @@ export class DroneLayer implements Layer {
       case 'syro': {
         // Acid 303-style bass — sawtooth, resonant but controlled to avoid masking upper layers
         const syroBass = generateBassPattern(root, fifth, 'syro', 4);
+        this.injectApproachNotes(syroBass, state, root, 2);
         return `note("${syroBass.join(' ')}")
           .sound("sawtooth")
           .fm(${(0.8 + brightness * 0.5).toFixed(1)})
@@ -329,6 +333,7 @@ export class DroneLayer implements Layer {
       case 'blockhead': {
         // Warm sub bass — sine with slight saturation via low FM, solid hip-hop foundation
         const bhBass = generateBassPattern(root, fifth, 'blockhead', 2);
+        this.injectApproachNotes(bhBass, state, root, 2);
         return `note("${bhBass.join(' ')}")
           .sound("sine")
           .fm(${(0.5 + brightness * 0.4).toFixed(1)})
@@ -374,6 +379,7 @@ export class DroneLayer implements Layer {
         // Expand to 8 steps with rests for rhythmic pattern
         const discoExpanded = [discoBass[0], discoBass[1], discoBass[2], discoBass[3],
                                '~', discoBass[0], `${fifth}${1}`, discoBass[0]];
+        this.injectApproachNotes(discoExpanded, state, root, 2);
         return `note("${discoExpanded.join(' ')}")
           .sound("gm_slap_bass_1")
           .attack(0.003)
@@ -388,6 +394,34 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
+      }
+    }
+  }
+
+  /**
+   * Replace trailing notes in a bass pattern with chromatic approach notes
+   * walking toward the next chord root, if conditions are met.
+   */
+  private injectApproachNotes(
+    pattern: string[],
+    state: GenerativeState,
+    currentRoot: string,
+    octave: number
+  ): void {
+    if (!state.nextChordHint) return;
+    if (!shouldBassApproach(state.mood, state.ticksSinceChordChange, true)) return;
+
+    const nextRoot = state.nextChordHint.root;
+    const approach = bassApproachNotes(currentRoot, nextRoot, octave);
+    if (approach.length === 0) return;
+
+    // Replace the last N non-rest notes with approach notes
+    // Walk backward through pattern to find slots
+    let placed = 0;
+    for (let i = pattern.length - 1; i >= 0 && placed < approach.length; i--) {
+      if (pattern[i] !== '~') {
+        pattern[i] = approach[approach.length - 1 - placed];
+        placed++;
       }
     }
   }

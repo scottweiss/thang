@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateBassPattern, getBassConfig, bassFollowsChord } from './bass-pattern';
+import { generateBassPattern, getBassConfig, bassFollowsChord, bassApproachNotes, shouldBassApproach } from './bass-pattern';
 
 describe('getBassConfig', () => {
   it('ambient uses pedal style', () => {
@@ -63,5 +63,64 @@ describe('bassFollowsChord', () => {
 
   it('xtal does not follow chord', () => {
     expect(bassFollowsChord('xtal')).toBe(false);
+  });
+});
+
+describe('bassApproachNotes', () => {
+  it('returns 1-2 approach notes', () => {
+    const notes = bassApproachNotes('C', 'F', 2);
+    expect(notes.length).toBeGreaterThanOrEqual(1);
+    expect(notes.length).toBeLessThanOrEqual(2);
+  });
+
+  it('returns empty for same root', () => {
+    expect(bassApproachNotes('C', 'C', 2)).toEqual([]);
+  });
+
+  it('approach notes lead toward target', () => {
+    // C → F (up 5 semitones): should approach from below F
+    const notes = bassApproachNotes('C', 'F', 2);
+    // Last approach note should be close to F (E or E♭)
+    expect(notes.length).toBeGreaterThan(0);
+    const lastNote = notes[notes.length - 1];
+    expect(lastNote).toMatch(/^[A-G][#]?\d$/);
+  });
+
+  it('handles half-step movement', () => {
+    // C → C# (1 semitone)
+    const notes = bassApproachNotes('C', 'C#', 2);
+    expect(notes.length).toBe(1);
+  });
+
+  it('handles large intervals', () => {
+    // C → F# (tritone = 6 semitones)
+    const notes = bassApproachNotes('C', 'F#', 2);
+    expect(notes.length).toBe(2);
+  });
+
+  it('all notes have valid format', () => {
+    const tests = [
+      ['C', 'D'], ['C', 'G'], ['D', 'A'], ['F#', 'B'], ['Bb', 'E'],
+    ];
+    for (const [from, to] of tests) {
+      const notes = bassApproachNotes(from, to, 2);
+      for (const n of notes) {
+        expect(n).toMatch(/^[A-G][#]?\d$/);
+      }
+    }
+  });
+});
+
+describe('shouldBassApproach', () => {
+  it('returns false without next chord hint', () => {
+    expect(shouldBassApproach('trance', 3, false)).toBe(false);
+  });
+
+  it('returns false for pedal moods', () => {
+    expect(shouldBassApproach('ambient', 5, true)).toBe(false);
+  });
+
+  it('returns false when too close to chord change', () => {
+    expect(shouldBassApproach('trance', 1, true)).toBe(false);
   });
 });
