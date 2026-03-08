@@ -602,7 +602,7 @@ export class HarmonyLayer implements Layer {
     const sectionRoom = SECTION_ROOM_MULT[state.section];
     const tension = state.tension?.overall ?? 0.5;
     // Tension opens filters (+15%), reduces reverb (-20%), and adds presence
-    const gain = 0.28 * (0.5 + state.params.density * 0.5) * sectionGain * (0.9 + tension * 0.15);
+    const gain = 0.20 * (0.5 + state.params.density * 0.5) * sectionGain * (0.9 + tension * 0.15);
     const room = (0.4 + state.params.spaciousness * 0.4) * sectionRoom * (1.1 - tension * 0.2);
     const brightness = state.params.brightness * sectionFilter * (0.85 + tension * 0.3);
 

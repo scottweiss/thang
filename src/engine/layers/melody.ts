@@ -120,7 +120,7 @@ export class MelodyLayer extends CachingLayer {
     // Tension brightens melody, reduces reverb wash, adds presence
     const room = (0.5 + state.params.spaciousness * 0.4) * (1.15 - tension * 0.25);
     const brightness = state.params.brightness * (0.85 + tension * 0.3);
-    const gain = 0.25 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
+    const gain = 0.30 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
 
     // Build melodic phrase
     let elements = (mood === 'ambient' || mood === 'xtal')
@@ -715,7 +715,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.3)
           .slow(4)
-          .gain("${applyMelodicDynamics(gain * 0.6, elements)}")
+          .gain("${applyMelodicDynamics(gain * 0.75, elements)}")
           .hpf(300)
           .lpf(${(2000 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
@@ -739,7 +739,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.6)
           .slow(5)
-          .gain("${applyMelodicDynamics(gain * 0.5, elements)}")
+          .gain("${applyMelodicDynamics(gain * 0.65, elements)}")
           .hpf(250)
           .lpf(${(1500 + brightness * 1500).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(9))
@@ -812,7 +812,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.01)
           .release(0.1)
           .slow(4)
-          .gain("${applyMelodicDynamics(gain * 0.6, elements)}")
+          .gain("${applyMelodicDynamics(gain * 0.75, elements)}")
           .hpf(400)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
