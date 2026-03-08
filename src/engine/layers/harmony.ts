@@ -47,6 +47,7 @@ import type { SuspensionChainPlan } from '../../theory/suspension-chain';
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../../theory/textural-contrast';
 import { shouldApplyAmbiguity, suggestAmbiguousExtensions, ambiguityDarkenFactor } from '../../theory/tonal-ambiguity';
 import { accompGravityPull, nextChordBlend, blendVoicings, shouldApplyAccompGravity } from '../../theory/accompaniment-gravity';
+import { shouldApplySpectralHarmony, suggestSpectralEnrichment } from '../../theory/spectral-harmony';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -706,6 +707,19 @@ export class HarmonyLayer implements Layer {
         // Add one ambiguous extension in the upper register
         const topOct = parseInt((chordNotes[chordNotes.length - 1] || '').replace(/[^\d]/g, '') || '4');
         const ext = `${ambiguousNotes[0]}${topOct}`;
+        if (!chordNotes.includes(ext)) {
+          chordNotes = [...chordNotes, ext];
+        }
+      }
+    }
+
+    // Spectral harmony: add overtone-series extensions for luminous voicings
+    if (shouldApplySpectralHarmony(state.tick, mood, state.section) && !hasSuspension) {
+      const existingPCs = chordNotes.map(n => n.replace(/\d+$/, '')) as import('../../types').NoteName[];
+      const spectralNotes = suggestSpectralEnrichment(chord.root, existingPCs, 1);
+      if (spectralNotes.length > 0) {
+        const topOct = parseInt((chordNotes[chordNotes.length - 1] || '').replace(/[^\d]/g, '') || '4');
+        const ext = `${spectralNotes[0]}${topOct}`;
         if (!chordNotes.includes(ext)) {
           chordNotes = [...chordNotes, ext];
         }

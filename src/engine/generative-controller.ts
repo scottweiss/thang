@@ -32,6 +32,7 @@ import { targetKeyArea, journeyBias, shouldModulate } from '../theory/harmonic-j
 import { tempoFeelMultiplier, shouldApplyTempoFeel } from '../theory/tempo-feel';
 import { EmotionalMemoryBank, isEmotionalLandmark } from '../theory/emotional-memory';
 import { shouldApplyNegativeHarmony, negativeRoot } from '../theory/negative-harmony';
+import { shouldModulate as shouldMetricModulate, modulationRatio, modulationEnvelope, modulationWindowTicks } from '../theory/metric-modulation';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -84,6 +85,11 @@ export class GenerativeController {
   private tonalGravity = new TonalGravity('C', 'minor');
   private emotionalMemory = new EmotionalMemoryBank();
   private prevTension = 0.5;
+  /** Metric modulation state */
+  private modulationActive = false;
+  private modulationTicksRemaining = 0;
+  private modulationTotalTicks = 0;
+  private modulationRatioStr: import('../theory/metric-modulation').ModulationRatio = '4:3';
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -240,6 +246,13 @@ export class GenerativeController {
       this.arrivalActive = shouldFireArrival(
         this.prevSection, this.state.section, this.state.mood
       );
+      // Metric modulation: rhythmic tempo illusion during transitions
+      if (shouldMetricModulate(this.prevSection, this.state.section, this.state.mood, this.state.tick)) {
+        this.modulationActive = true;
+        this.modulationRatioStr = modulationRatio(this.prevSection, this.state.section, this.state.mood, this.state.tick);
+        this.modulationTotalTicks = modulationWindowTicks(this.state.mood);
+        this.modulationTicksRemaining = this.modulationTotalTicks;
+      }
       this.prevSection = this.state.section;
     } else {
       this.arrivalActive = false; // arrivals last exactly one tick
@@ -712,7 +725,15 @@ export class GenerativeController {
     const tempoFeel = shouldApplyTempoFeel(this.state.mood)
       ? tempoFeelMultiplier(this.state.tick, this.state.mood, this.state.section)
       : 1.0;
-    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel;
+    // Metric modulation: rhythmic tempo illusion during section transitions
+    let metricMod = 1.0;
+    if (this.modulationActive && this.modulationTicksRemaining > 0) {
+      const progress = 1.0 - (this.modulationTicksRemaining / this.modulationTotalTicks);
+      metricMod = modulationEnvelope(progress, this.modulationRatioStr);
+      this.modulationTicksRemaining--;
+      if (this.modulationTicksRemaining <= 0) this.modulationActive = false;
+    }
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
