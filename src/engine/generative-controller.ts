@@ -38,6 +38,7 @@ import { macroDynamicGain, transitionDynamicAccent, shouldApplyMacroDynamics } f
 import { shouldApplyNR, suggestNRMove } from '../theory/neo-riemannian';
 import { shouldGrandPause, gpDuration } from '../theory/grand-pause';
 import { shouldApplySymmetric, selectAxisType, suggestSymmetricMove } from '../theory/symmetric-division';
+import { shouldApplyUnison, selectUnisonPattern, unisonAccentMask, unisonIntensity } from '../theory/rhythmic-unison';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -679,6 +680,29 @@ export class GenerativeController {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * gpMult).toFixed(4)})`;
             return `.gain((${expr}) * ${gpMult.toFixed(4)})`;
+          }
+        );
+      }
+    }
+
+    // Rhythmic unison: coordinated accent across all layers at climactic moments
+    if (shouldApplyUnison(
+      this.state.tick, this.state.mood, this.state.section,
+      this.state.sectionProgress ?? 0, this.state.tension?.overall ?? 0.5
+    )) {
+      const uPattern = selectUnisonPattern(this.state.tick, this.state.mood);
+      const uIntensity = unisonIntensity(
+        this.state.mood, this.state.section, this.state.tension?.overall ?? 0.5
+      );
+      const mask = unisonAccentMask(uPattern, 16, uIntensity);
+      // Apply gain-pattern accent mask to all layers that use note patterns
+      for (const result of layerResults) {
+        result.code = result.code.replace(
+          /\.gain\("([^"]+)"\)/,
+          (_, gains) => {
+            const parts = gains.split(' ').map(Number);
+            const modded = parts.map((g: number, i: number) => (g * mask[i % mask.length]).toFixed(4));
+            return `.gain("${modded.join(' ')}")`;
           }
         );
       }

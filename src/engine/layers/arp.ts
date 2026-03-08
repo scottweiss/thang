@@ -32,6 +32,7 @@ import { shouldApplyOstinato, selectOstinatoType, generateOstinato, ostinatoLeng
 import { shouldApplyStretto, strettoEntry, transposeForStretto, strettoOffset, strettoInterval } from '../../theory/stretto';
 import { shouldApplyTintinnabuli, generateTVoice, selectPosition } from '../../theory/tintinnabuli';
 import { shouldApplyColorPedal, selectPedalTone, pedalOctave } from '../../theory/color-pedal';
+import { shouldApplyPhaseShift, phaseOffset, phaseToLate, phaseCycleLength } from '../../theory/phase-shift';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -63,6 +64,8 @@ export class ArpLayer extends CachingLayer {
   orbit = 4;
   private lastPlayedNote: string | null = null;
   private echoCounter = 0;
+  private phaseActive = false;
+  private phaseStartTick = 0;
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -93,6 +96,24 @@ export class ArpLayer extends CachingLayer {
       : SECTION_DENSITY[state.section];
     const section = state.section;
     this.lastMood = mood;
+
+    // Phase shift: Steve Reich-style gradual pattern offset
+    if (!this.phaseActive && shouldApplyPhaseShift(state.tick, mood, section)) {
+      this.phaseActive = true;
+      this.phaseStartTick = state.tick;
+    }
+    let phaseLate = 0;
+    if (this.phaseActive) {
+      const cycleLen = phaseCycleLength(mood);
+      const elapsed = state.tick - this.phaseStartTick;
+      if (elapsed >= cycleLen * 2) {
+        // Phase passage complete after 2 full cycles
+        this.phaseActive = false;
+      } else {
+        const offset = phaseOffset(state.tick, this.phaseStartTick, cycleLen);
+        phaseLate = phaseToLate(offset, mood);
+      }
+    }
 
     // Build arp notes from chord tones across octaves
     let baseNotes = chord.notes;
@@ -283,7 +304,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.5)
           .delaytime(0.66)
           .delayfeedback(0.5)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'downtempo': {
@@ -309,7 +330,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.3)
           .delaytime(0.33)
           .delayfeedback(0.3)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'lofi': {
@@ -335,7 +356,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.2)
           .delaytime(0.375)
           .delayfeedback(0.15)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'trance': {
@@ -363,7 +384,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.35)
           .delaytime(0.1875)
           .delayfeedback(0.4)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'avril': {
@@ -388,7 +409,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.5)
           .delaytime(0.66)
           .delayfeedback(0.45)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'xtal': {
@@ -429,7 +450,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.35)
           .delaytime(0.5)
           .delayfeedback(0.3)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'syro': {
@@ -469,7 +490,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.3)
           .delaytime(0.125)
           .delayfeedback(0.35)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'blockhead': {
@@ -497,7 +518,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.2)
           .delaytime(0.33)
           .delayfeedback(0.2)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'flim': {
@@ -522,7 +543,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.4)
           .delaytime(0.66)
           .delayfeedback(0.4)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'disco': {
@@ -550,7 +571,7 @@ export class ArpLayer extends CachingLayer {
           .delay(0.25)
           .delaytime(0.125)
           .delayfeedback(0.3)
-          .orbit(${this.orbit})`;
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
     }
   }
