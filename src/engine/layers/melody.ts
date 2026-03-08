@@ -45,8 +45,9 @@ import { shouldApplyRhythmicCadence, selectCadenceType, applyRhythmicCadence } f
 import { tessituraGainMap } from '../../theory/tessitura';
 import { detectInertiaDirection, inertiaBias, inertiaStrength } from '../../theory/melodic-inertia';
 import { applyMetricConsonance } from '../../theory/metric-consonance';
-import { applyRhythmicResolution, syncopationReduction } from '../../theory/rhythmic-resolution';
+import { applyRhythmicResolution } from '../../theory/rhythmic-resolution';
 import { registerCeiling, registerFloor, constrainToRegister } from '../../theory/registral-climax';
+import { shouldApplyEconomy, pitchVocabularySize, selectCorePitches, constrainToVocabulary } from '../../theory/melodic-economy';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -147,6 +148,13 @@ export class MelodyLayer extends CachingLayer {
     elements = applyMetricConsonance(
       elements, state.currentChord.notes, state.scale.notes, mood
     );
+
+    // Melodic economy: constrain to core pitch vocabulary for focused, memorable melodies
+    if (shouldApplyEconomy(mood, state.section)) {
+      const vocabSize = pitchVocabularySize(state.scale.notes.length, mood, state.section);
+      const corePitches = selectCorePitches(state.scale.notes, vocabSize, state.scale.root);
+      elements = constrainToVocabulary(elements, corePitches);
+    }
 
     // Compound melody: split into interleaved register streams for implied polyphony
     if (shouldApplyCompound(state.tick, mood, state.section)) {
