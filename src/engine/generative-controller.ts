@@ -261,6 +261,9 @@ import { grooveStabilityGain } from '../theory/groove-stability-index';
 import { suspensionTensionGain } from '../theory/harmonic-suspension-tension';
 import { layerPriorityGain } from '../theory/dynamic-layer-priority';
 import { sectionIdentityFm } from '../theory/timbral-section-identity';
+import { opennessGain } from '../theory/voicing-openness-score';
+import { tensionArcGain } from '../theory/melodic-tension-arc';
+import { grooveLockGain } from '../theory/rhythmic-groove-lock';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4596,6 +4599,61 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voicing openness score: open vs close voicing preference
+    {
+      const noteToMidi7: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const chordNotes7 = (this.state.currentChord?.notes ?? ['C4', 'E4', 'G4']).map(n => {
+        const name = n.replace(/[0-9]/g, '');
+        const octave = parseInt(n.replace(/[^0-9]/g, '')) || 4;
+        return (noteToMidi7[name] ?? 60) + (octave - 4) * 12;
+      });
+      const lowest = Math.min(...chordNotes7);
+      const highest = Math.max(...chordNotes7);
+      const ogGain = opennessGain(lowest, highest, this.state.mood, this.state.section);
+      if (Math.abs(ogGain - 1.0) > 0.01) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * ogGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic tension arc: phrase tension from pitch-root distance
+    {
+      const noteToPC6: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const melPc = noteToPC6[this.state.currentChord?.root ?? 'C'] ?? 0;
+      const rootPc6 = noteToPC6[this.state.scale?.root ?? 'C'] ?? 0;
+      const taGain = tensionArcGain(melPc, rootPc6, this.state.mood);
+      if (Math.abs(taGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * taGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic groove lock: reward grid alignment on strong beats
+    {
+      const beatPos8 = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const glGain = grooveLockGain(beatPos8, this.state.mood);
+      if (Math.abs(glGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * glGain).toFixed(4)})`
             );
           }
         }
