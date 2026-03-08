@@ -31,7 +31,7 @@ export class MelodyLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4, blockhead: 10, flim: 12 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4, blockhead: 10, flim: 12, disco: 6 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
@@ -264,6 +264,30 @@ export class MelodyLayer extends CachingLayer {
           .delaytime(0.5)
           .delayfeedback(0.45)
           .orbit(${this.orbit})`;
+
+      case 'disco':
+        // Bright disco lead — triangle, funky and bright, cuts through square harmony
+        return `note("${elements.join(' ')}")
+          .sound("triangle")
+          .fm(0.8)
+          .fmh(5)
+          .fmenv("exp")
+          .fmdecay(0.06)
+          .attack(0.001)
+          .decay(0.2)
+          .sustain(0.03)
+          .release(0.1)
+          .slow(1)
+          .gain(${(gain * 0.95).toFixed(3)})
+          .hpf(500)
+          .lpf(${(3500 + brightness * 4000).toFixed(0)})
+          .pan(sine.range(0.3, 0.7).slow(3))
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1.5)
+          .delay(0.2)
+          .delaytime(0.25)
+          .delayfeedback(0.25)
+          .orbit(${this.orbit})`;
     }
   }
 
@@ -334,6 +358,7 @@ export class MelodyLayer extends CachingLayer {
       syro: effectiveDensity * 0.55,
       blockhead: effectiveDensity * 0.35,
       flim: effectiveDensity * 0.3,
+      disco: effectiveDensity * 0.45,
     }[mood];
 
     const totalNotes = Math.max(1, Math.floor(noteCount * noteProbability));

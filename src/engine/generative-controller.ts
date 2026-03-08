@@ -27,6 +27,7 @@ const MOOD_TEMPOS: Record<Mood, number> = {
   syro: 0.58,       // ~140 BPM
   blockhead: 0.37,  // ~88 BPM
   flim: 0.40,       // ~95 BPM
+  disco: 0.50,      // ~120 BPM
 };
 
 export class GenerativeController {

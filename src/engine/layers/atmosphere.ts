@@ -11,7 +11,7 @@ export class AtmosphereLayer extends CachingLayer {
     if (state.sectionChanged) return true;
 
     // Atmosphere is slow-evolving, regenerate infrequently
-    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6, avril: 15, xtal: 15, syro: 5, blockhead: 12, flim: 15 }[state.mood] ?? 12;
+    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6, avril: 15, xtal: 15, syro: 5, blockhead: 12, flim: 15, disco: 8 }[state.mood] ?? 12;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -50,6 +50,9 @@ export class AtmosphereLayer extends CachingLayer {
 
       case 'flim':
         return this.buildFlimAtmosphere(density, brightness, room, section);
+
+      case 'disco':
+        return this.buildDiscoAtmosphere(density, brightness, room, section);
     }
   }
 
@@ -290,6 +293,53 @@ export class AtmosphereLayer extends CachingLayer {
       .delay(0.2)
       .delaytime(0.66)
       .delayfeedback(0.3)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildDiscoAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+    // Shimmering string wash — bright, warm, disco energy
+    const sectionGain = { intro: 0.6, build: 0.8, peak: 1.0, breakdown: 0.65, groove: 0.9 }[section];
+    const gain = 0.06 * (0.3 + density * 0.4) * sectionGain;
+
+    if (section === 'peak' || section === 'groove') {
+      // Full shimmering wash — bright, open filter
+      return `note("C2")
+        .sound("sawtooth")
+        .fm(${(10 + brightness * 6).toFixed(0)})
+        .fmh(0.5)
+        .fmenv("exp")
+        .fmdecay(1)
+        .attack(1)
+        .decay(2)
+        .sustain(0.35)
+        .release(1)
+        .slow(3)
+        .gain(${gain.toFixed(4)})
+        .lpf(${(600 + brightness * 1200).toFixed(0)})
+        .resonance(4)
+        .pan(sine.range(0.2, 0.8).slow(7))
+        .room(${(room * 0.6).toFixed(2)})
+        .roomsize(3)
+        .orbit(${this.orbit})`;
+    }
+
+    // Intro/build/breakdown: quieter shimmer
+    return `note("C2")
+      .sound("sawtooth")
+      .fm(${(6 + brightness * 4).toFixed(0)})
+      .fmh(0.5)
+      .fmenv("exp")
+      .fmdecay(1.5)
+      .attack(2)
+      .decay(3)
+      .sustain(0.2)
+      .release(1.5)
+      .slow(5)
+      .gain(${(gain * 0.5).toFixed(4)})
+      .lpf(${(300 + brightness * 600).toFixed(0)})
+      .pan(sine.range(0.3, 0.7).slow(11))
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(2)
       .orbit(${this.orbit})`;
   }
 

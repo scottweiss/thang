@@ -84,6 +84,13 @@ function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQua
         if (q === 'dom7') return 'maj7';            // soften dom7 to maj7
         return q;
       });
+    case 'disco':
+      // Funky — dom7 and min7 for that classic disco/funk feel
+      return baseQualities.map((q) => {
+        if (q === 'maj' || q === 'maj7') return 'dom7'; // major becomes dominant 7
+        if (q === 'min') return 'min7';                  // minor becomes minor 7
+        return q;
+      });
   }
 }
 

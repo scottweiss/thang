@@ -264,6 +264,32 @@ export class HarmonyLayer implements Layer {
           .delaytime(0.5)
           .delayfeedback(0.45)
           .orbit(${this.orbit})`;
+
+      case 'disco':
+        // Disco chord stabs — square wave, short and punchy, wide stereo via detune
+        return `${chordStart}
+          .sound("square")
+          .fm(${(1.5 + brightness * 1).toFixed(1)})
+          .fmh(2)
+          .fmenv("exp")
+          .fmdecay(0.06)
+          .attack(0.003)
+          .decay(0.3)
+          .sustain(0.06)
+          .release(0.12)
+          .slow(1)
+          .gain(${(gain * 0.9).toFixed(3)})
+          .hpf(250)
+          .lpf(${(2500 + brightness * 3500).toFixed(0)})
+          .resonance(${(3 + brightness * 3).toFixed(0)})
+          .detune(sine.range(-6, 6).slow(3))
+          .pan(sine.range(0.25, 0.75).slow(4))
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1.5)
+          .delay(0.15)
+          .delaytime(0.25)
+          .delayfeedback(0.2)
+          .orbit(${this.orbit})`;
     }
   }
 }

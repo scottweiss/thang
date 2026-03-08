@@ -231,6 +231,28 @@ export class DroneLayer implements Layer {
           .room(${(room * 1.3).toFixed(2)})
           .roomsize(6)
           .orbit(${this.orbit})`;
+
+      case 'disco':
+        // Funky disco bass — sawtooth with octave jumps, rhythmic, punchy
+        return `note("${root}2 ${root}2 ${fifth}2 ${root}2 ~ ${root}2 ${fifth}1 ${root}2")
+          .sound("sawtooth")
+          .fm(${(0.6 + brightness * 0.5).toFixed(1)})
+          .fmh(0.5)
+          .fmenv("exp")
+          .fmdecay(0.08)
+          .attack(0.003)
+          .decay(0.18)
+          .sustain(0.15)
+          .release(0.06)
+          .slow(1)
+          .gain(${(gain * 1.3).toFixed(3)})
+          .lpf(sine.range(${(500 + brightness * 400).toFixed(0)}, ${(1200 + brightness * 1000).toFixed(0)}).slow(3))
+          .resonance(${(5 + brightness * 4).toFixed(0)})
+          .hpf(30)
+          .pan(sine.range(0.4, 0.6).slow(5))
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .orbit(${this.orbit})`;
     }
   }
 }

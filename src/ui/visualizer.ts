@@ -22,6 +22,7 @@ const MOOD_PALETTES: Record<Mood, { bg: string; hues: number[]; saturation: numb
   syro: { bg: '#0a0410', hues: [280, 300, 320, 340], saturation: 55, lightness: 40 },
   blockhead: { bg: '#0a0806', hues: [20, 35, 45, 15], saturation: 30, lightness: 35 },
   flim: { bg: '#060a0a', hues: [160, 175, 190, 200], saturation: 35, lightness: 35 },
+  disco: { bg: '#0c0608', hues: [320, 340, 40, 60], saturation: 55, lightness: 45 },
 };
 
 export class Visualizer {
@@ -125,7 +126,7 @@ export class Visualizer {
     this.sectionFlash *= 0.94;
 
     // Background fade (creates trails)
-    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'syro' ? 0.14 : this.currentMood === 'avril' ? 0.04 : this.currentMood === 'xtal' ? 0.03 : this.currentMood === 'flim' ? 0.04 : 0.06;
+    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'syro' ? 0.14 : this.currentMood === 'avril' ? 0.04 : this.currentMood === 'xtal' ? 0.03 : this.currentMood === 'flim' ? 0.04 : this.currentMood === 'disco' ? 0.1 : 0.06;
     ctx.fillStyle = palette.bg;
     ctx.globalAlpha = fadeAlpha + this.pulseIntensity * 0.05;
     ctx.fillRect(0, 0, w, h);
@@ -236,6 +237,7 @@ export class Visualizer {
       syro: 3.0,
       blockhead: 1.0,
       flim: 0.3,
+      disco: 2.0,
     }[this.currentMood];
     // Section energy modulates spawn rate — intro is sparse, peak floods particles
     const sectionMult = 0.4 + this.sectionEnergy * 0.8;
@@ -350,6 +352,18 @@ export class Visualizer {
         maxLife = 350 + Math.random() * 450;
         break;
       }
+      case 'disco': {
+        // Rising bursts from bottom — like a dance floor, energetic upward motion
+        const angle = (Math.random() - 0.5) * Math.PI * 0.6 - Math.PI / 2; // upward bias
+        const speed = 1.5 + Math.random() * 2.5;
+        x = Math.random() * w;
+        y = h * 0.7 + Math.random() * h * 0.3;
+        vx = Math.cos(angle) * speed;
+        vy = Math.sin(angle) * speed;
+        size = 1.5 + Math.random() * 3.5;
+        maxLife = 80 + Math.random() * 120;
+        break;
+      }
     }
 
     // Section energy scales particle size — peak sections get bigger, more visible particles
@@ -435,6 +449,14 @@ export class Visualizer {
         p.vy *= 0.999;
         break;
       }
+      case 'disco': {
+        // Upward with sway — dance floor energy
+        p.vx += Math.sin(this.time * 0.8 + p.y * 0.015) * 0.04;
+        p.vy -= 0.01; // slight upward pull
+        p.vx *= 0.98;
+        p.vy *= 0.99;
+        break;
+      }
     }
 
     p.x += p.vx;
@@ -448,7 +470,7 @@ export class Visualizer {
 
     ctx.beginPath();
 
-    if ((this.currentMood === 'trance' || this.currentMood === 'syro') && p.size > 2) {
+    if ((this.currentMood === 'trance' || this.currentMood === 'syro' || this.currentMood === 'disco') && p.size > 2) {
       // Diamond shape for trance
       ctx.moveTo(p.x, p.y - p.size);
       ctx.lineTo(p.x + p.size * 0.6, p.y);

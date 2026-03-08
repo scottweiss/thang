@@ -33,7 +33,7 @@ export class ArpLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 3, blockhead: 10, flim: 14 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 3, blockhead: 10, flim: 14, disco: 6 }[state.mood] ?? 8;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -298,6 +298,39 @@ export class ArpLayer extends CachingLayer {
           .delay(0.4)
           .delaytime(0.66)
           .delayfeedback(0.4)
+          .orbit(${this.orbit})`;
+      }
+
+      case 'disco': {
+        // Bubbly disco arp — sine with high FM, fast 16th notes, funky
+        const notes = this.spreadOctaves(baseNotes, 3, 5);
+        const discoPattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
+          ? randomChoice<ArpPattern>(['up', 'updown'])
+          : state.section === 'build'
+            ? 'updown'
+            : 'broken';
+        const fill = this.pickFill16(density * sectionMult);
+        const steps = this.buildFromFill(notes, discoPattern, 16, fill);
+        return `note("${steps.join(' ')}")
+          .sound("sine")
+          .fm(${(2 + brightness * 1.5).toFixed(1)})
+          .fmh(4)
+          .fmenv("exp")
+          .fmdecay(0.04)
+          .attack(0.001)
+          .decay(0.1)
+          .sustain(0.02)
+          .release(0.05)
+          .slow(1)
+          .gain(${(0.18 * (0.5 + density * 0.5)).toFixed(3)})
+          .hpf(500)
+          .lpf(${(3000 + brightness * 4000).toFixed(0)})
+          .pan(sine.range(0.25, 0.75).slow(3))
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.25)
+          .delaytime(0.125)
+          .delayfeedback(0.3)
           .orbit(${this.orbit})`;
       }
     }

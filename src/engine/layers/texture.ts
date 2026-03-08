@@ -144,6 +144,23 @@ const FLIM_VELOCITIES = [
   '0.4 0.3 0.5 0.3 0.3 0.4 0.3 0.3 0.5 0.3 0.3 0.4 0.4 0.3 0.5 0.3', // soft detail
 ];
 
+// Disco patterns — kick on beats 1&3, clap on beats 2&4, hats on upbeats
+// 16 steps: 0,4,8,12 = beats 1,2,3,4; 2,6,10,14 = upbeats ("and")
+const DISCO_PATTERNS = [
+  'bd ~ hh ~ cp ~ hh ~ bd ~ hh ~ cp ~ hh ~',     // classic disco — clean
+  'bd ~ hh ~ cp ~ hh hh bd ~ hh ~ cp ~ hh hh',   // busy upbeat hats
+  'bd hh hh ~ cp ~ hh ~ bd hh hh ~ cp ~ hh ~',   // 16th hat run into clap
+  'bd ~ hh ~ cp hh hh ~ bd ~ hh ~ cp hh hh ~',   // hat flurry after clap
+  'bd ~ hh ~ cp ~ hh ~ bd ~ hh hh cp ~ hh hh',   // rolling ending
+];
+
+// Velocities aligned to beat structure: strong on 0,4,8,12; medium on hats; ghost on 16ths
+const DISCO_VELOCITIES = [
+  '1 0.3 0.6 0.3 0.9 0.3 0.6 0.3 1 0.3 0.6 0.3 0.9 0.3 0.6 0.3',   // tight groove
+  '1 0.4 0.5 0.4 1 0.4 0.5 0.5 0.9 0.3 0.6 0.4 1 0.4 0.5 0.4',     // swinging
+  '0.9 0.3 0.7 0.3 1 0.3 0.5 0.4 1 0.4 0.6 0.3 0.9 0.3 0.7 0.3',   // accented hats
+];
+
 export class TextureLayer extends CachingLayer {
   name = 'texture';
   orbit = 3;
@@ -154,7 +171,7 @@ export class TextureLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12, xtal: 10, syro: 4, blockhead: 8, flim: 10 }[state.mood] ?? 8;
+    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12, xtal: 10, syro: 4, blockhead: 8, flim: 10, disco: 6 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
@@ -209,6 +226,9 @@ export class TextureLayer extends CachingLayer {
 
       case 'flim':
         return this.buildFlimPattern(density, gain * 0.6, room, brightness, state.section);
+
+      case 'disco':
+        return this.buildDiscoPattern(density, gain * 1.1, room * 0.5, brightness, state.section);
     }
   }
 
@@ -444,6 +464,37 @@ export class TextureLayer extends CachingLayer {
       .delay(0.15)
       .delaytime(0.5)
       .delayfeedback(0.2)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildDiscoPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
+  ): string {
+    let pattern: string;
+
+    if (section === 'intro' || section === 'breakdown') {
+      // Sparse four-on-the-floor — kick on every beat, minimal hats
+      pattern = 'bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~';
+      if (density > 0.3) {
+        pattern = 'bd ~ hh ~ bd ~ hh ~ bd ~ hh ~ bd ~ hh ~';
+      }
+    } else {
+      pattern = randomChoice(DISCO_PATTERNS);
+      if (density > 0.5) {
+        pattern = this.addGhostHats(pattern, (density - 0.5) * 0.2);
+      }
+    }
+
+    // Disco: punchy, bright, tight — moderate reverb, open filter
+    const discoGainPattern = this.applyVelocity(gain, randomChoice(DISCO_VELOCITIES));
+    return `sound("${pattern}")
+      .slow(1)
+      .gain("${discoGainPattern}")
+      .hpf(40)
+      .lpf(${(4000 + brightness * 5000).toFixed(0)})
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(1)
       .orbit(${this.orbit})`;
   }
 
