@@ -23,6 +23,7 @@
 import { consonanceWeights } from './intervallic-consonance';
 import { tendencyWeights } from './tendency-tones';
 import { intervalCharacterWeights } from './interval-character';
+import { isAvoidNote, chordScaleStrength } from './chord-scale-map';
 
 /**
  * Context for computing note weights.
@@ -44,6 +45,12 @@ export interface MelodicContext {
   scaleDegrees?: (number | null)[];
   /** Optional: mood for tendency tone strength scaling */
   mood?: import('../types').Mood;
+  /** Optional: chord degree (0-6) for chord-scale avoid-note penalization */
+  chordDegree?: number;
+  /** Optional: chord quality for chord-scale mapping */
+  chordQuality?: import('../types').ChordQuality;
+  /** Optional: parent scale type for chord-scale mapping */
+  scaleType?: string;
 }
 
 /**
@@ -137,6 +144,24 @@ export function melodicWeights(
       const iWeights = intervalCharacterWeights(ladderSize, ctx.ladderPitches, prevPitch, ctx.mood);
       for (let i = 0; i < ladderSize; i++) {
         weights[i] *= iWeights[i];
+      }
+    }
+  }
+
+  // 7. Chord-scale avoid notes (penalize notes that clash with current chord's mode)
+  if (ctx.chordDegree !== undefined && ctx.chordQuality && ctx.scaleType &&
+      ctx.ladderPitches && ctx.chordPitches && ctx.chordPitches.length > 0 && ctx.mood) {
+    const strength = chordScaleStrength(ctx.mood);
+    if (strength >= 0.1) {
+      const chordRoot = ctx.chordPitches[0] % 12;
+      for (let i = 0; i < ladderSize; i++) {
+        if (i < ctx.ladderPitches.length) {
+          const semitone = ((ctx.ladderPitches[i] % 12) - chordRoot + 12) % 12;
+          if (isAvoidNote(semitone, ctx.chordDegree, ctx.chordQuality, ctx.scaleType)) {
+            // Penalize avoid notes — stronger effect for jazzier moods
+            weights[i] *= 1.0 - strength * 0.7; // 0.3–0.6 multiplier
+          }
+        }
       }
     }
   }

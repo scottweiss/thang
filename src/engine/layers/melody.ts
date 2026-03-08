@@ -456,6 +456,9 @@ export class MelodyLayer extends CachingLayer {
           chordPitches,
           scaleDegrees,
           mood: state.mood,
+          chordDegree: state.currentChord.degree,
+          chordQuality: state.currentChord.quality,
+          scaleType: state.scale.type,
         };
         const idx = selectMelodicNote(ladder.length, ctx);
         elements.push(ladder[idx]);
@@ -470,6 +473,8 @@ export class MelodyLayer extends CachingLayer {
       const idx = selectMelodicNote(ladder.length, {
         prevIndex: -1, chordIndices, direction: 0, tension,
         ladderPitches, chordPitches, scaleDegrees, mood: state.mood,
+        chordDegree: state.currentChord.degree, chordQuality: state.currentChord.quality,
+        scaleType: state.scale.type,
       });
       elements[pos] = ladder[idx];
     }
@@ -663,6 +668,9 @@ export class MelodyLayer extends CachingLayer {
           chordPitches,
           scaleDegrees,
           mood: state.mood,
+          chordDegree: state.currentChord.degree,
+          chordQuality: state.currentChord.quality,
+          scaleType: state.scale.type,
         };
         const selectedIdx = selectMelodicNote(ladder.length, ctx);
         elements[i] = ladder[selectedIdx];
