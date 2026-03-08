@@ -33,6 +33,7 @@ import { constrainRange, shouldConstrainRange } from '../../theory/range-constra
 import { addAnacrusis } from '../../theory/anacrusis';
 import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
 import { anchorBias, melodicAnchorStrength } from '../../theory/melodic-anchor';
+import { gravityPlacementWeights, rhythmicGravityStrength } from '../../theory/rhythmic-gravity';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -683,6 +684,11 @@ export class MelodyLayer extends CachingLayer {
       syro: 0.15, blockhead: 0.4, flim: 0.7, disco: 0.25,
     }[mood];
 
+    // Rhythmic gravity: bias note placement toward metrically strong positions
+    const gravityWeights = rhythmicGravityStrength(mood) >= 0.1
+      ? gravityPlacementWeights(8, mood, noteProbability)
+      : null;
+
     // Rhythmic memory: 30% chance to recall a stored rhythm for the first half
     // This creates rhythmic continuity across chord changes
     let mask: boolean[];
@@ -692,6 +698,11 @@ export class MelodyLayer extends CachingLayer {
     if (recalledRhythm) {
       // Develop the recalled rhythm and use it as placement mask
       mask = this.rhythmMemory.develop(recalledRhythm, 8);
+    } else if (gravityWeights) {
+      // Gravity-weighted density mask: each step has its own probability
+      mask = gravityWeights.map(w => Math.random() < w);
+      // Ensure at least one note
+      if (!mask.some(v => v)) mask[0] = true;
     } else {
       // Fresh density mask
       mask = phraseDensityMask(8, noteProbability, breathiness);
