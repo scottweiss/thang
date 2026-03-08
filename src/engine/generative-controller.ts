@@ -189,6 +189,9 @@ import { harmonicRhythmVariance } from '../theory/harmonic-rhythm-variance';
 import { centroidMomentumCorrection } from '../theory/spectral-centroid-momentum';
 import { varietyGainMultiplier } from '../theory/interval-variety-scoring';
 import { hierarchyGainMultiplier } from '../theory/metric-accent-hierarchy';
+import { rootMotionGainMultiplier } from '../theory/chord-root-motion';
+import { pedalDecayMultiplier as sustainPedalDecay } from '../theory/sustain-pedal-simulation';
+import { spectralBalanceLpf } from '../theory/spectral-energy-distribution';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3783,6 +3786,57 @@ export class GenerativeController {
               () => `.lpf(${Math.round(tracked)})`
             );
           }
+        }
+      }
+    }
+
+    // Chord root motion quality: emphasize strong bass progressions
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const rootInterval = ((rootPc - tonicPc) % 12 + 12) % 12;
+      const rmGain = rootMotionGainMultiplier(rootInterval, this.state.mood);
+      if (Math.abs(rmGain - 1.0) > 0.01) {
+        const droneResult = layerResults.find(r => r.name === 'drone');
+        if (droneResult) {
+          droneResult.code = droneResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * rmGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Sustain pedal simulation: extend decay for harmonically connected chords
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const currentPcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      // Use tonic triad as proxy for previous chord
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const prevPcs = [tonicPc, (tonicPc + 4) % 12, (tonicPc + 7) % 12];
+      const sPedalDecay = sustainPedalDecay(currentPcs, prevPcs, this.state.mood);
+      if (sPedalDecay > 1.05) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.decay\(([0-9.]+)\)/,
+            (_, val) => `.decay(${(parseFloat(val) * sPedalDecay).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Spectral energy distribution: LPF correction for frequency balance
+    {
+      const activeNames = layerResults.map(r => r.name);
+      for (const result of layerResults) {
+        const lpfMul = spectralBalanceLpf(result.name, activeNames, this.state.mood);
+        if (Math.abs(lpfMul - 1.0) > 0.03) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMul)})`
+          );
         }
       }
     }
