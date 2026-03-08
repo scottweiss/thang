@@ -25,7 +25,7 @@ interface BassConfig {
 const MOOD_BASS: Record<Mood, BassConfig> = {
   ambient:   { style: 'pedal',       octave: 2, followChord: false },
   downtempo: { style: 'root-fifth',  octave: 2, followChord: true },
-  lofi:      { style: 'root-fifth',  octave: 2, followChord: true },
+  lofi:      { style: 'walking',     octave: 2, followChord: true },
   trance:    { style: 'driving',     octave: 2, followChord: true },
   avril:     { style: 'pedal',       octave: 2, followChord: false },
   xtal:      { style: 'pedal',       octave: 1, followChord: false },
@@ -100,7 +100,18 @@ export function generateBassPattern(
       return patterns[Math.floor(Math.random() * patterns.length)].slice(0, steps);
     }
 
-    case 'walking':
+    case 'walking': {
+      // Walking bass — scale-based motion: root, passing tone, fifth, approach
+      // Classic jazz walking bass line structure
+      const patterns = [
+        [root, scaleToneAbove(chordRoot, oct), fth, scaleApproach(chordRoot, oct)],
+        [root, fth, scaleToneAbove(chordRoot, oct), root],
+        [root, scaleToneBelow(chordRoot, oct), fth, root],
+        [root, root, scaleToneAbove(chordRoot, oct), fth],
+      ];
+      return patterns[Math.floor(Math.random() * patterns.length)].slice(0, steps);
+    }
+
     default:
       return new Array(steps).fill(root);
   }
@@ -144,6 +155,42 @@ export function shouldBassApproach(
   if (ticksSinceChange < 2) return false;
   return Math.random() < (MOOD_APPROACH_PROB[mood] ?? 0);
 }
+
+/**
+ * Walking bass helpers — scale-tone motion from root.
+ */
+function scaleToneAbove(root: string, octave: number): string {
+  // Major 2nd above root (whole step)
+  const pitch = NOTE_TO_PITCH_LOCAL[root];
+  if (pitch === undefined) return `${root}${octave}`;
+  const above = CHROMATIC_LOCAL[(pitch + 2) % 12];
+  return `${above}${octave}`;
+}
+
+function scaleToneBelow(root: string, octave: number): string {
+  // Major 2nd below root (whole step down)
+  const pitch = NOTE_TO_PITCH_LOCAL[root];
+  if (pitch === undefined) return `${root}${octave}`;
+  const below = CHROMATIC_LOCAL[(pitch + 10) % 12]; // -2 mod 12 = 10
+  const belowOct = (pitch - 2 < 0) ? octave - 1 : octave;
+  return `${below}${Math.max(1, belowOct)}`;
+}
+
+function scaleApproach(root: string, octave: number): string {
+  // Chromatic approach from below (half step below root)
+  const pitch = NOTE_TO_PITCH_LOCAL[root];
+  if (pitch === undefined) return `${root}${octave}`;
+  const approach = CHROMATIC_LOCAL[(pitch + 11) % 12]; // -1 mod 12 = 11
+  const approachOct = (pitch - 1 < 0) ? octave - 1 : octave;
+  return `${approach}${Math.max(1, approachOct)}`;
+}
+
+const CHROMATIC_LOCAL = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_TO_PITCH_LOCAL: Record<string, number> = {
+  'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+  'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+  'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+};
 
 /** Chromatic note names in order. */
 const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
