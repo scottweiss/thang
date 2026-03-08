@@ -71,14 +71,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'downtempo':
-        // Warm electric piano — mid-harmonicity FM with bell-like decay
-        // Percussive attack with singing sustain, stereo shimmer via delay
+        // Warm electric piano — GM Rhodes with stereo shimmer
         return `${chordStart}
-          .sound("sine")
-          .fm(${(2.5 + brightness * 1).toFixed(1)})
-          .fmh(2)
-          .fmenv("exp")
-          .fmdecay(0.45)
+          .sound("gm_epiano1")
           .attack(0.005)
           .decay(1)
           .sustain(0.08)
@@ -88,7 +83,6 @@ export class HarmonyLayer implements Layer {
           .hpf(200)
           .lpf(sine.range(${(1500 + brightness * 1000).toFixed(0)}, ${(3000 + brightness * 2000).toFixed(0)}).slow(7))
           .pan(sine.range(0.3, 0.7).slow(5))
-          .detune(sine.range(-1.5, 1.5).slow(9))
           .room(${room.toFixed(2)})
           .roomsize(3)
           .delay(0.18)
@@ -97,13 +91,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'lofi':
-        // Triangle Rhodes — warm, distinct from square melody
+        // Lofi Rhodes — GM electric piano with bit crush for tape warmth
         return `${chordStart}
-          .sound("triangle")
-          .fm(${(1.5 + brightness * 1).toFixed(1)})
-          .fmh(2)
-          .fmenv("exp")
-          .fmdecay(0.2)
+          .sound("gm_epiano1")
           .attack(0.003)
           .decay(0.5)
           .sustain(0.08)
@@ -113,7 +103,6 @@ export class HarmonyLayer implements Layer {
           .hpf(250)
           .lpf(${(1200 + brightness * 2500).toFixed(0)})
           .crush(${(12 + brightness * 4).toFixed(0)})
-          .detune(sine.range(-4, 4).slow(3))
           .pan(sine.range(0.3, 0.7).slow(7))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(1.5)
@@ -143,13 +132,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'avril':
-        // Prepared piano — sine with fundamental FM, intimate warmth
+        // Intimate piano — GM acoustic piano with heavy reverb and delay
         return `${chordStart}
-          .sound("sine")
-          .fm(5)
-          .fmh(1)
-          .fmenv("exp")
-          .fmdecay(0.08)
+          .sound("gm_piano")
           .attack(0.005)
           .decay(1.5)
           .sustain(0.04)
@@ -217,13 +202,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'blockhead':
-        // Square organ — hollow, distinct from sawtooth melody and triangle arp
+        // Warm organ — GM rock organ, cinematic hip-hop feel
         return `${chordStart}
-          .sound("square")
-          .fm(${(1 + brightness * 0.8).toFixed(1)})
-          .fmh(1)
-          .fmenv("exp")
-          .fmdecay(0.4)
+          .sound("gm_rock_organ")
           .attack(0.005)
           .decay(1.0)
           .sustain(0.1)
@@ -233,7 +214,6 @@ export class HarmonyLayer implements Layer {
           .hpf(180)
           .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2800 + brightness * 2000).toFixed(0)}).slow(7))
           .pan(sine.range(0.3, 0.7).slow(5))
-          .detune(sine.range(-2, 2).slow(7))
           .room(${(room * 0.7).toFixed(2)})
           .roomsize(2.5)
           .delay(0.2)
@@ -242,13 +222,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'flim':
-        // Music-box bells — sine/2, distinct from triangle/7 melody and square/3 arp
+        // Music box bells — GM celesta, delicate and crystalline
         return `${chordStart}
-          .sound("sine")
-          .fm(${(3 + brightness * 2).toFixed(1)})
-          .fmh(2)
-          .fmenv("exp")
-          .fmdecay(0.08)
+          .sound("gm_celesta")
           .attack(0.003)
           .decay(1.5)
           .sustain(0.04)
