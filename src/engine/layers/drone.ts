@@ -11,6 +11,7 @@ import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/te
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
+import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -70,6 +71,21 @@ export class DroneLayer implements Layer {
           /\.resonance\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.resonance(${Math.round(parseFloat(val) * resMult)})`
         );
+      }
+    }
+
+    // Sidechain ducking: rhythmic gain pump on strong beats
+    if (shouldDuckLayer(this.name) && shouldApplySidechainDuck(state.mood, state.section)) {
+      const droneSingleGain = result.match(/\.gain\((\d+(?:\.\d+)?)\)/);
+      const droneNoteMatch = result.match(/note\("([^"]+)"\)/);
+      if (droneSingleGain && droneNoteMatch) {
+        const base = parseFloat(droneSingleGain[1]);
+        const steps = droneNoteMatch[1].split(' ').length;
+        if (steps > 1) {
+          const duck = sidechainGainPattern(steps, state.mood, state.section);
+          const ducked = duck.map(d => (base * d).toFixed(4)).join(' ');
+          result = result.replace(`.gain(${droneSingleGain[1]})`, `.gain("${ducked}")`);
+        }
       }
     }
 

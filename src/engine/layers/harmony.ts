@@ -34,6 +34,7 @@ import { applyDrop2, applyDrop3, pickDropVoicing } from '../../theory/drop-voici
 import { compingPattern, shouldComp } from '../../theory/comping-rhythm';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../../theory/stereo-placement';
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
+import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -316,6 +317,30 @@ export class HarmonyLayer implements Layer {
           /\.release\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
         );
+      }
+    }
+
+    // Sidechain ducking: rhythmic gain pump on strong beats
+    if (shouldDuckLayer(this.name) && shouldApplySidechainDuck(state.mood, state.section)) {
+      const singleGainMatch = result.match(/\.gain\((\d+(?:\.\d+)?)\)/);
+      const noteMatch = result.match(/note\("([^"]+)"\)/);
+      if (singleGainMatch && noteMatch) {
+        const base = parseFloat(singleGainMatch[1]);
+        const steps = noteMatch[1].split(' ').length;
+        if (steps > 1) {
+          const duck = sidechainGainPattern(steps, state.mood, state.section);
+          const ducked = duck.map(d => (base * d).toFixed(4)).join(' ');
+          result = result.replace(`.gain(${singleGainMatch[1]})`, `.gain("${ducked}")`);
+        }
+      }
+      const quotedGainMatch = result.match(/\.gain\("([^"]+)"\)/);
+      if (quotedGainMatch && !singleGainMatch) {
+        const gains = quotedGainMatch[1].split(' ').map(parseFloat);
+        if (!gains.some(isNaN)) {
+          const duck = sidechainGainPattern(gains.length, state.mood, state.section);
+          const ducked = gains.map((g, i) => (g * (duck[i] ?? 1.0)).toFixed(4)).join(' ');
+          result = result.replace(`.gain("${quotedGainMatch[1]}")`, `.gain("${ducked}")`);
+        }
       }
     }
 

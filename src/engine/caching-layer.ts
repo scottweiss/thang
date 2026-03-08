@@ -31,6 +31,7 @@ import { pitchPanPattern, shouldApplyPitchPan } from '../theory/pitch-pan';
 import { chordLpfMultiplier, chordFmMultiplier, shouldApplyChordTimbre } from '../theory/chord-timbre';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../theory/stereo-placement';
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../theory/ensemble-thinning';
+import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../theory/sidechain-duck';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -158,6 +159,9 @@ export abstract class CachingLayer implements Layer {
 
     // Hemiola: cross-rhythm accents (3-over-4 or clave 3+3+2)
     result = this.applyHemiola(result, state);
+
+    // Sidechain ducking: rhythmic gain pump on strong beats (EDM breathing effect)
+    result = this.applySidechainDuck(result, state);
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
@@ -714,6 +718,44 @@ export abstract class CachingLayer implements Layer {
       /\.orbit\((\d+)\)/,
       `.degradeBy(${amount.toFixed(2)}).orbit($1)`
     );
+  }
+
+  /**
+   * Apply sidechain-style gain pumping on strong beats.
+   * Creates the characteristic EDM "breathing" effect.
+   * Only applies to layers that should duck (not melody or texture/drums).
+   */
+  private applySidechainDuck(pattern: string, state: GenerativeState): string {
+    if (!shouldDuckLayer(this.name)) return pattern;
+    if (!shouldApplySidechainDuck(state.mood, state.section)) return pattern;
+
+    // Apply to quoted gain patterns (per-step velocity)
+    const match = pattern.match(/\.gain\("([^"]+)"\)/);
+    if (match) {
+      const gains = match[1].split(' ').map(parseFloat);
+      if (gains.some(isNaN)) return pattern;
+      const duck = sidechainGainPattern(gains.length, state.mood, state.section);
+      const ducked = gains.map((g, i) => (g * (duck[i] ?? 1.0)).toFixed(4)).join(' ');
+      return pattern.replace(`.gain("${match[1]}")`, `.gain("${ducked}")`);
+    }
+
+    // Apply to single gain values — convert to per-step pattern
+    const singleMatch = pattern.match(/\.gain\((\d+(?:\.\d+)?)\)/);
+    if (singleMatch) {
+      const base = parseFloat(singleMatch[1]);
+      // Determine step count from note pattern
+      const noteMatch = pattern.match(/note\("([^"]+)"\)/);
+      if (noteMatch) {
+        const steps = noteMatch[1].split(' ').length;
+        if (steps > 1) {
+          const duck = sidechainGainPattern(steps, state.mood, state.section);
+          const ducked = duck.map(d => (base * d).toFixed(4)).join(' ');
+          return pattern.replace(`.gain(${singleMatch[1]})`, `.gain("${ducked}")`);
+        }
+      }
+    }
+
+    return pattern;
   }
 
   /**
