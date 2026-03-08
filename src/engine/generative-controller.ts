@@ -20,6 +20,7 @@ import { phraseCadenceBias } from '../theory/phrase-harmony';
 import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../theory/form-trajectory';
 import type { TrajectoryState } from '../theory/form-trajectory';
 import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
+import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theory/tritone-sub';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -362,6 +363,19 @@ export class GenerativeController {
         quality: 'dom7',
         notes: secondaryDominantNotes(nextChord.root, 3),
         degree: nextChord.degree, // keep target degree for resolution tracking
+      };
+    }
+
+    // Tritone substitution: replace dominant chords with ♭II7 for
+    // chromatic bass motion (e.g., Dm → Db7 → C instead of Dm → G7 → C)
+    if (shouldApplyTritoneSub(nextChord.degree, nextChord.quality, this.state.mood, this.state.section)) {
+      const subRoot = tritoneSubRoot(nextChord.root);
+      nextChord = {
+        symbol: getChordSymbol(subRoot, 'dom7'),
+        root: subRoot,
+        quality: 'dom7',
+        notes: tritoneSubNotes(nextChord.root, 3),
+        degree: nextChord.degree, // keep original degree for resolution tracking
       };
     }
 
