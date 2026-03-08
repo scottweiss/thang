@@ -45,6 +45,8 @@ import { shouldApplyRhythmicCadence, selectCadenceType, applyRhythmicCadence } f
 import { tessituraGainMap } from '../../theory/tessitura';
 import { detectInertiaDirection, inertiaBias, inertiaStrength } from '../../theory/melodic-inertia';
 import { applyMetricConsonance } from '../../theory/metric-consonance';
+import { applyRhythmicResolution, syncopationReduction } from '../../theory/rhythmic-resolution';
+import { registerCeiling, registerFloor, constrainToRegister } from '../../theory/registral-climax';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -132,6 +134,15 @@ export class MelodyLayer extends CachingLayer {
       for (let ri = 0; ri < elements.length; ri++) elements[ri] = constrained[ri];
     }
 
+    // Registral climax: constrain register based on section/tension
+    // Reserves highest notes for peak moments
+    {
+      const secProg = state.sectionProgress ?? 0;
+      const ceiling = registerCeiling(mood, state.section, secProg, tension);
+      const floor = registerFloor(mood, state.section);
+      elements = elements.map(n => constrainToRegister(n, floor, ceiling));
+    }
+
     // Metric consonance: chord tones on strong beats, passing tones on weak
     elements = applyMetricConsonance(
       elements, state.currentChord.notes, state.scale.notes, mood
@@ -177,6 +188,9 @@ export class MelodyLayer extends CachingLayer {
       const cadType = selectCadenceType(mood, state.tick);
       elements = applyRhythmicCadence(elements, cadType);
     }
+
+    // Rhythmic resolution: complex rhythms simplify near phrase endings
+    elements = applyRhythmicResolution(elements, state.sectionProgress ?? 0, mood);
 
     // Rhythmic feel: shuffle or halftime transformation based on mood + section
     if (shouldApplyFeel(mood)) {
