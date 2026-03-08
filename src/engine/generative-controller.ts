@@ -267,6 +267,9 @@ import { grooveLockGain } from '../theory/rhythmic-groove-lock';
 import { motionTypeGain, detectMotion } from '../theory/harmonic-motion-type';
 import { spectralDensityFm } from '../theory/spectral-density-control';
 import { phraseLengthGain } from '../theory/phrase-length-variation';
+import { rhythmWeightGain } from '../theory/harmonic-rhythm-weight';
+import { breathSpacingGain } from '../theory/melodic-breath-spacing';
+import { timbralDecayFm } from '../theory/timbral-decay-curve';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5392,6 +5395,53 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic rhythm weight: emphasize chord changes on strong beats
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const rwGain = rhythmWeightGain(beatPos, this.state.chordChanged, this.state.mood);
+      if (Math.abs(rwGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rwGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic breath spacing: gain dip at phrase boundaries
+    {
+      const phraseProgress = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const bsGain = breathSpacingGain(phraseProgress, this.state.mood, this.state.section);
+      if (Math.abs(bsGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * bsGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Timbral decay curve: FM darkens over sustained chords
+    {
+      const tdFm = timbralDecayFm(this.state.ticksSinceChordChange, this.state.mood, this.state.section);
+      if (Math.abs(tdFm - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone' || result.name === 'atmosphere') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * tdFm).toFixed(4)})`
             );
           }
         }
