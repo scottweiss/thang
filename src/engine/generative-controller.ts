@@ -40,6 +40,8 @@ import { shouldGrandPause, gpDuration } from '../theory/grand-pause';
 import { shouldApplySymmetric, selectAxisType, suggestSymmetricMove } from '../theory/symmetric-division';
 import { shouldApplyUnison, selectUnisonPattern, unisonAccentMask, unisonIntensity } from '../theory/rhythmic-unison';
 import { shouldApplySaturation, saturationLevel, motifInjectionCount, selectMotifFragment, saturatedLayers } from '../theory/motivic-saturation';
+import { fmIndexMultiplier, cadentialLpf, isResolutionChord } from '../theory/timbral-cadence';
+import { isStructuralDownbeat, downbeatGainBoost } from '../theory/structural-downbeat';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -100,6 +102,8 @@ export class GenerativeController {
   /** Grand pause state */
   private gpActive = false;
   private gpTicksRemaining = 0;
+  /** Structural downbeat state */
+  private structuralDownbeatActive = false;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -327,6 +331,12 @@ export class GenerativeController {
 
     this.state.ticksSinceChordChange++;
     this.state.tick++;
+
+    // Structural downbeat: detect if we're at a first-note moment
+    const gpJustEnded = this.gpActive && this.gpTicksRemaining === 1;
+    this.structuralDownbeatActive = isStructuralDownbeat(
+      this.state.sectionChanged, gpJustEnded, this.ticksSinceSilence
+    );
 
     // Grand pause: check for dramatic silence at section boundaries
     if (this.gpActive) {
@@ -789,6 +799,50 @@ export class GenerativeController {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * macroMult).toFixed(4)})`;
               return `.gain((${expr}) * ${macroMult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
+
+    // Timbral cadence: FM parameters resolve at cadence points
+    {
+      const prevDeg = this.state.chordHistory.length > 0
+        ? this.state.chordHistory[this.state.chordHistory.length - 1].degree
+        : null;
+      const isRes = isResolutionChord(this.state.currentChord.degree, prevDeg);
+      const tension = this.state.tension?.overall ?? 0.5;
+      const fmMult = fmIndexMultiplier(tension, isRes, this.state.mood);
+      if (Math.abs(fmMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+          );
+        }
+      }
+      // LPF adjustment
+      if (isRes) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(cadentialLpf(parseFloat(val), tension, true, this.state.mood))})`
+          );
+        }
+      }
+    }
+
+    // Structural downbeat: emphasize the first note after silence/section change
+    if (this.structuralDownbeatActive) {
+      const boost = downbeatGainBoost(this.state.mood, this.state.section);
+      if (boost > 1.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
+              return `.gain((${expr}) * ${boost.toFixed(4)})`;
             }
           );
         }
