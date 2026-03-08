@@ -231,8 +231,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.6).toFixed(3)})
           .lpf(sine.range(${(150 + brightness * 150).toFixed(0)}, ${(300 + brightness * 400).toFixed(0)}).slow(11))
           .pan(sine.range(0.3, 0.7).slow(13))
-          .room(${room.toFixed(2)})
-          .roomsize(4)
+          .room(${(room * 0.35).toFixed(2)})
+          .roomsize(2)
           .orbit(${this.orbit})`;
 
       case 'downtempo': {
@@ -255,8 +255,8 @@ export class DroneLayer implements Layer {
           .resonance(3)
           .pan(sine.range(0.35, 0.65).slow(9))
           .detune(sine.range(-3, 3).slow(5))
-          .room(${room.toFixed(2)})
-          .roomsize(3)
+          .room(${(room * 0.35).toFixed(2)})
+          .roomsize(1.5)
           .orbit(${this.orbit})`;
       }
 
@@ -279,8 +279,8 @@ export class DroneLayer implements Layer {
           .lpf(sine.range(${(300 + brightness * 200).toFixed(0)}, ${(500 + brightness * 500).toFixed(0)}).slow(5))
           .detune(sine.range(-2, 2).slow(3))
           .pan(sine.range(0.4, 0.6).slow(7))
-          .room(${(room * 0.7).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.25).toFixed(2)})
+          .roomsize(1)
           .orbit(${this.orbit})`;
       }
 
@@ -304,8 +304,8 @@ export class DroneLayer implements Layer {
           .resonance(${(6 + brightness * 4).toFixed(0)})
           .detune(sine.range(-4, 4).slow(3))
           .pan(sine.range(0.35, 0.65).slow(4))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.2).toFixed(2)})
+          .roomsize(1)
           .orbit(${this.orbit})`;
       }
 
@@ -325,8 +325,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.4).toFixed(3)})
           .lpf(sine.range(${(120 + brightness * 100).toFixed(0)}, ${(250 + brightness * 200).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(15))
-          .room(${(room * 1.2).toFixed(2)})
-          .roomsize(5)
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(2)
           .orbit(${this.orbit})`;
 
       case 'xtal':
@@ -346,8 +346,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.7).toFixed(3)})
           .lpf(sine.range(${(80 + brightness * 60).toFixed(0)}, ${(180 + brightness * 120).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(17))
-          .room(${(room * 1.4).toFixed(2)})
-          .roomsize(8)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(3)
           .orbit(${this.orbit})`;
 
       case 'syro': {
@@ -371,7 +371,7 @@ export class DroneLayer implements Layer {
           .hpf(30)
           .detune(sine.range(-5, 5).slow(2))
           .pan(sine.range(0.35, 0.65).slow(3))
-          .room(${(room * 0.3).toFixed(2)})
+          .room(${(room * 0.1).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
       }
@@ -394,8 +394,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 1.1).toFixed(3)})
           .lpf(sine.range(${(250 + brightness * 200).toFixed(0)}, ${(500 + brightness * 400).toFixed(0)}).slow(9))
           .pan(sine.range(0.4, 0.6).slow(7))
-          .room(${(room * 0.6).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.2).toFixed(2)})
+          .roomsize(1)
           .orbit(${this.orbit})`;
       }
 
@@ -415,8 +415,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.35).toFixed(3)})
           .lpf(sine.range(${(100 + brightness * 80).toFixed(0)}, ${(220 + brightness * 180).toFixed(0)}).slow(21))
           .pan(sine.range(0.4, 0.6).slow(17))
-          .room(${(room * 1.3).toFixed(2)})
-          .roomsize(6)
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(2)
           .orbit(${this.orbit})`;
 
       case 'disco': {
@@ -437,7 +437,7 @@ export class DroneLayer implements Layer {
           .lpf(sine.range(${(600 + brightness * 500).toFixed(0)}, ${(1400 + brightness * 1000).toFixed(0)}).slow(3))
           .hpf(30)
           .pan(sine.range(0.4, 0.6).slow(5))
-          .room(${(room * 0.3).toFixed(2)})
+          .room(${(room * 0.1).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
       }

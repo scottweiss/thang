@@ -743,11 +743,11 @@ export class MelodyLayer extends CachingLayer {
           .hpf(250)
           .lpf(${(1500 + brightness * 1500).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(9))
-          .room(${(room * 1.3).toFixed(2)})
-          .roomsize(7)
-          .delay(0.5)
-          .delaytime(0.66)
-          .delayfeedback(0.5)
+          .room(${(room * 0.8).toFixed(2)})
+          .roomsize(4)
+          .delay(0.4)
+          .delaytime(0.5)
+          .delayfeedback(0.35)
           .orbit(${this.orbit})`;
 
       case 'syro':
@@ -818,9 +818,9 @@ export class MelodyLayer extends CachingLayer {
           .pan(sine.range(0.2, 0.8).slow(7))
           .room(${(room * 0.8).toFixed(2)})
           .roomsize(3)
-          .delay(0.45)
+          .delay(0.35)
           .delaytime(0.5)
-          .delayfeedback(0.45)
+          .delayfeedback(0.3)
           .orbit(${this.orbit})`;
 
       case 'disco':
