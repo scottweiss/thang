@@ -28,6 +28,7 @@ import { reharmCooldown } from '../theory/reharm-density';
 import { functionalBias } from '../theory/functional-harmony';
 import { shouldStartCadentialSequence, createCadentialPlan, nextCadentialDegree, advanceCadentialPlan, isCadentialPlanActive } from '../theory/cadential-sequence';
 import type { CadentialPlan } from '../theory/cadential-sequence';
+import { targetKeyArea, journeyBias, shouldModulate } from '../theory/harmonic-journey';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -348,8 +349,11 @@ export class GenerativeController {
     const phraseBias = phraseCadenceBias(this.state.tick, this.state.mood, this.state.section);
     // Functional harmony: bias toward functionally strong progressions (T→S→D→T)
     const currentQuality = this.state.currentChord.quality;
+    // Harmonic journey: bias toward chords that serve the target key area
+    const keyArea = targetKeyArea(this.state.section, this.state.mood, this.state.tick);
     const combinedBias = phraseBias.map((pb, degree) =>
       pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
+         * journeyBias(degree, keyArea, this.state.mood)
     );
     let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
