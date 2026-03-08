@@ -51,6 +51,7 @@ import { shouldApplySpectralHarmony, suggestSpectralEnrichment } from '../../the
 import { shouldApplyQuartal, quartalVoicing, quintalVoicing, selectVoicingType, quartalVoiceCount } from '../../theory/quartal-voicing';
 import { shouldApplyField, overtoneVoicing, fieldPartials, blendVoicings as blendOvertone } from '../../theory/harmonic-field';
 import { shouldApplyVoicingDensity, targetVoiceCount, thinVoicing } from '../../theory/voicing-density';
+import { shouldRespace, eliminateCrossings, crossingTolerance } from '../../theory/voice-crossing';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -799,6 +800,25 @@ export class HarmonyLayer implements Layer {
     if (shouldApplyVoicingDensity(mood)) {
       const voices = targetVoiceCount(mood, state.section, tension);
       chordNotes = thinVoicing(chordNotes, voices);
+    }
+
+    // Voice-crossing: eliminate crossings when they exceed mood tolerance
+    if (useRawNotes && chordNotes.length >= 3 && crossingTolerance(mood) < 0.5) {
+      const NOTE_PC_VC: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const midiPitches = chordNotes.map(n => {
+        const name = n.replace(/\d+$/, '');
+        const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+        return (NOTE_PC_VC[name] ?? 0) + oct * 12;
+      });
+      if (shouldRespace(midiPitches, mood)) {
+        const sorted = eliminateCrossings(midiPitches);
+        const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        chordNotes = sorted.map(m => `${pcNames[m % 12]}${Math.floor(m / 12)}`);
+      }
     }
 
     // Harmonic animation: inner voices move to neighbor tones within held chords

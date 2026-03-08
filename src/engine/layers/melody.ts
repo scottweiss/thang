@@ -49,6 +49,7 @@ import { applyRhythmicResolution } from '../../theory/rhythmic-resolution';
 import { registerCeiling, registerFloor, constrainToRegister } from '../../theory/registral-climax';
 import { shouldApplyEconomy, pitchVocabularySize, selectCorePitches, constrainToVocabulary } from '../../theory/melodic-economy';
 import { buildGravityMap, gravityScore, pitchGravityStrength } from '../../theory/pitch-gravity-well';
+import { classifyGesture, shouldInjectSurprise, shouldInjectStability, suggestGesture, type GestureType } from '../../theory/gestural-entropy';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -75,6 +76,8 @@ export class MelodyLayer extends CachingLayer {
   private recentContours: import('../../theory/melodic-contour').ContourShape[] = [];
   /** Last note played (for phrase continuity across regenerations) */
   private lastNoteName: string | null = null;
+  /** Gestural entropy tracking */
+  private gestureHistory: GestureType[] = [];
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -83,6 +86,7 @@ export class MelodyLayer extends CachingLayer {
       this.rhythmMemory.clear();
       this.recentContours = [];
       this.lastNoteName = null;
+      this.gestureHistory = [];
       return true;
     }
     if (state.chordChanged) return true;
@@ -191,6 +195,57 @@ export class MelodyLayer extends CachingLayer {
               if (dist < minDist) { minDist = dist; nearest = cn; }
             }
             elements[i] = `${nearest}${octave}`;
+          }
+        }
+      }
+    }
+
+    // Gestural entropy: track gesture types and bias toward target entropy
+    {
+      const NOTE_PC_GE: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      // Classify gestures from current phrase
+      const pitches: number[] = [];
+      for (const e of elements) {
+        if (e === '~') continue;
+        const n = e.replace(/\d+$/, '');
+        const oct = parseInt(e.match(/\d+$/)?.[0] ?? '4');
+        const pc = NOTE_PC_GE[n];
+        if (pc !== undefined) pitches.push(pc + oct * 12);
+      }
+      for (let pi = 1; pi < pitches.length; pi++) {
+        const interval = pitches[pi] - pitches[pi - 1];
+        this.gestureHistory.push(classifyGesture(interval));
+      }
+      // Keep history at 16 entries max
+      if (this.gestureHistory.length > 16) {
+        this.gestureHistory = this.gestureHistory.slice(-16);
+      }
+      // Apply entropy bias to last note in phrase
+      if (this.gestureHistory.length >= 4 && elements.length >= 3) {
+        const lastNoteIdx = elements.length - 1 - [...elements].reverse().findIndex(e => e !== '~');
+        if (lastNoteIdx >= 1 && lastNoteIdx < elements.length && elements[lastNoteIdx] !== '~') {
+          if (shouldInjectSurprise(this.gestureHistory, mood, state.section)) {
+            // Make last note a leap instead of step (add 5 semitones)
+            const match = elements[lastNoteIdx].match(/^([A-Gb#]+)(\d+)$/);
+            if (match) {
+              const pc = NOTE_PC_GE[match[1]] ?? 0;
+              const oct = parseInt(match[2]);
+              const newMidi = Math.max(36, Math.min(84, pc + oct * 12 + 5));
+              const newPc = newMidi % 12;
+              const newOct = Math.floor(newMidi / 12);
+              const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+              elements[lastNoteIdx] = `${pcNames[newPc]}${newOct}`;
+            }
+          } else if (shouldInjectStability(this.gestureHistory, mood, state.section)) {
+            // Repeat the previous note for stability
+            const prevNoteIdx = lastNoteIdx - 1 - [...elements.slice(0, lastNoteIdx)].reverse().findIndex(e => e !== '~');
+            if (prevNoteIdx >= 0 && prevNoteIdx < lastNoteIdx && elements[prevNoteIdx] !== '~') {
+              elements[lastNoteIdx] = elements[prevNoteIdx];
+            }
           }
         }
       }
