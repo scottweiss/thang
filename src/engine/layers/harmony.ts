@@ -54,6 +54,7 @@ import { shouldApplyVoicingDensity, targetVoiceCount, thinVoicing } from '../../
 import { shouldRespace, eliminateCrossings, crossingTolerance } from '../../theory/voice-crossing';
 import { shouldBassHold, superpositionStrength } from '../../theory/harmonic-rhythm-layer';
 import { shouldAnticipateVoice, anticipationAmount, anticipatedPitch, nearestTarget } from '../../theory/anticipatory-voice';
+import { selectApproachType, approachOffset, shouldApplyApproach } from '../../theory/approach-pattern';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -868,6 +869,36 @@ export class HarmonyLayer implements Layer {
           const anticipated = anticipatedPitch(midi, targetMidi, amount);
           if (anticipated !== midi) {
             chordNotes[vi] = `${pcNames[anticipated % 12]}${Math.floor(anticipated / 12)}`;
+          }
+        }
+      }
+    }
+
+    // Approach pattern: systematic approach motion before chord changes
+    if (useRawNotes && chordNotes.length >= 3 &&
+        shouldApplyApproach(mood, state.section) &&
+        state.nextChordHint && (state.ticksSinceChordChange ?? 0) >= 2) {
+      const NOTE_PC_AP: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const nextRootPc = NOTE_PC_AP[state.nextChordHint.root] ?? 0;
+      const aType = selectApproachType(mood, state.tick);
+      if (aType !== 'direct') {
+        // Apply to one inner voice
+        for (let vi = 1; vi < Math.min(chordNotes.length - 1, 3); vi++) {
+          const name = chordNotes[vi].replace(/\d+$/, '');
+          const oct = parseInt(chordNotes[vi].match(/\d+$/)?.[0] ?? '4');
+          const pc = NOTE_PC_AP[name];
+          if (pc === undefined) continue;
+          const dist = nextRootPc - pc;
+          const offset = approachOffset(aType, dist);
+          if (offset !== 0) {
+            const newPc = ((pc + offset) % 12 + 12) % 12;
+            chordNotes[vi] = `${pcNames[newPc]}${oct}`;
+            break; // only one voice
           }
         }
       }

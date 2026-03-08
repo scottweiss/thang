@@ -63,6 +63,8 @@ import { cadentialAccelMultiplier, shouldAccelerate, phraseProgressFromSection }
 import { densityWaveMultiplier, shouldApplyDensityWave } from '../theory/density-wave';
 import { hocketDensityMultiplier, shouldApplyHocket } from '../theory/rhythmic-hocket';
 import { shouldSurpriseTiming, surpriseOffset, shouldApplyTimingSurprise } from '../theory/timing-surprise';
+import { gravityDurationMultiplier, shouldApplyHarmonicGravity } from '../theory/harmonic-gravity';
+import { closurePressure, tonicBias, shouldApplyClosure } from '../theory/tonal-closure';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -499,14 +501,23 @@ export class GenerativeController {
     const currentQuality = this.state.currentChord.quality;
     // Harmonic journey: bias toward chords that serve the target key area
     const keyArea = targetKeyArea(this.state.section, this.state.mood, this.state.tick);
-    const combinedBias = phraseBias.map((pb, degree) =>
-      pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
+    // Tonal closure: bias toward tonic-compatible chords near section ends
+    const closureBias = shouldApplyClosure(this.state.mood)
+      ? tonicBias(closurePressure(sectionProgress, this.state.mood, this.state.section))
+      : 1.0;
+    const combinedBias = phraseBias.map((pb, degree) => {
+      let bias = pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
          * journeyBias(degree, keyArea, this.state.mood)
          * this.emotionalMemory.chordRecallBias(
              this.state.scale.notes[degree] ?? 'C', degree,
              this.state.mood, this.state.section
-           )
-    );
+           );
+      // Boost I, IV, V when closure pressure is high
+      if (closureBias > 1.05 && (degree === 0 || degree === 3 || degree === 4)) {
+        bias *= closureBias;
+      }
+      return bias;
+    });
     let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
       : this.progression.next(combinedBias);

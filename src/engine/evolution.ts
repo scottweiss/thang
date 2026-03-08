@@ -3,6 +3,7 @@ import { densityEnvelope } from '../theory/density-envelope';
 import { harmonicMomentumMultiplier } from '../theory/harmonic-momentum';
 import { resolutionTimingMultiplier } from '../theory/resolution-timing';
 import { selectHarmonicRhythm, harmonicRhythmMultiplier, shouldApplyHarmonicRhythm } from '../theory/harmonic-rhythm-pattern';
+import { gravityDurationMultiplier, shouldApplyHarmonicGravity } from '../theory/harmonic-gravity';
 
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
 const CHORD_TIMING: Record<Mood, [number, number]> = {
@@ -118,7 +119,11 @@ export class EvolutionManager {
     const rhythmMod = shouldApplyHarmonicRhythm(mood)
       ? harmonicRhythmMultiplier(selectHarmonicRhythm(section, mood, this.chordChangeIndex), this.chordChangeIndex, mood)
       : 1.0;
-    const combined = m * tensionMod * momentumMod * resMod * rhythmMod;
+    // Harmonic gravity: heavier chords (I, V) sustain longer, lighter chords pass quickly
+    const gravMod = (chordDegree !== undefined && shouldApplyHarmonicGravity(mood))
+      ? gravityDurationMultiplier(chordDegree, mood, section)
+      : 1.0;
+    const combined = m * tensionMod * momentumMod * resMod * rhythmMod * gravMod;
     return [base[0] * combined, base[1] * combined];
   }
 
