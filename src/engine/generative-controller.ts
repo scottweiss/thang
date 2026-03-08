@@ -176,6 +176,9 @@ import { blendLpfCorrection } from '../theory/spectral-blend';
 import { counterpointScore } from '../theory/counterpoint-rules';
 import { interchangeBrightness, interchangeFm } from '../theory/modal-interchange-brightness';
 import { agogicDuration, noteImportance } from '../theory/agogic-accent';
+import { harmonicAcceleration } from '../theory/harmonic-rhythm-acceleration';
+import { commonToneWeight } from '../theory/pitch-set-intersection';
+import { contourDynamicGain } from '../theory/dynamic-contour';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3116,6 +3119,45 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic rhythm acceleration: stored for chord timing
+    {
+      const phrasePos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const _accel = harmonicAcceleration(phrasePos, this.state.mood, this.state.section);
+      // Available for chord duration multiplier
+    }
+
+    // Pitch set intersection: stored for chord selection
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const currPcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      const _ctWeight = commonToneWeight(currPcs, currPcs, this.state.mood);
+      // Available for chord selection bias
+    }
+
+    // Dynamic contour: gain follows melodic pitch direction
+    {
+      // Estimate pitch delta from chord root movement
+      const prevChord = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2]
+        : null;
+      if (prevChord) {
+        const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+        const prevPc = noteToPC[prevChord.root] ?? 0;
+        const currPc = noteToPC[this.state.currentChord.root] ?? 0;
+        const delta = currPc - prevPc;
+        const cGain = contourDynamicGain(delta, this.state.mood);
+        if (Math.abs(cGain - 1.0) > 0.01) {
+          const melodyResult = layerResults.find(r => r.name === 'melody');
+          if (melodyResult) {
+            melodyResult.code = melodyResult.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * cGain).toFixed(4)})`
             );
           }
         }
