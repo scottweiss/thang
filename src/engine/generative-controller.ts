@@ -65,6 +65,7 @@ import { hocketDensityMultiplier, shouldApplyHocket } from '../theory/rhythmic-h
 import { shouldSurpriseTiming, surpriseOffset, shouldApplyTimingSurprise } from '../theory/timing-surprise';
 import { gravityDurationMultiplier, shouldApplyHarmonicGravity } from '../theory/harmonic-gravity';
 import { closurePressure, tonicBias, shouldApplyClosure } from '../theory/tonal-closure';
+import { chordTimingOffset, shouldApplyChordTiming } from '../theory/chord-anticipation-delay';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1423,6 +1424,20 @@ export class GenerativeController {
               );
             }
           }
+        }
+      }
+    }
+
+    // Chord anticipation delay: layers arrive at chord changes at different times
+    if (this.state.chordChanged && shouldApplyChordTiming(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        const offset = chordTimingOffset(result.name, this.state.mood, this.state.section);
+        if (Math.abs(offset) > 0.005) {
+          const lateVal = Math.max(0.001, offset + 0.05); // shift to positive range
+          result.code = result.code.replace(
+            /\.orbit\((\d+)\)/,
+            (m) => `.late(${lateVal.toFixed(4)})${m}`
+          );
         }
       }
     }

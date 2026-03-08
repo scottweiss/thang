@@ -54,6 +54,8 @@ import { anticipationDelay, violationTendency } from '../../theory/temporal-expe
 import { intervalVariety, suggestIntervalBias, biasOffset, varietyAppetite } from '../../theory/intervallic-variety';
 import { selectTargetTone, targetPull, biasTowardTarget, shouldApplyTargeting } from '../../theory/melodic-target';
 import { directionBias, biasInterval, shouldApplyBrightnessBias } from '../../theory/brightness-bias';
+import { generateCell, applyCell, cellAdherence, shouldApplyRhythmicMotif } from '../../theory/rhythmic-motif';
+import { dynamicAccents, shouldApplyDynamicAccent } from '../../theory/dynamic-accent';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -420,6 +422,12 @@ export class MelodyLayer extends CachingLayer {
       elements = applyRhythmicTransform(elements, state.section, elements.length);
     }
 
+    // Rhythmic motif: apply mood-characteristic rhythmic cell for groove identity
+    if (shouldApplyRhythmicMotif(mood, state.section)) {
+      const cell = generateCell(mood, Math.floor(state.tick / 8));
+      elements = applyCell(elements, cell, cellAdherence(mood), state.tick);
+    }
+
     // Report phrase density, step pattern, and active motif for cross-layer coordination
     state.layerPhraseDensity[this.name] = elements.filter(e => e !== '~').length / Math.max(1, elements.length);
     state.layerStepPattern[this.name] = elements;
@@ -446,11 +454,16 @@ export class MelodyLayer extends CachingLayer {
       : null;
     // Tessitura energy: high notes get effort/brightness, low notes get warmth
     const tessMap = tessituraGainMap(elements, 'C3', 'C6', mood);
+    // Dynamic accent: emphasis on leap arrivals, peak notes, re-entries
+    const dynAccent = shouldApplyDynamicAccent(mood)
+      ? dynamicAccents(elements, mood)
+      : null;
     const dynamicGain = rawDynamicGain.split(' ')
       .map((g, i) => {
         let v = parseFloat(g) * (accents[i] ?? 1.0);
         if (contour) v *= contour[i] ?? 1.0;
         v *= tessMap[i] ?? 1.0;
+        if (dynAccent) v *= dynAccent[i] ?? 1.0;
         return v.toFixed(4);
       })
       .join(' ');
