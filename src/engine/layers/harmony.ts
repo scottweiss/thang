@@ -12,7 +12,7 @@ import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution 
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
-import { attackMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../../theory/envelope-evolution';
+import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../../theory/envelope-evolution';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -117,15 +117,29 @@ export class HarmonyLayer implements Layer {
       }
     }
 
-    // Envelope evolution: attacks tighten in builds, soften in breakdowns
+    // Envelope evolution: full ADSR evolves with section progress
     if (shouldApplyEnvelopeEvolution(state.section)) {
       const progress = state.sectionProgress ?? 0;
       const aMult = attackMultiplier(state.section, progress);
+      const dMult = decayMultiplier(state.section, progress);
+      const sMult = sustainMultiplier(state.section, progress);
       const rMult = releaseMultiplier(state.section, progress);
       if (Math.abs(aMult - 1.0) > 0.05) {
         result = result.replace(
           /\.attack\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.attack(${(parseFloat(val) * aMult).toFixed(3)})`
+        );
+      }
+      if (Math.abs(dMult - 1.0) > 0.05) {
+        result = result.replace(
+          /\.decay\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.decay(${(parseFloat(val) * dMult).toFixed(3)})`
+        );
+      }
+      if (Math.abs(sMult - 1.0) > 0.05) {
+        result = result.replace(
+          /\.sustain\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.sustain(${(parseFloat(val) * sMult).toFixed(4)})`
         );
       }
       if (Math.abs(rMult - 1.0) > 0.05) {

@@ -9,7 +9,7 @@ import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-mo
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../theory/resonance-sweep';
-import { attackMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../theory/envelope-evolution';
+import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../theory/envelope-evolution';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -252,14 +252,16 @@ export abstract class CachingLayer implements Layer {
   }
 
   /**
-   * Scale .attack() and .release() by section-progress multipliers.
-   * Builds get punchier, breakdowns get dreamier.
+   * Scale full ADSR envelope by section-progress multipliers.
+   * Builds get punchier (short decay, low sustain), breakdowns get dreamier (long decay, high sustain).
    */
   private applyEnvelopeEvolution(pattern: string, state: GenerativeState): string {
     if (!shouldApplyEnvelopeEvolution(state.section)) return pattern;
 
     const progress = state.sectionProgress ?? 0;
     const aMult = attackMultiplier(state.section, progress);
+    const dMult = decayMultiplier(state.section, progress);
+    const sMult = sustainMultiplier(state.section, progress);
     const rMult = releaseMultiplier(state.section, progress);
 
     let result = pattern;
@@ -268,6 +270,20 @@ export abstract class CachingLayer implements Layer {
       result = result.replace(
         /\.attack\((\d+(?:\.\d+)?)\)/g,
         (_match, val) => `.attack(${(parseFloat(val) * aMult).toFixed(3)})`
+      );
+    }
+
+    if (Math.abs(dMult - 1.0) > 0.05) {
+      result = result.replace(
+        /\.decay\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.decay(${(parseFloat(val) * dMult).toFixed(3)})`
+      );
+    }
+
+    if (Math.abs(sMult - 1.0) > 0.05) {
+      result = result.replace(
+        /\.sustain\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.sustain(${(parseFloat(val) * sMult).toFixed(4)})`
       );
     }
 
