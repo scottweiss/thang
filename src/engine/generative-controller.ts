@@ -357,6 +357,9 @@ import { tupletFeelGain } from '../theory/rhythmic-tuplet-feel';
 import { commonTonePreservationGain } from '../theory/harmonic-common-tone-preservation';
 import { registralReturnGain } from '../theory/melodic-registral-return';
 import { agogicAccentGain } from '../theory/rhythmic-agogic-accent';
+import { orbitTendencyFm } from '../theory/harmonic-orbit-tendency';
+import { peakSpacingGain } from '../theory/melodic-peak-spacing';
+import { beatSubdivisionGain } from '../theory/rhythmic-beat-subdivision-density';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -7055,6 +7058,56 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${safeMul(val, aaGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic orbit tendency: FM color on natural degree tendencies
+    if (this.state.chordChanged && this.state.chordHistory.length >= 2) {
+      const prevDeg = this.state.chordHistory[this.state.chordHistory.length - 2].degree ?? 0;
+      const currDeg = this.state.currentChord.degree ?? 0;
+      const otFm = orbitTendencyFm(prevDeg, currDeg, this.state.mood, this.state.section);
+      if (otFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${safeMul(val, otFm, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic peak spacing: reward well-spaced melodic peaks
+    {
+      // Use ticksSinceChordChange as proxy for peak spacing
+      const peakTicks = this.state.ticksSinceChordChange ?? 4;
+      const psGain = peakSpacingGain(peakTicks, this.state.mood, this.state.section);
+      if (psGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, psGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic beat subdivision density: boost finer subdivisions in energetic context
+    {
+      const beatPos = this.state.tick % 16;
+      const bsGain = beatSubdivisionGain(beatPos, this.state.mood, this.state.section);
+      if (bsGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, bsGain, 4)})`
             );
           }
         }
