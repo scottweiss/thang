@@ -104,6 +104,9 @@ import { estimateMetabolism, metabolismDensityCorrection, shouldAdjustMetabolism
 import { spectralWeight, weightLpfMultiplier, weightHpfMultiplier, shouldApplyWeight } from '../theory/spectral-weight';
 import { magneticPull, attractorPitch, shouldApplyMagnetism } from '../theory/tonal-magnetism';
 import { attentionEnergy, needsNovelty, noveltyGainBoost, shouldTrackAttention } from '../theory/attention-decay';
+import { phraseTensionProfile, tensionGainMultiplier } from '../theory/phrase-consonance-curve';
+import { gainJitter, fmJitter, filterJitter, shouldApplyResonance } from '../theory/stochastic-resonance';
+import { grooveTightness, timingCorrection, shouldApplyBinding } from '../theory/temporal-binding';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2488,6 +2491,88 @@ export class GenerativeController {
               /\.orbit\((\d+)\)/,
               (m) => `.late(${lateVal.toFixed(4)})${m}`
             );
+          }
+        }
+      }
+    }
+
+    // Phrase consonance curve: per-note tension gain within melody
+    {
+      const melodyResult = layerResults.find(r => r.name === 'melody');
+      if (melodyResult) {
+        const noteMatch = melodyResult.code.match(/note\("([^"]+)"\)/);
+        if (noteMatch) {
+          const notes = noteMatch[1].split(/\s+/);
+          const profile = phraseTensionProfile(notes, this.state.currentChord.root, this.state.mood);
+          // Apply average tension as gain multiplier
+          const avgTension = profile.reduce((a, b) => a + b, 0) / profile.length;
+          const mult = tensionGainMultiplier(avgTension, this.state.mood);
+          if (Math.abs(mult - 1.0) > 0.01) {
+            melodyResult.code = melodyResult.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
+                return `.gain((${expr}) * ${mult.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
+    // Stochastic resonance: micro-jitter on gain/FM/filter for organic life
+    if (shouldApplyResonance(this.state.mood, this.state.section)) {
+      for (let i = 0; i < layerResults.length; i++) {
+        const result = layerResults[i];
+        const gJit = gainJitter(this.state.tick, i, this.state.mood, this.state.section);
+        if (Math.abs(gJit - 1.0) > 0.005) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * gJit).toFixed(4)})`;
+              return `.gain((${expr}) * ${gJit.toFixed(4)})`;
+            }
+          );
+        }
+        const fJit = fmJitter(this.state.tick, i, this.state.mood, this.state.section);
+        if (Math.abs(fJit - 1.0) > 0.01) {
+          result.code = result.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fJit).toFixed(2)})`
+          );
+        }
+        const lpfJit = filterJitter(this.state.tick, i, this.state.mood, this.state.section);
+        if (Math.abs(lpfJit - 1.0) > 0.005) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfJit)})`
+          );
+        }
+      }
+    }
+
+    // Temporal binding: groove tightness correction on layer timing
+    if (shouldApplyBinding(this.state.mood, this.state.section)) {
+      const delays: number[] = [];
+      for (const result of layerResults) {
+        const lateMatch = result.code.match(/\.late\(([0-9.]+)\)/);
+        delays.push(lateMatch ? parseFloat(lateMatch[1]) * 1000 : 0);
+      }
+      const tightness = grooveTightness(delays, this.state.mood, this.state.section);
+      if (tightness < 0.8) {
+        const avgDelay = delays.reduce((a, b) => a + b, 0) / delays.length;
+        for (let i = 0; i < layerResults.length; i++) {
+          const corr = timingCorrection(delays[i], avgDelay, this.state.mood, this.state.section);
+          if (Math.abs(corr) > 1) {
+            const newDelay = Math.max(0, (delays[i] + corr) / 1000);
+            if (newDelay > 0.001) {
+              layerResults[i].code = layerResults[i].code.replace(
+                /\.late\(([0-9.]+)\)/,
+                () => `.late(${newDelay.toFixed(4)})`
+              );
+            }
           }
         }
       }
