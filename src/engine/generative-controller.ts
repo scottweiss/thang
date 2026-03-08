@@ -192,6 +192,9 @@ import { hierarchyGainMultiplier } from '../theory/metric-accent-hierarchy';
 import { rootMotionGainMultiplier } from '../theory/chord-root-motion';
 import { pedalDecayMultiplier as sustainPedalDecay } from '../theory/sustain-pedal-simulation';
 import { spectralBalanceLpf } from '../theory/spectral-energy-distribution';
+import { rangeEdgeGain } from '../theory/pitch-range-expansion';
+import { anticipationOffset } from '../theory/harmonic-anticipation-timing';
+import { grooveGainMultiplier } from '../theory/groove-template-application';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3784,6 +3787,56 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Pitch range expansion: edge notes get slight gain reduction
+    {
+      // Estimate note position from section progress
+      const notePos = this.state.sectionProgress ?? 0.5;
+      const edgeGain = rangeEdgeGain(notePos, this.state.tension?.overall ?? 0.5, this.state.mood);
+      if (edgeGain < 0.97) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * edgeGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic anticipation timing: bass/drone arrive early
+    {
+      for (const result of layerResults) {
+        const offset = anticipationOffset(result.name, this.state.mood, this.state.section);
+        if (offset < -0.005) {
+          const existing = result.code.match(/\.late\(([0-9.]+)\)/);
+          if (existing) {
+            const newLate = Math.max(0, parseFloat(existing[1]) + offset);
+            result.code = result.code.replace(
+              /\.late\(([0-9.]+)\)/,
+              () => `.late(${newLate.toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Groove template application: mood-characteristic rhythmic gain pattern
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const gGain = grooveGainMultiplier(beatPos, this.state.mood);
+      if (Math.abs(gGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * gGain).toFixed(4)})`
             );
           }
         }
