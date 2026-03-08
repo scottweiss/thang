@@ -30,6 +30,7 @@ import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../theory/
 import { pitchPanPattern, shouldApplyPitchPan } from '../theory/pitch-pan';
 import { chordLpfMultiplier, chordFmMultiplier, shouldApplyChordTimbre } from '../theory/chord-timbre';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../theory/stereo-placement';
+import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../theory/ensemble-thinning';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -160,6 +161,9 @@ export abstract class CachingLayer implements Layer {
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
+
+    // Ensemble thinning: reduce FM/reverb/delay when many layers play
+    result = this.applyEnsembleThinning(result, state);
 
     // Pattern degradation: thin out notes in sparse sections, fill in at peaks
     result = this.applyPatternDegrade(result, state);
@@ -710,6 +714,50 @@ export abstract class CachingLayer implements Layer {
       /\.orbit\((\d+)\)/,
       `.degradeBy(${amount.toFixed(2)}).orbit($1)`
     );
+  }
+
+  /**
+   * Scale FM, reverb, and delay based on how many layers are active.
+   * More layers → cleaner tones, drier mix. Fewer → richer, more spacious.
+   */
+  private applyEnsembleThinning(pattern: string, state: GenerativeState): string {
+    const count = state.activeLayers.size;
+    if (!shouldApplyEnsembleThinning(count)) return pattern;
+
+    let result = pattern;
+    const mood = state.mood;
+
+    // FM thinning
+    const fmMult = ensembleFmMultiplier(count, mood);
+    if (Math.abs(fmMult - 1.0) > 0.03 && result.includes('.fm(') && !result.includes('.fm(sine')) {
+      result = result.replace(
+        /\.fm\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
+      );
+    }
+
+    // Room thinning
+    const roomMult = ensembleRoomMultiplier(count, mood);
+    if (Math.abs(roomMult - 1.0) > 0.03) {
+      result = result.replace(
+        /\.room\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.room(${(parseFloat(val) * roomMult).toFixed(2)})`
+      );
+    }
+
+    // Delay feedback thinning
+    const delayMult = ensembleDelayMultiplier(count, mood);
+    if (Math.abs(delayMult - 1.0) > 0.03) {
+      result = result.replace(
+        /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => {
+          const scaled = Math.min(0.85, parseFloat(val) * delayMult);
+          return `.delayfeedback(${scaled.toFixed(2)})`;
+        }
+      );
+    }
+
+    return result;
   }
 
   /**
