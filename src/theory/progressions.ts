@@ -122,24 +122,67 @@ const MOOD_MATRICES: Record<Mood, number[][]> = {
   ],
 };
 
+/**
+ * Second-order transition biases for context-aware progressions.
+ * Format: SECOND_ORDER[prev][current] = weight adjustments for next state.
+ * Only defines the "interesting" transitions — undefined entries fall back to first-order.
+ * These encode common harmonic patterns: ii→V→I, I→IV→V, vi→IV→V, etc.
+ */
+function buildSecondOrderMatrix(): number[][][] {
+  // Start with zeros — undefined entries use first-order fallback
+  const m: number[][][] = Array.from({ length: 7 }, () =>
+    Array.from({ length: 7 }, () => [0, 0, 0, 0, 0, 0, 0])
+  );
+
+  // ii(1) → V(4) → strongly I(0): the classic ii-V-I
+  m[1][4] = [8, 0, 0, 1, 0, 1, 0];
+
+  // I(0) → IV(3) → prefer V(4) or vi(5): classic I-IV-V or I-IV-vi
+  m[0][3] = [1, 0, 0, 0, 4, 3, 0];
+
+  // vi(5) → IV(3) → prefer V(4) or I(0): vi-IV-V-I
+  m[5][3] = [2, 0, 0, 0, 5, 0, 0];
+
+  // IV(3) → V(4) → strongly I(0) or vi(5): IV-V-I cadence
+  m[3][4] = [6, 0, 0, 0, 0, 3, 0];
+
+  // I(0) → V(4) → prefer vi(5) or I(0): I-V-vi (deceptive) or I-V-I
+  m[0][4] = [3, 0, 0, 0, 0, 5, 0];
+
+  // V(4) → vi(5) → prefer IV(3) or ii(1): vi-IV or vi-ii continuation
+  m[4][5] = [0, 3, 0, 5, 0, 0, 0];
+
+  // I(0) → vi(5) → prefer IV(3) or ii(1): I-vi-IV or I-vi-ii
+  m[0][5] = [0, 3, 0, 5, 0, 0, 0];
+
+  return m;
+}
+
+const SECOND_ORDER = buildSecondOrderMatrix();
+
 export class ProgressionGenerator {
   private chain: MarkovChain<number>;
   private scale: ScaleState;
   private chords: ChordState[];
   private currentDegree: number;
+  private previousDegree: number;
   private mood: Mood;
 
   constructor(scale: ScaleState, mood: Mood, startDegree: number = 0) {
     const degrees = [0, 1, 2, 3, 4, 5, 6];
     this.chain = new MarkovChain(degrees, MOOD_MATRICES[mood]);
+    this.chain.setSecondOrderMatrix(SECOND_ORDER);
     this.scale = scale;
     this.mood = mood;
     this.chords = chordsInScale(scale, mood);
     this.currentDegree = startDegree;
+    this.previousDegree = startDegree;
   }
 
   next(): ChordState {
-    const result = this.chain.nextByIndex(this.currentDegree);
+    // Use second-order Markov when available (considers previous→current→next)
+    const result = this.chain.nextWithHistory(this.previousDegree, this.currentDegree);
+    this.previousDegree = this.currentDegree;
     this.currentDegree = result.index;
 
     // Occasionally substitute a borrowed chord for harmonic color
