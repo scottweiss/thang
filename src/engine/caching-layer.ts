@@ -40,6 +40,7 @@ import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, sho
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../theory/textural-contrast';
 import { spectralLpfMultiplier, spectralHpfOffset, shouldApplySpectralBalance } from '../theory/spectral-balance';
 import { breathSyncGainPattern, shouldApplyBreathSync } from '../theory/rhythmic-breath-sync';
+import { sectionTimbre, shouldApplyTimbralVariety } from '../theory/timbral-variety';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -81,6 +82,9 @@ export abstract class CachingLayer implements Layer {
 
     // Tension brightness: LPF tracks real-time tension (stacks on filter envelope)
     result = this.applyTensionBrightness(result, state);
+
+    // Timbral variety: section-specific FM/filter character for sonic evolution
+    result = this.applyTimbralVariety(result, state);
 
     // Tension register: shift note octaves and LPF brightness based on tension
     result = this.applyTensionRegister(result, state);
@@ -351,6 +355,42 @@ export abstract class CachingLayer implements Layer {
       /\.lpf\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
     );
+  }
+
+  /**
+   * Apply section-specific timbral variety: FM depth and filter brightness
+   * shift per section for sonic evolution across the piece.
+   */
+  private applyTimbralVariety(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTimbralVariety(state.mood)) return pattern;
+
+    const timbre = sectionTimbre(state.section, state.mood);
+
+    // Apply FM depth multiplier
+    if (Math.abs(timbre.fmDepthMult - 1.0) > 0.02 && pattern.includes('.fm(')) {
+      pattern = pattern.replace(
+        /\.fm\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.fm(${(parseFloat(val) * timbre.fmDepthMult).toFixed(2)})`
+      );
+    }
+
+    // Apply filter brightness multiplier
+    if (Math.abs(timbre.filterBrightness - 1.0) > 0.02 && pattern.includes('.lpf(')) {
+      pattern = pattern.replace(
+        /\.lpf\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.lpf(${Math.round(parseFloat(val) * timbre.filterBrightness)})`
+      );
+    }
+
+    // Apply attack multiplier
+    if (Math.abs(timbre.attackMult - 1.0) > 0.05 && pattern.includes('.attack(')) {
+      pattern = pattern.replace(
+        /\.attack\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.attack(${(parseFloat(val) * timbre.attackMult).toFixed(4)})`
+      );
+    }
+
+    return pattern;
   }
 
   /**
