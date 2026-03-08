@@ -15,6 +15,7 @@ import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theor
 import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../../theory/envelope-evolution';
 import { crushOffset, shouldApplyCrushEvolution } from '../../theory/crush-evolution';
 import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../../theory/frequency-band';
+import { chorusDepth, shouldApplyChorus } from '../../theory/chorus-depth';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -134,6 +135,27 @@ export class HarmonyLayer implements Layer {
           /\.hpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.hpf(${Math.round(parseFloat(val) + offset)})`
         );
+      }
+    }
+
+    // Chorus depth: detuning adds warmth at peaks
+    if (shouldApplyChorus('harmony', state.section)) {
+      const cents = chorusDepth('harmony', state.section, state.sectionProgress ?? 0);
+      if (cents >= 0.5) {
+        if (result.includes('.detune(')) {
+          result = result.replace(
+            /\.detune\(sine\.range\(([^,]+),\s*([^)]+)\)\.slow\(([^)]+)\)\)/,
+            (_match, minStr, maxStr, speed) => {
+              const min = parseFloat(minStr);
+              const max = parseFloat(maxStr);
+              const scale = Math.max(1, cents / Math.max(1, Math.abs(max)));
+              return `.detune(sine.range(${(min * scale).toFixed(1)}, ${(max * scale).toFixed(1)}).slow(${speed}))`;
+            }
+          );
+        } else if (result.includes('.gain(')) {
+          const detuneStr = `.detune(sine.range(${(-cents).toFixed(1)}, ${cents.toFixed(1)}).slow(7))`;
+          result = result.replace(/\.gain\(/, `${detuneStr}\n          .gain(`);
+        }
       }
     }
 

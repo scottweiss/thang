@@ -14,6 +14,7 @@ import { crushOffset, shouldApplyCrushEvolution } from '../theory/crush-evolutio
 import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../theory/frequency-band';
 import { evolvedVelocity, applyVelocityEvolution } from '../theory/velocity-evolution';
 import { slowMultiplier, shouldApplyRhythmicAcceleration } from '../theory/rhythmic-acceleration';
+import { chorusDepth, shouldApplyChorus } from '../theory/chorus-depth';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -55,6 +56,9 @@ export abstract class CachingLayer implements Layer {
 
     // Timbral morphing: FM index evolves within sections
     result = this.applyTimbralMorph(result, state);
+
+    // Chorus depth: detuning adds warmth at peaks, cleans at breakdowns
+    result = this.applyChorusDepth(result, state);
 
     // Crush evolution: bit depth modulates for digital character
     result = this.applyCrushEvolution(result, state);
@@ -295,6 +299,38 @@ export abstract class CachingLayer implements Layer {
       /\.fm\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.fm(${(parseFloat(val) * mult).toFixed(1)})`
     );
+  }
+
+  /**
+   * Add or modulate .detune() for chorus warmth effect.
+   * Peaks get rich detuning, breakdowns clean up.
+   */
+  private applyChorusDepth(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyChorus(this.name, state.section)) return pattern;
+
+    const cents = chorusDepth(this.name, state.section, state.sectionProgress ?? 0);
+    if (cents < 0.5) return pattern;
+
+    if (pattern.includes('.detune(')) {
+      // Modify existing detune — scale the range
+      return pattern.replace(
+        /\.detune\(sine\.range\(([^,]+),\s*([^)]+)\)\.slow\(([^)]+)\)\)/,
+        (_match, minStr, maxStr, speed) => {
+          const min = parseFloat(minStr);
+          const max = parseFloat(maxStr);
+          const scale = Math.max(1, cents / Math.max(1, Math.abs(max)));
+          return `.detune(sine.range(${(min * scale).toFixed(1)}, ${(max * scale).toFixed(1)}).slow(${speed}))`;
+        }
+      );
+    }
+
+    // No existing detune — add a slow LFO detune
+    // Insert before .gain() or at the end of the chain
+    const detuneStr = `.detune(sine.range(${(-cents).toFixed(1)}, ${cents.toFixed(1)}).slow(7))`;
+    if (pattern.includes('.gain(')) {
+      return pattern.replace(/\.gain\(/, `${detuneStr}\n      .gain(`);
+    }
+    return pattern;
   }
 
   /**
