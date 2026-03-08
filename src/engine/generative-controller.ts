@@ -303,6 +303,9 @@ import { smoothedFm } from '../theory/timbral-evolution-rate';
 import { chordToneGravityGain } from '../theory/chord-tone-gravity';
 import { transitionMomentumGain } from '../theory/section-transition-momentum';
 import { subdivisionVarietyGain } from '../theory/rhythmic-subdivision-variety';
+import { commonToneDecay } from '../theory/harmonic-common-tone-sustain';
+import { contourEnergyGain } from '../theory/melodic-contour-energy';
+import { syncopationRewardGain } from '../theory/rhythmic-syncopation-reward';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5428,6 +5431,55 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic common tone sustain: shared tones get decay extension
+    {
+      if (this.state.chordChanged && this.state.chordHistory.length >= 2) {
+        const prevNotes = this.state.chordHistory[this.state.chordHistory.length - 2]?.notes ?? [];
+        const ctDecay = commonToneDecay(prevNotes, this.state.currentChord.notes, this.state.mood);
+        if (Math.abs(ctDecay - 1.0) > 0.005) {
+          const harmonyResult = layerResults.find(r => r.name === 'harmony');
+          if (harmonyResult) {
+            harmonyResult.code = harmonyResult.code.replace(
+              /\.decay\(([0-9.]+)\)/,
+              (_, val) => `.decay(${(parseFloat(val) * ctDecay).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic contour energy: ascending = boost, descending = soften
+    {
+      const dir = this.state.melodyDirection ?? 'static';
+      const ceGain = contourEnergyGain(dir, this.state.mood);
+      if (Math.abs(ceGain - 1.0) > 0.005) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * ceGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic syncopation reward: off-beat emphasis in groove moods
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const isOffbeat = beatPos % 2 !== 0;
+      const srGain = syncopationRewardGain(isOffbeat, this.state.mood);
+      if (Math.abs(srGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * srGain).toFixed(4)})`
             );
           }
         }
