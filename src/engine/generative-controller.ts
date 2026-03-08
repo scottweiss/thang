@@ -11,6 +11,7 @@ import { getChordNotesWithOctave, getChordSymbol } from '../theory/chords';
 import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
 import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
+import { rubatoMultiplier } from '../theory/rubato';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -310,7 +311,10 @@ export class GenerativeController {
     if (layerResults.length === 0) return;
 
     const layerCodes = layerResults.map(r => r.code);
-    const fullCode = `setCps(${this.state.params.tempo})\nstack(\n${layerCodes.join(',\n')}\n)`;
+    // Apply rubato: subtle tempo variation based on section and tension
+    const rubato = rubatoMultiplier(this.state.mood, this.state.section, this.state.tension?.overall ?? 0.5);
+    const effectiveTempo = this.state.params.tempo * rubato;
+    const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
       await evaluate(fullCode);
