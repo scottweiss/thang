@@ -13,11 +13,18 @@ export class DroneLayer implements Layer {
     const room = 0.5 + state.params.spaciousness * 0.3;
     const brightness = state.params.brightness;
 
+    // FM index evolves slowly with brightness for organic movement
+    const fmSweep = `sine.range(${(0.5 + brightness * 0.5).toFixed(1)}, ${(1.5 + brightness * 2).toFixed(1)}).slow(17)`;
+
     switch (mood) {
       case 'ambient':
-        // Evolving sine pad with slow filter sweep and stereo drift
+        // Evolving FM pad — low harmonicity creates breathy, organ-like texture
         return `note("${root}2")
           .sound("sine")
+          .fm(${fmSweep})
+          .fmh(2)
+          .fmenv("exp")
+          .fmdecay(1.5)
           .attack(0.8)
           .decay(2)
           .sustain(0.2)
@@ -31,9 +38,13 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'downtempo':
-        // Warm detuned pad with filter movement — Boards of Canada warmth
+        // Warm FM bass — harmonicity 1 creates growl, slow FM sweep adds movement
         return `note("${root}2 ${fifth}2")
-          .sound("sawtooth")
+          .sound("sine")
+          .fm(${(1 + brightness * 1.5).toFixed(1)})
+          .fmh(1)
+          .fmenv("exp")
+          .fmdecay(0.6)
           .attack(0.1)
           .decay(0.8)
           .sustain(0.3)
@@ -49,9 +60,13 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'lofi':
-        // Warm bass with subtle vibrato and filter wobble
+        // Warm sub bass — triangle + light FM for subtle tape saturation feel
         return `note("${root}2 ${root}2 ${fifth}1 ${fifth}1")
           .sound("triangle")
+          .fm(${(0.3 + brightness * 0.5).toFixed(1)})
+          .fmh(1)
+          .fmenv("exp")
+          .fmdecay(0.3)
           .attack(0.01)
           .decay(0.3)
           .sustain(0.15)
@@ -66,9 +81,13 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'trance':
-        // Pulsing bass with filter pump and stereo width
+        // Acid-tinged pulsing bass — higher FM and resonance for squelch
         return `note("${root}2 ${root}2 ${fifth}2 ${root}2")
           .sound("sawtooth")
+          .fm(${(0.5 + brightness * 1).toFixed(1)})
+          .fmh(0.5)
+          .fmenv("exp")
+          .fmdecay(0.15)
           .attack(0.005)
           .decay(0.15)
           .sustain(0.2)
@@ -76,7 +95,7 @@ export class DroneLayer implements Layer {
           .slow(1)
           .gain(${(gain * 1.1).toFixed(3)})
           .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(700 + brightness * 1000).toFixed(0)}).slow(2))
-          .resonance(6)
+          .resonance(${(6 + brightness * 4).toFixed(0)})
           .detune(sine.range(-4, 4).slow(3))
           .pan(sine.range(0.35, 0.65).slow(4))
           .room(${(room * 0.5).toFixed(2)})
