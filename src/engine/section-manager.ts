@@ -59,10 +59,22 @@ export class SectionManager {
     this.sectionElapsed += dt;
 
     const config = SECTION_CONFIGS[state.mood][state.section];
+    const progress = this.sectionElapsed / this.sectionDuration;
 
-    // Gently steer density and brightness toward section targets
-    const densityDelta = (config.densityTarget - state.params.density) * 0.03;
-    const brightnessDelta = (config.brightnessTarget - state.params.brightness) * 0.03;
+    // Determine interpolation rate based on section progress
+    // Faster at start (settle into the feel) and near end (ramp toward next)
+    let interpRate: number;
+    if (progress < 0.2) {
+      interpRate = 0.08; // fast settle at section start
+    } else if (progress > 0.85) {
+      interpRate = 0.06; // pre-transition ramp
+    } else {
+      interpRate = 0.04; // gentle mid-section drift
+    }
+
+    // Steer density and brightness toward section targets
+    const densityDelta = (config.densityTarget - state.params.density) * interpRate;
+    const brightnessDelta = (config.brightnessTarget - state.params.brightness) * interpRate;
     state.params.density = Math.max(0.15, Math.min(1.0, state.params.density + densityDelta));
     state.params.brightness = Math.max(0.1, Math.min(0.9, state.params.brightness + brightnessDelta));
 
@@ -79,11 +91,21 @@ export class SectionManager {
     this.sectionElapsed = 0;
 
     if (!this.pastIntro) {
-      // Move from intro to build
       this.pastIntro = true;
-      this.currentIndex = 0; // index into CYCLE_ORDER
+      this.currentIndex = 0;
     } else {
-      this.currentIndex = (this.currentIndex + 1) % CYCLE_ORDER.length;
+      // Usually follow the cycle, but occasionally skip breakdown → groove
+      // to keep things unpredictable
+      const currentSection = CYCLE_ORDER[this.currentIndex];
+      if (currentSection === 'peak' && Math.random() < 0.25) {
+        // 25% chance to skip breakdown and go straight to groove
+        this.currentIndex = (this.currentIndex + 2) % CYCLE_ORDER.length;
+      } else if (currentSection === 'groove' && Math.random() < 0.2) {
+        // 20% chance to skip build and go straight to peak
+        this.currentIndex = (this.currentIndex + 2) % CYCLE_ORDER.length;
+      } else {
+        this.currentIndex = (this.currentIndex + 1) % CYCLE_ORDER.length;
+      }
     }
 
     const nextSection = this.pastIntro
@@ -93,16 +115,13 @@ export class SectionManager {
     state.section = nextSection;
     state.sectionChanged = true;
 
-    // Set duration for the new section
     const config = SECTION_CONFIGS[state.mood][nextSection];
     this.sectionDuration = this.randomBetween(config.duration[0], config.duration[1]);
 
-    // Update active layers immediately
     state.activeLayers = new Set(config.activeLayers);
   }
 
   reset(mood: Mood): void {
-    // On mood change, restart from intro
     this.pastIntro = false;
     this.currentIndex = 0;
     this.sectionElapsed = 0;

@@ -1,9 +1,14 @@
-import { GenerativeState } from '../types';
+import { GenerativeState, Mood } from '../types';
 import { randomWalk } from './random';
 
-// Time constants (in seconds)
-const CHORD_CHANGE_MIN = 15;
-const CHORD_CHANGE_MAX = 60;
+// Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
+const CHORD_TIMING: Record<Mood, [number, number]> = {
+  ambient: [25, 80],
+  downtempo: [15, 45],
+  lofi: [12, 35],
+  trance: [8, 24],
+};
+
 const SCALE_CHANGE_MIN = 120;
 const SCALE_CHANGE_MAX = 300;
 
@@ -12,16 +17,15 @@ export class EvolutionManager {
   private nextScaleChange: number;
 
   constructor() {
-    this.nextChordChange = this.randomBetween(CHORD_CHANGE_MIN, CHORD_CHANGE_MAX);
+    const timing = CHORD_TIMING.downtempo;
+    this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     this.nextScaleChange = this.randomBetween(SCALE_CHANGE_MIN, SCALE_CHANGE_MAX);
   }
 
   evolve(state: GenerativeState, dt: number): { chordChange: boolean; scaleChange: boolean } {
     state.elapsed += dt;
 
-    // Drift parameters
-    state.params.density = randomWalk(state.params.density, 0.02, 0.2, 1.0);
-    state.params.brightness = randomWalk(state.params.brightness, 0.015, 0.1, 0.9);
+    // Gentle spaciousness drift only — density and brightness are steered by section manager
     state.params.spaciousness = randomWalk(state.params.spaciousness, 0.01, 0.3, 1.0);
 
     const timeSinceChord = state.elapsed - state.lastChordChange;
@@ -33,7 +37,8 @@ export class EvolutionManager {
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
       state.lastChordChange = state.elapsed;
-      this.nextChordChange = this.randomBetween(CHORD_CHANGE_MIN, CHORD_CHANGE_MAX);
+      const timing = CHORD_TIMING[state.mood];
+      this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     }
 
     if (timeSinceScale >= this.nextScaleChange) {
