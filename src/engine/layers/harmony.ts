@@ -45,6 +45,7 @@ import { applySpacingOptimization } from '../../theory/voice-spacing';
 import { shouldStartChain, createChainPlan, chainSuspensionOffset, advanceChain, isChainActive } from '../../theory/suspension-chain';
 import type { SuspensionChainPlan } from '../../theory/suspension-chain';
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../../theory/textural-contrast';
+import { shouldApplyAmbiguity, suggestAmbiguousExtensions, ambiguityDarkenFactor } from '../../theory/tonal-ambiguity';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -126,6 +127,17 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
           (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
+        );
+      }
+    }
+
+    // Tonal ambiguity darken: blur key center with darker timbre
+    if (shouldApplyAmbiguity(state.mood, state.section, state.tension?.overall ?? 0.5)) {
+      const darkFactor = ambiguityDarkenFactor(state.mood, state.section);
+      if (darkFactor < 0.98) {
+        result = result.replace(
+          /\.lpf\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.lpf(${Math.round(parseFloat(val) * darkFactor)})`
         );
       }
     }
@@ -683,6 +695,19 @@ export class HarmonyLayer implements Layer {
       if (colorTone && !chordNotes.includes(colorTone) &&
           extensionImprovesSonority(chordNotes, colorTone, mood, state.section)) {
         chordNotes = [...chordNotes, colorTone];
+      }
+    }
+
+    // Tonal ambiguity: add notes that blur the key center (dreamy moods)
+    if (shouldApplyAmbiguity(mood, state.section, tension) && !hasSuspension) {
+      const ambiguousNotes = suggestAmbiguousExtensions(chordNotes, state.scale.notes);
+      if (ambiguousNotes.length > 0) {
+        // Add one ambiguous extension in the upper register
+        const topOct = parseInt((chordNotes[chordNotes.length - 1] || '').replace(/[^\d]/g, '') || '4');
+        const ext = `${ambiguousNotes[0]}${topOct}`;
+        if (!chordNotes.includes(ext)) {
+          chordNotes = [...chordNotes, ext];
+        }
       }
     }
 
