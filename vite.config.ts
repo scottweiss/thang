@@ -2,6 +2,11 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   optimizeDeps: {
-    include: ['@strudel/web'],
+    include: [
+      '@strudel/web',
+      '@strudel/soundfonts',
+      '@strudel/core',
+      '@strudel/webaudio',
+    ],
   },
 });
