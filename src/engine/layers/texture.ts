@@ -180,9 +180,11 @@ export class TextureLayer extends CachingLayer {
   protected buildPattern(state: GenerativeState): string {
     const density = state.params.density;
     const mood = state.mood;
-    const gain = 0.3 * density;
-    const room = 0.3 + state.params.spaciousness * 0.3;
-    const brightness = state.params.brightness;
+    const tension = state.tension?.overall ?? 0.5;
+    // Tension brightens drums, dries reverb, adds presence
+    const gain = 0.3 * density * (0.9 + tension * 0.15);
+    const room = (0.3 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.2);
+    const brightness = state.params.brightness * (0.85 + tension * 0.3);
 
     // Play a transition fill on section changes (not for ambient/avril/xtal)
     if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril' && mood !== 'xtal' && mood !== 'flim') {
