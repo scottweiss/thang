@@ -1,5 +1,6 @@
 import { GenerativeState, Mood, Section } from '../types';
 import { randomWalk } from './random';
+import { densityEnvelope } from '../theory/density-envelope';
 
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
 const CHORD_TIMING: Record<Mood, [number, number]> = {
@@ -45,6 +46,10 @@ export class EvolutionManager {
 
     // Gentle spaciousness drift only — density and brightness are steered by section manager
     state.params.spaciousness = randomWalk(state.params.spaciousness, 0.01, 0.3, 1.0);
+
+    // Apply density breathing envelope — modulates density on multiple timescales
+    const densityMod = densityEnvelope(state.elapsed, state.lastChordChange, state.params.tempo);
+    state.params.density = Math.max(0.1, Math.min(1.0, state.params.density * densityMod));
 
     const timeSinceChord = state.elapsed - state.lastChordChange;
     const timeSinceScale = state.elapsed - state.lastScaleChange;
