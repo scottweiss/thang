@@ -47,6 +47,9 @@ import { outerIntervalTension, intervalReverb, intervalFmDepth } from '../theory
 import { shouldApplyGradient, gradientDensityMultiplier } from '../theory/texture-gradient';
 import { chordConsonance, updateFatigue, shouldInjectColor, resolutionBonus } from '../theory/consonance-fatigue';
 import { estimateCentroid, centroidDeviation, lpfCorrectionMultiplier, shouldCorrectCentroid } from '../theory/spectral-centroid';
+import { layerActivity, accompanimentGainResponse, shouldFollowEnvelope, followingLayers } from '../theory/envelope-following';
+import { alignedFmh, shouldAlignOvertones } from '../theory/overtone-alignment';
+import { speakingLayer, conversationGainMultiplier, shouldApplyConversation } from '../theory/rhythmic-conversation';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1049,6 +1052,79 @@ export class GenerativeController {
               }
             );
           }
+        }
+      }
+    }
+
+    // Envelope following: accompaniment breathes with melody activity
+    if (shouldFollowEnvelope(this.state.mood, this.state.section)) {
+      const melodyResult = layerResults.find(r => r.name === 'melody');
+      if (melodyResult) {
+        const noteMatch = melodyResult.code.match(/note\("([^"]+)"\)/);
+        const melodyAct = noteMatch ? layerActivity(noteMatch[1]) : 0.5;
+        const followers = followingLayers(this.state.mood);
+        for (const result of layerResults) {
+          if (followers.includes(result.name)) {
+            const followMult = accompanimentGainResponse(melodyAct, this.state.mood, this.state.section);
+            if (Math.abs(followMult - 1.0) > 0.02) {
+              result.code = result.code.replace(
+                /\.gain\(([^)]+)\)/,
+                (_, expr) => {
+                  const num = parseFloat(expr);
+                  if (!isNaN(num)) return `.gain(${(num * followMult).toFixed(4)})`;
+                  return `.gain((${expr}) * ${followMult.toFixed(4)})`;
+                }
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Overtone alignment: nudge fmh toward reinforcing ratios between layers
+    if (shouldAlignOvertones(this.state.mood, layerResults.length)) {
+      const fmhValues: { name: string; fmh: number }[] = [];
+      for (const result of layerResults) {
+        const match = result.code.match(/\.fmh\(([0-9.]+)\)/);
+        if (match) fmhValues.push({ name: result.name, fmh: parseFloat(match[1]) });
+      }
+      if (fmhValues.length >= 2) {
+        for (const result of layerResults) {
+          const match = result.code.match(/\.fmh\(([0-9.]+)\)/);
+          if (match) {
+            const myFmh = parseFloat(match[1]);
+            const others = fmhValues
+              .filter(f => f.name !== result.name)
+              .map(f => f.fmh);
+            const aligned = alignedFmh(myFmh, others, this.state.mood, this.state.section);
+            if (Math.abs(aligned - myFmh) > 0.01) {
+              result.code = result.code.replace(
+                /\.fmh\([0-9.]+\)/,
+                `.fmh(${aligned.toFixed(2)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic conversation: foreground speaking layer, dip others
+    if (shouldApplyConversation(this.state.mood, layerResults.length)) {
+      const activeNames = layerResults.map(r => r.name);
+      const speaker = speakingLayer(
+        activeNames, this.state.tick, this.state.mood, this.state.section
+      );
+      for (const result of layerResults) {
+        const convMult = conversationGainMultiplier(result.name, speaker, this.state.mood);
+        if (Math.abs(convMult - 1.0) > 0.01) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * convMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${convMult.toFixed(4)})`;
+            }
+          );
         }
       }
     }
