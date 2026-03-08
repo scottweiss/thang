@@ -24,6 +24,7 @@ export class MelodyLayer extends CachingLayer {
     const density = state.params.density;
     const mood = state.mood;
     const room = 0.5 + state.params.spaciousness * 0.4;
+    const brightness = state.params.brightness;
 
     const noteProbability = {
       ambient: density * 0.15,
@@ -49,6 +50,7 @@ export class MelodyLayer extends CachingLayer {
 
     switch (mood) {
       case 'ambient':
+        // Sparse bell tones with wide stereo and long delay
         return `note("${elements.join(' ')}")
           .sound("sine")
           .fm(1.5)
@@ -61,6 +63,7 @@ export class MelodyLayer extends CachingLayer {
           .release(0.5)
           .slow(5)
           .gain(${(gain * 0.7).toFixed(3)})
+          .pan(sine.range(0.15, 0.85).slow(7))
           .room(${room.toFixed(2)})
           .roomsize(4)
           .delay(0.4)
@@ -69,6 +72,7 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'downtempo':
+        // Piano-like melody with stereo placement and delay
         return `note("${elements.join(' ')}")
           .sound("sine")
           .fm(2)
@@ -81,6 +85,8 @@ export class MelodyLayer extends CachingLayer {
           .release(0.3)
           .slow(3)
           .gain(${gain.toFixed(3)})
+          .pan(sine.range(0.25, 0.75).slow(5))
+          .lpf(${(2000 + brightness * 3000).toFixed(0)})
           .room(${room.toFixed(2)})
           .roomsize(3)
           .delay(0.3)
@@ -89,6 +95,7 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'lofi':
+        // Warm muted melody with vibrato and narrow stereo
         return `note("${elements.join(' ')}")
           .sound("sine")
           .fm(3)
@@ -101,7 +108,9 @@ export class MelodyLayer extends CachingLayer {
           .release(0.2)
           .slow(2)
           .gain(${(gain * 1.1).toFixed(3)})
-          .lpf(${(1500 + state.params.brightness * 2000).toFixed(0)})
+          .lpf(${(1500 + brightness * 2000).toFixed(0)})
+          .detune(sine.range(-2, 2).slow(3))
+          .pan(sine.range(0.35, 0.65).slow(4))
           .room(${(room * 0.6).toFixed(2)})
           .roomsize(2)
           .delay(0.2)
@@ -110,6 +119,7 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'trance':
+        // Bright arpeggiated melody with wide stereo
         return `note("${elements.join(' ')}")
           .sound("sine")
           .fm(2)
@@ -122,7 +132,8 @@ export class MelodyLayer extends CachingLayer {
           .release(0.1)
           .slow(1)
           .gain(${(gain * 1.2).toFixed(3)})
-          .lpf(${(3000 + state.params.brightness * 5000).toFixed(0)})
+          .lpf(${(3000 + brightness * 5000).toFixed(0)})
+          .pan(sine.range(0.2, 0.8).slow(3))
           .room(${(room * 0.6).toFixed(2)})
           .roomsize(2)
           .delay(0.3)

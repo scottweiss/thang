@@ -10,10 +10,11 @@ export class HarmonyLayer implements Layer {
     const mood = state.mood;
     const gain = 0.35 * (0.5 + state.params.density * 0.5);
     const room = 0.4 + state.params.spaciousness * 0.4;
+    const brightness = state.params.brightness;
 
     switch (mood) {
       case 'ambient':
-        // Slow pad chord, moderate reverb
+        // Evolving pad with slow filter sweep and wide stereo
         return `chord("${chord.symbol}")
           .voicing()
           .sound("sine")
@@ -27,12 +28,14 @@ export class HarmonyLayer implements Layer {
           .release(1)
           .slow(4)
           .gain(${(gain * 0.7).toFixed(3)})
+          .lpf(sine.range(${(800 + brightness * 500).toFixed(0)}, ${(1500 + brightness * 1500).toFixed(0)}).slow(13))
+          .pan(sine.range(0.2, 0.8).slow(11))
           .room(${room.toFixed(2)})
           .roomsize(4)
           .orbit(${this.orbit})`;
 
       case 'downtempo':
-        // Piano-like FM chords
+        // Piano-like FM chords with shimmer and stereo
         return `chord("${chord.symbol}")
           .voicing()
           .sound("sine")
@@ -46,12 +49,18 @@ export class HarmonyLayer implements Layer {
           .release(0.4)
           .slow(2)
           .gain(${gain.toFixed(3)})
+          .lpf(sine.range(${(1500 + brightness * 1000).toFixed(0)}, ${(3000 + brightness * 2000).toFixed(0)}).slow(7))
+          .pan(sine.range(0.3, 0.7).slow(5))
+          .detune(sine.range(-1, 1).slow(9))
           .room(${room.toFixed(2)})
           .roomsize(3)
+          .delay(0.15)
+          .delaytime(0.375)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'lofi':
-        // Jazzy Rhodes-style — warm FM
+        // Jazzy Rhodes-style with warm wobble and chorus
         return `chord("${chord.symbol}")
           .voicing()
           .sound("sine")
@@ -65,13 +74,15 @@ export class HarmonyLayer implements Layer {
           .release(0.3)
           .slow(2)
           .gain(${(gain * 1.1).toFixed(3)})
-          .lpf(${(2000 + state.params.brightness * 2000).toFixed(0)})
+          .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 2000).toFixed(0)}).slow(5))
+          .detune(sine.range(-3, 3).slow(4))
+          .pan(sine.range(0.3, 0.7).slow(7))
           .room(${(room * 0.7).toFixed(2)})
           .roomsize(2)
           .orbit(${this.orbit})`;
 
       case 'trance':
-        // Big supersaw-style pad chords
+        // Big supersaw pad with filter sweep and wide detune
         return `chord("${chord.symbol}")
           .voicing()
           .sound("sawtooth")
@@ -81,8 +92,10 @@ export class HarmonyLayer implements Layer {
           .release(0.2)
           .slow(1)
           .gain(${(gain * 1.2).toFixed(3)})
-          .lpf(${(1000 + state.params.brightness * 3000).toFixed(0)})
-          .resonance(4)
+          .lpf(sine.range(${(800 + brightness * 1500).toFixed(0)}, ${(2000 + brightness * 4000).toFixed(0)}).slow(3))
+          .resonance(5)
+          .detune(sine.range(-6, 6).slow(2))
+          .pan(sine.range(0.25, 0.75).slow(4))
           .room(${room.toFixed(2)})
           .roomsize(3)
           .delay(0.2)
