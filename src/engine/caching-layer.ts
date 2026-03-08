@@ -9,6 +9,7 @@ import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-mo
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../theory/resonance-sweep';
+import { attackMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../theory/envelope-evolution';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -50,6 +51,9 @@ export abstract class CachingLayer implements Layer {
 
     // HPF sweep: build-up tension via rising high-pass filter
     result = this.applyHpfSweep(result, state);
+
+    // Envelope evolution: attacks tighten in builds, soften in breakdowns
+    result = this.applyEnvelopeEvolution(result, state);
 
     // Gain arc: crescendo/decrescendo within sections
     result = this.applyGainArc(result, state);
@@ -245,6 +249,36 @@ export abstract class CachingLayer implements Layer {
       /\.fm\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.fm(${(parseFloat(val) * mult).toFixed(1)})`
     );
+  }
+
+  /**
+   * Scale .attack() and .release() by section-progress multipliers.
+   * Builds get punchier, breakdowns get dreamier.
+   */
+  private applyEnvelopeEvolution(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyEnvelopeEvolution(state.section)) return pattern;
+
+    const progress = state.sectionProgress ?? 0;
+    const aMult = attackMultiplier(state.section, progress);
+    const rMult = releaseMultiplier(state.section, progress);
+
+    let result = pattern;
+
+    if (Math.abs(aMult - 1.0) > 0.05) {
+      result = result.replace(
+        /\.attack\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.attack(${(parseFloat(val) * aMult).toFixed(3)})`
+      );
+    }
+
+    if (Math.abs(rMult - 1.0) > 0.05) {
+      result = result.replace(
+        /\.release\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
+      );
+    }
+
+    return result;
   }
 
   /**
