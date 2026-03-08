@@ -20,6 +20,7 @@ import { noteToPitch } from '../../theory/intervallic-consonance';
 import { RhythmicMemory } from '../../theory/rhythmic-memory';
 import { ladderToScaleDegrees } from '../../theory/tendency-tones';
 import { applyBlueNotes } from '../../theory/blue-notes';
+import { shouldTransformMotif, sectionTransform, applyTransform } from '../../theory/motivic-transform';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -486,8 +487,23 @@ export class MelodyLayer extends CachingLayer {
       : null;
 
     if (recalled) {
-      // Develop an existing motif (transpose, invert, fragment, etc.)
-      rawMotif = this.motifMemory.develop(recalled, ladder);
+      // Section-aware motivic transformation: use the right development
+      // technique for the musical moment (builds augment, peaks diminish, etc.)
+      if (shouldTransformMotif(state.mood, state.section)) {
+        const indices = recalled.notes.map(n => ladder.indexOf(n)).filter(i => i >= 0);
+        if (indices.length >= 2) {
+          const transform = sectionTransform(state.section, state.sectionProgress ?? 0);
+          const transformed = applyTransform(indices, transform, ladder.length);
+          rawMotif = transformed
+            .map(i => i < 0 ? '~' : ladder[Math.max(0, Math.min(ladder.length - 1, i))])
+            .filter(n => n !== undefined);
+        } else {
+          rawMotif = this.motifMemory.develop(recalled, ladder);
+        }
+      } else {
+        // Random development (existing behavior)
+        rawMotif = this.motifMemory.develop(recalled, ladder);
+      }
 
       // After developing a recalled motif, optionally create a melodic sequence
       // (motif repeated at shifting pitch levels for momentum and direction)
