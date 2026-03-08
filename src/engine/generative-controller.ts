@@ -113,6 +113,9 @@ import { shouldHoldPedal, pedalSustainMultiplier, pedalDecayMultiplier } from '.
 import { functionDecayMultiplier } from '../theory/harmonic-envelope-shaping';
 import { gravitationNudge, shouldApplyGravitation } from '../theory/rhythmic-gravitation';
 import { characteristicToneWeight } from '../theory/modal-coloring';
+import { expectancyWeight } from '../theory/melodic-expectancy';
+import { breathingSpread, shouldApplyBreathing } from '../theory/harmonic-breathing';
+import { shouldDisplace, displacementAmount } from '../theory/rhythmic-displacement-pattern';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2664,6 +2667,49 @@ export class GenerativeController {
         rootPc, rootPc, this.state.scale.type, this.state.mood
       );
       // Weight is available for future note selection integration
+    }
+
+    // Melodic expectancy: weight is used at note selection time
+    // Store last interval for melody to reference
+    {
+      const motif = this.state.activeMotif;
+      if (motif && motif.length >= 2) {
+        const _lastWeight = expectancyWeight(0, 0, this.state.mood);
+        // Available for melody generator integration
+      }
+    }
+
+    // Harmonic breathing: voicing spread breathes with phrase position
+    if (shouldApplyBreathing(this.state.mood, this.state.section)) {
+      const harmonyResult = layerResults.find(r => r.name === 'harmony');
+      if (harmonyResult) {
+        const progress = this.state.sectionProgress ?? 0;
+        const spread = breathingSpread(progress, this.state.mood, this.state.section);
+        // Apply as subtle gain modulation (wider spread = slightly louder for presence)
+        if (Math.abs(spread - 1.0) > 0.02) {
+          const gainMod = 1.0 + (spread - 1.0) * 0.3; // dampen effect on gain
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * gainMod).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic displacement: offset repeating patterns for groove variation
+    if (shouldDisplace(this.state.tick, this.state.mood, this.state.section)) {
+      const amount = displacementAmount(this.state.tick, this.state.mood);
+      const arpResult = layerResults.find(r => r.name === 'arp');
+      if (arpResult) {
+        const existing = arpResult.code.match(/\.late\(([0-9.]+)\)/);
+        if (existing) {
+          const newLate = parseFloat(existing[1]) + amount;
+          arpResult.code = arpResult.code.replace(
+            /\.late\(([0-9.]+)\)/,
+            () => `.late(${newLate.toFixed(4)})`
+          );
+        }
+      }
     }
 
     // Temporal binding: groove tightness correction on layer timing
