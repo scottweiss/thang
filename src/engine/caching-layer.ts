@@ -11,6 +11,7 @@ import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../theory/resonance-sweep';
 import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../theory/envelope-evolution';
 import { crushOffset, shouldApplyCrushEvolution } from '../theory/crush-evolution';
+import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../theory/frequency-band';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -37,6 +38,9 @@ export abstract class CachingLayer implements Layer {
 
     // Filter envelope: smooth LPF sweep over section duration
     result = this.applyFilterEnvelope(result, state);
+
+    // Frequency band separation: adjust HPF/LPF to avoid layer masking
+    result = this.applyBandSeparation(result, state);
 
     // Resonance sweep: filter Q rises in builds, drops in breakdowns
     result = this.applyResonanceSweep(result, state);
@@ -145,6 +149,36 @@ export abstract class CachingLayer implements Layer {
       /\.lpf\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
     );
+  }
+
+  /**
+   * Adjust HPF/LPF values for frequency band separation between layers.
+   * When many layers are active, tighten each layer's frequency band
+   * to prevent masking (mud).
+   */
+  private applyBandSeparation(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyBandSeparation(state.activeLayers)) return pattern;
+
+    const hpfOff = hpfBandOffset(this.name, state.activeLayers);
+    const lpfOff = lpfBandOffset(this.name, state.activeLayers);
+
+    let result = pattern;
+
+    if (hpfOff > 5 && result.includes('.hpf(')) {
+      result = result.replace(
+        /\.hpf\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.hpf(${Math.round(parseFloat(val) + hpfOff)})`
+      );
+    }
+
+    if (lpfOff < -50 && result.includes('.lpf(')) {
+      result = result.replace(
+        /\.lpf\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.lpf(${Math.max(500, Math.round(parseFloat(val) + lpfOff))})`
+      );
+    }
+
+    return result;
   }
 
   /**

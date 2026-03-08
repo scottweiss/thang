@@ -14,6 +14,7 @@ import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../../theory/envelope-evolution';
 import { crushOffset, shouldApplyCrushEvolution } from '../../theory/crush-evolution';
+import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../../theory/frequency-band';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -103,6 +104,24 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * fbMult).toFixed(2)})`
+        );
+      }
+    }
+
+    // Frequency band separation: tighten HPF/LPF when many layers active
+    if (shouldApplyBandSeparation(state.activeLayers)) {
+      const hpfOff = hpfBandOffset(this.name, state.activeLayers);
+      const lpfOff = lpfBandOffset(this.name, state.activeLayers);
+      if (hpfOff > 5 && result.includes('.hpf(')) {
+        result = result.replace(
+          /\.hpf\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.hpf(${Math.round(parseFloat(val) + hpfOff)})`
+        );
+      }
+      if (lpfOff < -50 && result.includes('.lpf(')) {
+        result = result.replace(
+          /\.lpf\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.lpf(${Math.max(500, Math.round(parseFloat(val) + lpfOff))})`
         );
       }
     }
