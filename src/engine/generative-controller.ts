@@ -183,6 +183,9 @@ import { shapedTension } from '../theory/tension-curve-shaping';
 import { momentumGainMultiplier } from '../theory/melodic-interval-momentum';
 import { partialsReinforcementFm } from '../theory/harmonic-partials-reinforcement';
 import { expectancyGainEmphasis } from '../theory/rhythmic-expectancy-violation';
+import { ambiguityReverbMultiplier } from '../theory/tonal-ambiguity-gradient';
+import { attackMultiplier } from '../theory/attack-transient-shaping';
+import { harmonicRhythmVariance } from '../theory/harmonic-rhythm-variance';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3775,6 +3778,60 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Tonal ambiguity gradient: reverb responds to harmonic distance
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const reverbMul = ambiguityReverbMultiplier(rootPc, tonicPc, this.state.mood);
+      if (reverbMul > 1.03) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.room\(([0-9.]+)\)/,
+              (_, val) => `.room(${Math.min(0.95, parseFloat(val) * reverbMul).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Attack transient shaping: vary attack crispness by beat position
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const atkMul = attackMultiplier(beatPos, this.state.mood);
+      if (Math.abs(atkMul - 1.0) > 0.05) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.attack\(([0-9.]+)\)/,
+              (_, val) => `.attack(${(parseFloat(val) * atkMul).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic rhythm variance: non-uniform chord timing
+    {
+      const variance = harmonicRhythmVariance(
+        this.state.sectionProgress ?? 0,
+        this.state.mood,
+        this.state.section
+      );
+      if (Math.abs(variance - 1.0) > 0.05) {
+        // Apply as slow multiplier to adjust perceived harmonic rhythm
+        for (const result of layerResults) {
+          if (result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.slow\(([0-9.]+)\)/,
+              (_, val) => `.slow(${(parseFloat(val) * variance).toFixed(4)})`
             );
           }
         }
