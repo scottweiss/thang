@@ -71,11 +71,11 @@ const SECTION_MELODY: Record<Section, {
   contourBias: Contour[]; // favored contour shapes
   useCallResponse: boolean; // whether to use call-and-response
 }> = {
-  intro:     { densityMult: 0.4, motifLen: [2, 3], contourBias: ['ascending', 'arch'], useCallResponse: false },
-  build:     { densityMult: 0.7, motifLen: [3, 4], contourBias: ['ascending', 'arch', 'valley'], useCallResponse: true },
-  peak:      { densityMult: 1.0, motifLen: [4, 5], contourBias: ['ascending', 'descending', 'arch', 'valley'], useCallResponse: true },
-  breakdown: { densityMult: 0.35, motifLen: [2, 3], contourBias: ['descending', 'valley'], useCallResponse: false },
-  groove:    { densityMult: 0.85, motifLen: [3, 4], contourBias: ['arch', 'ascending', 'valley'], useCallResponse: true },
+  intro:     { densityMult: 0.4, motifLen: [3, 4], contourBias: ['ascending', 'arch'], useCallResponse: false },
+  build:     { densityMult: 0.7, motifLen: [4, 6], contourBias: ['ascending', 'arch', 'valley'], useCallResponse: true },
+  peak:      { densityMult: 1.0, motifLen: [5, 7], contourBias: ['ascending', 'descending', 'arch', 'valley'], useCallResponse: true },
+  breakdown: { densityMult: 0.35, motifLen: [3, 4], contourBias: ['descending', 'valley'], useCallResponse: false },
+  groove:    { densityMult: 0.85, motifLen: [4, 6], contourBias: ['arch', 'ascending', 'valley'], useCallResponse: true },
 };
 
 export class MelodyLayer extends CachingLayer {
