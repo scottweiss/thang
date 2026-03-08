@@ -48,6 +48,7 @@ import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../../
 import { shouldApplyAmbiguity, suggestAmbiguousExtensions, ambiguityDarkenFactor } from '../../theory/tonal-ambiguity';
 import { accompGravityPull, nextChordBlend, blendVoicings, shouldApplyAccompGravity } from '../../theory/accompaniment-gravity';
 import { shouldApplySpectralHarmony, suggestSpectralEnrichment } from '../../theory/spectral-harmony';
+import { shouldApplyQuartal, quartalVoicing, quintalVoicing, selectVoicingType, quartalVoiceCount } from '../../theory/quartal-voicing';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -629,6 +630,16 @@ export class HarmonyLayer implements Layer {
           hasSuspension = true;
         }
       }
+    }
+
+    // Quartal/quintal voicing: replace tertial with 4th/5th-stacked chords
+    if (!hasSuspension && shouldApplyQuartal(state.tick, mood, state.section)) {
+      const voiceType = selectVoicingType(mood, state.tick);
+      const voices = quartalVoiceCount(state.section);
+      const rootName = chord.root;
+      chordNotes = voiceType === 'quartal'
+        ? quartalVoicing(rootName, 3, voices)
+        : quintalVoicing(rootName, 3, voices);
     }
 
     // Apply voicing spread — wider at peaks, tighter at breakdowns
