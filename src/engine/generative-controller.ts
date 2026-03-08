@@ -128,6 +128,9 @@ import { shouldDouble, doublingOctave } from '../theory/cross-register-doubling'
 import { driftAmount, driftDirection, shouldDrift } from '../theory/tonal-center-drift';
 import { layerTempoRatio, shouldApplyStrata } from '../theory/rhythmic-strata';
 import { harmonicSeriesRatio, harmonicSeriesDepth } from '../theory/harmonic-series-voicing';
+import { anticipatoryGain } from '../theory/anticipatory-accent';
+import { countChromaticMotions, chromaticLeadingGain } from '../theory/chromatic-voice-leading';
+import { barElasticity, shouldApplyMetricElasticity } from '../theory/metric-elasticity';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2908,6 +2911,57 @@ export class GenerativeController {
           );
         }
       }
+    }
+
+    // Anticipatory accent: forward-pulling gain emphasis
+    {
+      const beatPos = (this.state.tick % 4) / 4;
+      const aGain = anticipatoryGain(beatPos, this.state.mood, this.state.section);
+      if (Math.abs(aGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * aGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Chromatic voice leading: emphasis on semitone voice motion
+    {
+      const prevChord = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2]
+        : null;
+      if (prevChord) {
+        const prevPcs = prevChord.notes.map((n: string) => {
+          const map: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+          return map[n.replace(/\d+$/, '')] ?? 0;
+        });
+        const currPcs = this.state.currentChord.notes.map((n: string) => {
+          const map: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+          return map[n.replace(/\d+$/, '')] ?? 0;
+        });
+        const motions = countChromaticMotions(prevPcs, currPcs);
+        const boost = chromaticLeadingGain(motions, currPcs.length, this.state.mood);
+        if (boost > 1.01) {
+          const harmonyResult = layerResults.find(r => r.name === 'harmony');
+          if (harmonyResult) {
+            harmonyResult.code = harmonyResult.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * boost).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Metric elasticity: bar-level tempo breathing
+    if (shouldApplyMetricElasticity(this.state.mood, this.state.section)) {
+      const barPos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const _elasticity = barElasticity(barPos, this.state.mood, this.state.section);
+      // Available for tempo chain integration
     }
 
     // Temporal binding: groove tightness correction on layer timing
