@@ -1,9 +1,24 @@
 import { CachingLayer } from '../caching-layer';
-import { GenerativeState, Section } from '../../types';
+import { GenerativeState, Section, Mood } from '../../types';
 import { randomChoice, shuffle } from '../random';
 import { euclideanFillPositions } from '../../theory/euclidean';
+import { velocityCurve, VelocityPattern } from '../../theory/groove';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
+
+// Mood-specific velocity accent patterns
+const MOOD_VELOCITY: Record<Mood, VelocityPattern> = {
+  ambient: 'flat',
+  downtempo: 'accent14',
+  lofi: 'accent1',
+  trance: 'accent14',
+  avril: 'flat',
+  xtal: 'flat',
+  syro: 'accent14',
+  blockhead: 'accent14',
+  flim: 'accent1',
+  disco: 'accent14',
+};
 
 // Section density multipliers — how much of the arp is active per section
 const SECTION_DENSITY: Record<Section, number> = {
@@ -133,6 +148,8 @@ export class ArpLayer extends CachingLayer {
             : 'broken';
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.buildFromFill(notes, trancePattern, 16, fill);
+        const tranceGain = 0.16 * (0.5 + density * 0.5);
+        const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood);
         return `note("${steps.join(' ')}")
           .sound("sawtooth")
           .attack(0.001)
@@ -140,7 +157,7 @@ export class ArpLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.05)
           .slow(1)
-          .gain(${(0.16 * (0.5 + density * 0.5)).toFixed(3)})
+          .gain("${tranceVelGain}")
           .hpf(250)
           .lpf(${(2000 + brightness * 6000).toFixed(0)})
           .resonance(5)
@@ -218,6 +235,8 @@ export class ArpLayer extends CachingLayer {
             : randomChoice<ArpPattern>(['broken', 'down']);
         const fill = this.pickFill16(density * sectionMult * 1.2);
         const steps = this.buildFromFill(notes, syroPattern, 16, fill);
+        const syroGain = 0.12 * (0.5 + density * 0.5);
+        const syroVelGain = this.getVelocityGain(syroGain, 16, mood);
         return `note("${steps.join(' ')}")
           .sound("sawtooth")
           .attack(0.001)
@@ -225,7 +244,7 @@ export class ArpLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.03)
           .slow(1)
-          .gain(${(0.12 * (0.5 + density * 0.5)).toFixed(3)})
+          .gain("${syroVelGain}")
           .hpf(400)
           .lpf(sine.range(${(1000 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 3000).toFixed(0)}).slow(2))
           .resonance(${(10 + brightness * 5).toFixed(0)})
@@ -244,6 +263,8 @@ export class ArpLayer extends CachingLayer {
         const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'up']);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.buildFromFill(notes, pattern, 8, fill);
+        const bhGain = 0.15 * (0.5 + density * 0.5);
+        const bhVelGain = this.getVelocityGain(bhGain, 8, mood);
         return `note("${steps.join(' ')}")
           .sound("triangle")
           .fm(0.4)
@@ -255,7 +276,7 @@ export class ArpLayer extends CachingLayer {
           .sustain(0.01)
           .release(0.06)
           .slow(2)
-          .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
+          .gain("${bhVelGain}")
           .hpf(350)
           .lpf(${(2000 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(5))
@@ -305,6 +326,8 @@ export class ArpLayer extends CachingLayer {
             : 'broken';
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.buildFromFill(notes, discoPattern, 16, fill);
+        const discoGain = 0.18 * (0.5 + density * 0.5);
+        const velGain = this.getVelocityGain(discoGain, 16, mood);
         return `note("${steps.join(' ')}")
           .sound("sine")
           .fm(${(2 + brightness * 1.5).toFixed(1)})
@@ -316,7 +339,7 @@ export class ArpLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.05)
           .slow(1)
-          .gain(${(0.18 * (0.5 + density * 0.5)).toFixed(3)})
+          .gain("${velGain}")
           .hpf(500)
           .lpf(${(3000 + brightness * 4000).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(3))
@@ -375,6 +398,13 @@ export class ArpLayer extends CachingLayer {
     }
 
     return steps;
+  }
+
+  /** Generate a velocity-weighted gain pattern string for Strudel */
+  private getVelocityGain(baseGain: number, steps: number, mood: Mood): string {
+    const pattern = MOOD_VELOCITY[mood];
+    const curve = velocityCurve(steps, pattern);
+    return curve.map(v => (baseGain * v).toFixed(4)).join(' ');
   }
 
   // Create the note ordering for different arp patterns
