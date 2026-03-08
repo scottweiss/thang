@@ -360,6 +360,9 @@ import { agogicAccentGain } from '../theory/rhythmic-agogic-accent';
 import { orbitTendencyFm } from '../theory/harmonic-orbit-tendency';
 import { peakSpacingGain } from '../theory/melodic-peak-spacing';
 import { beatSubdivisionGain } from '../theory/rhythmic-beat-subdivision-density';
+import { parallelPeriodGain } from '../theory/harmonic-parallel-period';
+import { tessituraComfortGain } from '../theory/melodic-tessitura-comfort';
+import { microAccelOffset } from '../theory/rhythmic-micro-acceleration';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -7108,6 +7111,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${safeMul(val, bsGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic parallel period: reward question-answer phrase symmetry
+    if (this.state.chordHistory.length >= 8) {
+      const history = this.state.chordHistory;
+      const halfLen = Math.floor(history.length / 2);
+      const firstHalf = history.slice(0, halfLen).map(c => c.degree ?? 0);
+      const secondHalf = history.slice(halfLen).map(c => c.degree ?? 0);
+      const ppGain = parallelPeriodGain(firstHalf, secondHalf, this.state.mood, this.state.section);
+      if (ppGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, ppGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic tessitura comfort: boost notes in ideal range
+    {
+      const melodyCenter = this.state.layerCenterPitches?.melody ?? 0;
+      if (melodyCenter > 0) {
+        const tcGain = tessituraComfortGain(melodyCenter, this.state.mood, this.state.section);
+        if (tcGain > 1.001) {
+          for (const result of layerResults) {
+            if (result.name === 'melody') {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${safeMul(val, tcGain, 4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic micro-acceleration: timing push for forward momentum
+    {
+      const beatPos = this.state.tick % 16;
+      const maOffset = microAccelOffset(beatPos, this.state.mood, this.state.section);
+      if (Math.abs(maOffset) > 0.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.late\(([0-9.]+)\)/,
+              (_, val) => `.late(${(safeP(val, 0) + maOffset).toFixed(4)})`
             );
           }
         }
