@@ -225,6 +225,9 @@ import { cadenceTimingGain } from '../theory/phrase-cadence-timing';
 import { rootStrengthGain } from '../theory/harmonic-root-strength';
 import { rhythmicVariation } from '../theory/rhythmic-variation-curve';
 import { warmthFmCorrection } from '../theory/spectral-warmth-tracking';
+import { energyConservationGain } from '../theory/energy-conservation';
+import { repetitionAvoidanceGain } from '../theory/melodic-repetition-avoidance';
+import { voiceCountGain } from '../theory/harmonic-voice-count';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4562,6 +4565,58 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Energy conservation: soft limiter on total system energy
+    {
+      const layerGains = layerResults.map(r => {
+        const match = r.code.match(/\.gain\(([0-9.]+)\)/);
+        return match ? parseFloat(match[1]) : 0.5;
+      });
+      const ecGain = energyConservationGain(layerGains, this.state.mood);
+      if (ecGain < 0.98) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * ecGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic repetition avoidance: penalize repeated pitches
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const currentPc = noteToPC[this.state.currentChord?.root ?? 'C'] ?? 0;
+      const prevPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const raGain = repetitionAvoidanceGain(currentPc, prevPc, this.state.mood);
+      if (raGain < 0.98) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * raGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic voice count: voice count adjusted by section
+    {
+      const vcGain = voiceCountGain(
+        layerResults.length,
+        this.state.mood,
+        this.state.section
+      );
+      if (Math.abs(vcGain - 1.0) > 0.01) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * vcGain).toFixed(4)})`
+          );
         }
       }
     }
