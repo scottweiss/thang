@@ -32,9 +32,11 @@ export class ArpLayer extends CachingLayer {
   protected buildPattern(state: GenerativeState): string {
     const chord = state.currentChord;
     const mood = state.mood;
-    const density = state.params.density;
-    const brightness = state.params.brightness;
-    const room = 0.4 + state.params.spaciousness * 0.4;
+    const tension = state.tension?.overall ?? 0.5;
+    // Tension increases arp activity and brightness, dries out reverb
+    const density = state.params.density * (0.9 + tension * 0.2);
+    const brightness = state.params.brightness * (0.85 + tension * 0.3);
+    const room = (0.4 + state.params.spaciousness * 0.4) * (1.1 - tension * 0.2);
     const sectionMult = SECTION_DENSITY[state.section];
 
     // Build arp notes from chord tones across octaves

@@ -38,9 +38,11 @@ export class HarmonyLayer implements Layer {
     const sectionGain = SECTION_GAIN[state.section];
     const sectionFilter = SECTION_FILTER_MULT[state.section];
     const sectionRoom = SECTION_ROOM_MULT[state.section];
-    const gain = 0.28 * (0.5 + state.params.density * 0.5) * sectionGain;
-    const room = (0.4 + state.params.spaciousness * 0.4) * sectionRoom;
-    const brightness = state.params.brightness * sectionFilter;
+    const tension = state.tension?.overall ?? 0.5;
+    // Tension opens filters (+15%), reduces reverb (-20%), and adds presence
+    const gain = 0.28 * (0.5 + state.params.density * 0.5) * sectionGain * (0.9 + tension * 0.15);
+    const room = (0.4 + state.params.spaciousness * 0.4) * sectionRoom * (1.1 - tension * 0.2);
+    const brightness = state.params.brightness * sectionFilter * (0.85 + tension * 0.3);
 
     // Use raw notes for sus2/sus4 — Strudel's voicing() doesn't recognize them
     const chordStart = (chord.quality === 'sus2' || chord.quality === 'sus4')

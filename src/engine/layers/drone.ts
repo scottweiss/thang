@@ -35,9 +35,11 @@ export class DroneLayer implements Layer {
     const mood = state.mood;
     const sectionGain = SECTION_GAIN[state.section];
     const sectionFilter = SECTION_FILTER_MULT[state.section];
-    const gain = 0.15 * (0.5 + state.params.density * 0.5) * sectionGain;
-    const room = 0.5 + state.params.spaciousness * 0.3;
-    const brightness = state.params.brightness * sectionFilter;
+    const tension = state.tension?.overall ?? 0.5;
+    // Tension adds warmth to bass: opens filter slightly, less reverb at peaks
+    const gain = 0.15 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1);
+    const room = (0.5 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.15);
+    const brightness = state.params.brightness * sectionFilter * (0.9 + tension * 0.2);
 
     // FM index evolves slowly with brightness for organic movement
     const fmSweep = `sine.range(${(0.5 + brightness * 0.5).toFixed(1)}, ${(1.5 + brightness * 2).toFixed(1)}).slow(17)`;

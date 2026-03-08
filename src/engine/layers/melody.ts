@@ -41,9 +41,11 @@ export class MelodyLayer extends CachingLayer {
   protected buildPattern(state: GenerativeState): string {
     const mood = state.mood;
     const density = state.params.density;
-    const room = 0.5 + state.params.spaciousness * 0.4;
-    const brightness = state.params.brightness;
-    const gain = 0.25 * (0.4 + density * 0.6);
+    const tension = state.tension?.overall ?? 0.5;
+    // Tension brightens melody, reduces reverb wash, adds presence
+    const room = (0.5 + state.params.spaciousness * 0.4) * (1.15 - tension * 0.25);
+    const brightness = state.params.brightness * (0.85 + tension * 0.3);
+    const gain = 0.25 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
 
     // Build melodic phrase
     const elements = (mood === 'ambient' || mood === 'xtal')

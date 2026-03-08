@@ -17,10 +17,12 @@ export class AtmosphereLayer extends CachingLayer {
 
   protected buildPattern(state: GenerativeState): string {
     const mood = state.mood;
+    const tension = state.tension?.overall ?? 0.5;
+    // Tension opens atmosphere filter, reduces reverb size for clarity
     const density = state.params.density;
-    const brightness = state.params.brightness;
+    const brightness = state.params.brightness * (0.85 + tension * 0.3);
     const spaciousness = state.params.spaciousness;
-    const room = 0.5 + spaciousness * 0.4;
+    const room = (0.5 + spaciousness * 0.4) * (1.1 - tension * 0.15);
     const section = state.section;
 
     switch (mood) {
