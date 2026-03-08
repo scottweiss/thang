@@ -439,6 +439,39 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
+    // Harmonic anticipation: pull the last notes toward the next chord's tones
+    // This creates forward momentum and smoother harmonic transitions
+    if (state.nextChordHint) {
+      const nextChordNotes = state.nextChordHint.notes.map(n => n.replace(/\d+$/, ''));
+      const nextChordIndices = ladder
+        .map((n, i) => ({ n: n.replace(/\d+$/, ''), i }))
+        .filter(x => nextChordNotes.includes(x.n))
+        .map(x => x.i);
+
+      if (nextChordIndices.length > 0) {
+        // Pull the last 2-3 active notes toward next chord tones
+        for (let i = elements.length - 1, pulled = 0; i >= 0 && pulled < 2; i--) {
+          if (elements[i] !== '~') {
+            const currentIdx = ladder.indexOf(elements[i]);
+            if (currentIdx >= 0 && !nextChordIndices.includes(currentIdx)) {
+              // Find nearest next-chord tone
+              let nearest = nextChordIndices[0];
+              let nearestDist = Math.abs(currentIdx - nearest);
+              for (const nci of nextChordIndices) {
+                const d = Math.abs(currentIdx - nci);
+                if (d < nearestDist) { nearest = nci; nearestDist = d; }
+              }
+              // Only pull if within 3 ladder steps (subtle, not jarring)
+              if (nearestDist <= 3 && Math.random() < 0.5) {
+                elements[i] = ladder[nearest];
+              }
+            }
+            pulled++;
+          }
+        }
+      }
+    }
+
     return elements;
   }
 

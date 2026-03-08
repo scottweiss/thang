@@ -79,4 +79,5 @@ export interface GenerativeState {
   tension: TensionState;
   layerCenterPitches: Record<string, number>;
   ticksSinceChordChange: number;
+  nextChordHint?: ChordState;  // probable next chord for anticipation
 }

@@ -229,6 +229,13 @@ export class ProgressionGenerator {
     return this.currentDegree;
   }
 
+  /** Peek at the most likely next chord without advancing state. */
+  peekNext(): ChordState {
+    const result = this.chain.nextWithHistory(this.previousDegree, this.currentDegree);
+    const chordIdx = result.index % this.chords.length;
+    return this.chords[chordIdx];
+  }
+
   /** Force progression to a specific degree (for cadential steering) */
   forceToDegree(degree: number): ChordState {
     this.currentDegree = degree % this.chords.length;

@@ -273,6 +273,9 @@ export class GenerativeController {
     }
     this.state.currentChord = nextChord;
     this.state.progressionIndex++;
+
+    // Set hint for next chord (melody can use for anticipation)
+    this.state.nextChordHint = this.progression.peekNext();
   }
 
   private async rebuildAll(): Promise<void> {
