@@ -318,6 +318,9 @@ import { patternRotationGain } from '../theory/rhythmic-pattern-rotation';
 import { cadenceWeightGain } from '../theory/harmonic-cadence-weight';
 import { intervalSequenceRewardGain } from '../theory/melodic-interval-sequence-reward';
 import { displacementShiftOffset, displacementEmphasisGain } from '../theory/rhythmic-displacement-shift';
+import { pivotPreparationFm } from '../theory/harmonic-pivot-preparation';
+import { climaxTargetingGain } from '../theory/melodic-climax-targeting';
+import { groovePocketGain } from '../theory/rhythmic-groove-pocket';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6300,6 +6303,63 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * dsGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic pivot preparation: FM enrichment on pivot chords
+    {
+      // Estimate common tones from chord history
+      const prevNotes = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2].notes
+        : [];
+      const curNotes = this.state.currentChord.notes;
+      const commonCount = prevNotes.filter((n: string) => curNotes.includes(n)).length;
+      const ppFm = pivotPreparationFm(commonCount, this.state.mood, this.state.section);
+      if (ppFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * ppFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic climax targeting: gain boost near phrase peak
+    {
+      const centers = this.state.layerCenterPitches || {};
+      const melodyCenter = centers['melody'] || 67;
+      // Estimate phrase range and peak from section progress
+      const range = 12;
+      const peak = melodyCenter + Math.round(range * 0.4);
+      const ctGain = climaxTargetingGain(melodyCenter, peak, range, this.state.mood, this.state.section);
+      if (ctGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic groove pocket: backbeat emphasis and pocket feel
+    {
+      const beatPos = this.state.tick % 16;
+      const gpGain = groovePocketGain(beatPos, this.state.mood, this.state.section);
+      if (Math.abs(gpGain - 1.0) > 0.001) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * gpGain).toFixed(4)})`
             );
           }
         }
