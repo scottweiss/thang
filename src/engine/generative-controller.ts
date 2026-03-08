@@ -149,6 +149,9 @@ import { spectralWidthLpf } from '../theory/spectral-width';
 import { formantLpfMultiplier } from '../theory/formant-tracking';
 import { shouldPreferPalindrome } from '../theory/rhythmic-palindrome';
 import { centroidCorrectionLpf } from '../theory/spectral-centroid-correction';
+import { complementGain } from '../theory/rhythmic-complement';
+import { shouldChainSuspension, suspensionSustainMul } from '../theory/harmonic-suspension-flow';
+import { shouldRecallTimbre } from '../theory/timbral-recall';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3093,6 +3096,53 @@ export class GenerativeController {
           }
         }
       }
+    }
+
+    // Rhythmic complement: boost layers when partners are quiet
+    {
+      const densities: Record<string, number> = {};
+      for (const result of layerResults) {
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (noteMatch) {
+          const parts = noteMatch[1].split(' ');
+          densities[result.name] = parts.filter(p => p !== '~').length / Math.max(1, parts.length);
+        } else {
+          densities[result.name] = 0.5;
+        }
+      }
+      for (const result of layerResults) {
+        if (result.name === 'melody' || result.name === 'arp') {
+          const partner = result.name === 'melody' ? 'arp' : 'melody';
+          const partnerDensity = densities[partner] ?? 0.5;
+          const cGain = complementGain(densities[result.name] ?? 0.5, partnerDensity, this.state.mood, this.state.section);
+          if (cGain > 1.01) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * cGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic suspension flow: sustain boost during suspension chains
+    if (shouldChainSuspension(this.state.tick, this.state.mood, this.state.section)) {
+      const susMul = suspensionSustainMul(this.state.mood, this.state.section);
+      if (susMul > 1.05) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * Math.min(susMul, 1.3)).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Timbral recall: stored for FM/filter blending reference
+    {
+      const _shouldRecall = shouldRecallTimbre(this.state.tick, this.state.mood, this.state.section);
+      // Available for FM/filter setting integration
     }
 
     // Formant tracking: melody LPF follows vocal-like formant curve
