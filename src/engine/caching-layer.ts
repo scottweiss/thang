@@ -23,6 +23,7 @@ import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../theory/tensi
 import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
 import { arrivalEmphasis } from '../theory/arrival-emphasis';
 import { syncedDelayTime } from '../theory/delay-sync';
+import { shouldApplyHemiola, hemiolaType, hemiolaAccentMask, claveAccentMask } from '../theory/hemiola';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -94,6 +95,9 @@ export abstract class CachingLayer implements Layer {
 
     // Metric accent: mood-specific beat emphasis (backbeat, downbeat, etc.)
     result = this.applyMetricAccent(result, state);
+
+    // Hemiola: cross-rhythm accents (3-over-4 or clave 3+3+2)
+    result = this.applyHemiola(result, state);
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
@@ -542,6 +546,31 @@ export abstract class CachingLayer implements Layer {
     if (gains.some(isNaN)) return pattern;
 
     const accented = applyAccentProfile(gains, profile);
+    const newGain = accented.map(v => v.toFixed(4)).join(' ');
+    return pattern.replace(`.gain("${match[1]}")`, `.gain("${newGain}")`);
+  }
+
+  /**
+   * Apply hemiola cross-rhythm accents (3-over-4 or clave 3+3+2).
+   * Adds rhythmic tension by accenting every 3rd beat in 4/4 time.
+   */
+  private applyHemiola(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyHemiola(state.mood, state.section, state.sectionProgress ?? 0)) {
+      return pattern;
+    }
+
+    const match = pattern.match(/\.gain\("([^"]+)"\)/);
+    if (!match) return pattern;
+
+    const gains = match[1].split(' ').map(parseFloat);
+    if (gains.some(isNaN)) return pattern;
+
+    const type = hemiolaType(state.mood);
+    const mask = type === 'clave'
+      ? claveAccentMask(gains.length)
+      : hemiolaAccentMask(gains.length, 3);
+
+    const accented = gains.map((g, i) => g * mask[i]);
     const newGain = accented.map(v => v.toFixed(4)).join(' ');
     return pattern.replace(`.gain("${match[1]}")`, `.gain("${newGain}")`);
   }
