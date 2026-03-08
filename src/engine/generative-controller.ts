@@ -216,6 +216,9 @@ import { layerDisplacement as polyDisplacement } from '../theory/displacement-la
 import { densityWaveGain } from '../theory/harmonic-density-wave';
 import { sequenceGainEmphasis } from '../theory/sequence-recognition';
 import { rotatedAccentGain } from '../theory/accent-rotation';
+import { pedalTensionFm } from '../theory/pedal-resolution-tension';
+import { rangeCompression } from '../theory/melodic-range-compression';
+import { microPauseGain } from '../theory/micro-pause-anticipation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3808,6 +3811,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Pedal resolution tension: FM boost when pedal clashes with chord
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const chordRootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const pFm = pedalTensionFm(tonicPc, chordRootPc, this.state.mood);
+      if (pFm > 1.03) {
+        const droneResult = layerResults.find(r => r.name === 'drone');
+        if (droneResult) {
+          droneResult.code = droneResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * pFm).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic range compression: narrow range during quiet moments
+    {
+      const rc = rangeCompression(
+        this.state.tension?.overall ?? 0.5,
+        this.state.mood,
+        this.state.section
+      );
+      // Range compression affects gain indirectly — compressed range = softer
+      if (rc < 0.85) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * (0.9 + rc * 0.1)).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Micro-pause anticipation: tiny gaps before strong beats
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const mpGain = microPauseGain(beatPos, this.state.mood);
+      if (mpGain < 0.98) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp' || result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * mpGain).toFixed(4)})`
             );
           }
         }
