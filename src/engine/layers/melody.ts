@@ -48,6 +48,7 @@ import { applyMetricConsonance } from '../../theory/metric-consonance';
 import { applyRhythmicResolution } from '../../theory/rhythmic-resolution';
 import { registerCeiling, registerFloor, constrainToRegister } from '../../theory/registral-climax';
 import { shouldApplyEconomy, pitchVocabularySize, selectCorePitches, constrainToVocabulary } from '../../theory/melodic-economy';
+import { buildGravityMap, gravityScore, pitchGravityStrength } from '../../theory/pitch-gravity-well';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -154,6 +155,45 @@ export class MelodyLayer extends CachingLayer {
       const vocabSize = pitchVocabularySize(state.scale.notes.length, mood, state.section);
       const corePitches = selectCorePitches(state.scale.notes, vocabSize, state.scale.root);
       elements = constrainToVocabulary(elements, corePitches);
+    }
+
+    // Pitch gravity well: bias notes toward tonic/chord tone attractors
+    if (pitchGravityStrength(mood) > 0.1) {
+      const NOTE_PC: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const rootPc = NOTE_PC[state.scale.root] ?? 0;
+      const chordPcs = state.currentChord.notes
+        .map(n => NOTE_PC[n.replace(/\d+$/, '')])
+        .filter((pc): pc is number => pc !== undefined);
+      const gMap = buildGravityMap(chordPcs, rootPc, mood, state.section);
+      // On weak beats, if a note has low gravity score, swap to nearest chord tone
+      for (let i = 0; i < elements.length; i++) {
+        if (elements[i] === '~') continue;
+        const name = elements[i].replace(/\d+$/, '');
+        const pc = NOTE_PC[name];
+        if (pc === undefined) continue;
+        const score = gravityScore(pc, gMap);
+        // Only intervene on weak positions with low gravity
+        const isWeak = i % 4 !== 0;
+        if (isWeak && score < 0.15) {
+          // Snap to nearest chord tone
+          const octave = elements[i].match(/\d+$/)?.[0] ?? '4';
+          const chordNames = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+          if (chordNames.length > 0) {
+            let nearest = chordNames[0];
+            let minDist = 12;
+            for (const cn of chordNames) {
+              const cnPc = NOTE_PC[cn] ?? 0;
+              const dist = Math.min(Math.abs(pc - cnPc), 12 - Math.abs(pc - cnPc));
+              if (dist < minDist) { minDist = dist; nearest = cn; }
+            }
+            elements[i] = `${nearest}${octave}`;
+          }
+        }
+      }
     }
 
     // Compound melody: split into interleaved register streams for implied polyphony
