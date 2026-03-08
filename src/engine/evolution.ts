@@ -2,6 +2,7 @@ import { GenerativeState, Mood, Section } from '../types';
 import { densityEnvelope } from '../theory/density-envelope';
 import { harmonicMomentumMultiplier } from '../theory/harmonic-momentum';
 import { resolutionTimingMultiplier } from '../theory/resolution-timing';
+import { selectHarmonicRhythm, harmonicRhythmMultiplier, shouldApplyHarmonicRhythm } from '../theory/harmonic-rhythm-pattern';
 
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
 const CHORD_TIMING: Record<Mood, [number, number]> = {
@@ -34,6 +35,8 @@ const SCALE_TIMING: Record<Mood, [number, number]> = {
 export class EvolutionManager {
   private nextChordChange: number;
   private nextScaleChange: number;
+  /** Chord change counter for harmonic rhythm patterning */
+  private chordChangeIndex = 0;
 
   constructor() {
     const timing = CHORD_TIMING.downtempo;
@@ -61,6 +64,7 @@ export class EvolutionManager {
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
       state.lastChordChange = state.elapsed;
+      this.chordChangeIndex++;
       const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall, state.sectionProgress ?? 0, state.currentChord.degree, state.currentChord.quality);
       this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     }
@@ -110,7 +114,12 @@ export class EvolutionManager {
     const resMod = (chordDegree !== undefined && chordQuality)
       ? resolutionTimingMultiplier(chordDegree, chordQuality, mood)
       : 1.0;
-    return [base[0] * m * tensionMod * momentumMod * resMod, base[1] * m * tensionMod * momentumMod * resMod];
+    // Harmonic rhythm pattern: quick-quick-slow, long-short, accelerando, etc.
+    const rhythmMod = shouldApplyHarmonicRhythm(mood)
+      ? harmonicRhythmMultiplier(selectHarmonicRhythm(section, mood, this.chordChangeIndex), this.chordChangeIndex, mood)
+      : 1.0;
+    const combined = m * tensionMod * momentumMod * resMod * rhythmMod;
+    return [base[0] * combined, base[1] * combined];
   }
 
   private randomBetween(min: number, max: number): number {
