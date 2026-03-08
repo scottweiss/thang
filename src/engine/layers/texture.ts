@@ -5,6 +5,7 @@ import { evolveDrumPattern } from '../../theory/drum-evolution';
 import { applyDrumDynamics, TRANCE_VELOCITIES, AVRIL_VELOCITIES } from '../../theory/drum-dynamics';
 import { addIntelligentGhosts, moodGhostDensity } from '../../theory/ghost-notes';
 import { shouldApplyAdditive, selectGrouping, additiveAccentMask } from '../../theory/additive-rhythm';
+import { shouldApplyDNA, selectDNACell, dnaAccentMask } from '../../theory/rhythmic-dna';
 
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
@@ -540,6 +541,15 @@ export class TextureLayer extends CachingLayer {
   private applyVelocity(baseGain: number, velocityTemplate: string): string {
     const template = applyDrumDynamics(velocityTemplate, this._section, this._tension);
     const gains = template.split(' ').map(v => parseFloat(v) * baseGain);
+
+    // Rhythmic DNA: apply mood-characteristic rhythmic fingerprint
+    if (shouldApplyDNA(this._tick, this._mood, this._section)) {
+      const cell = selectDNACell(this._mood, this._tick);
+      const dnaMask = dnaAccentMask(cell, gains.length, 0.6);
+      for (let i = 0; i < gains.length && i < dnaMask.length; i++) {
+        gains[i] *= dnaMask[i];
+      }
+    }
 
     // Additive rhythm: apply asymmetric accent mask for lopsided groove
     if (shouldApplyAdditive(this._tick, this._mood, this._section)) {
