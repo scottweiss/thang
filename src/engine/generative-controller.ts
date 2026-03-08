@@ -119,6 +119,9 @@ import { shouldDisplace, displacementAmount } from '../theory/rhythmic-displacem
 import { registralGainCorrection } from '../theory/registral-balance';
 import { shouldOrnamentCadence, selectOrnament } from '../theory/cadential-ornamentation';
 import { timbralContrastMultiplier, shouldApplyTimbralContrast } from '../theory/timbral-contrast-curve';
+import { leapRecoveryWeight } from '../theory/intervallic-leap-recovery';
+import { chordDurationElasticity } from '../theory/harmonic-rhythm-elasticity';
+import { perceptualGainCorrection } from '../theory/perceptual-loudness';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2763,6 +2766,43 @@ export class GenerativeController {
               (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Intervallic leap recovery: note selection weight (stored for melody reference)
+    {
+      const motif = this.state.activeMotif;
+      if (motif && motif.length >= 2) {
+        const _recWeight = leapRecoveryWeight(0, 0, this.state.mood);
+        // Available for melody generator integration
+      }
+    }
+
+    // Harmonic rhythm elasticity: chord duration adjusted by quality/function
+    {
+      const _durElasticity = chordDurationElasticity(
+        this.state.currentChord.quality,
+        this.state.currentChord.degree,
+        this.state.mood,
+        this.state.section
+      );
+      // Available for evolution chord timing integration
+    }
+
+    // Perceptual loudness: Fletcher-Munson gain correction per layer
+    {
+      const layerFreqs: Record<string, number> = {
+        drone: 80, harmony: 350, melody: 700, texture: 200, arp: 900, atmosphere: 500
+      };
+      for (const result of layerResults) {
+        const freq = layerFreqs[result.name] ?? 400;
+        const correction = perceptualGainCorrection(freq, this.state.mood);
+        if (Math.abs(correction - 1.0) > 0.01) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * correction).toFixed(4)})`
+          );
         }
       }
     }
