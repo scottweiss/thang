@@ -20,6 +20,7 @@ import { patternDegrade, shouldApplyDegrade } from '../../theory/pattern-density
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../../theory/density-balance';
 import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../../theory/tension-brightness';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
+import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -135,6 +136,17 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * fbMult).toFixed(2)})`
+        );
+      }
+    }
+
+    // Tension delay: echo feedback tracks real-time tension
+    if (shouldApplyTensionDelay(this.name) && result.includes('.delayfeedback(')) {
+      const tdMult = tensionDelayMultiplier(state.tension?.overall ?? 0.5, state.mood);
+      if (Math.abs(tdMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * tdMult).toFixed(2)})`
         );
       }
     }

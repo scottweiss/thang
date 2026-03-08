@@ -19,6 +19,7 @@ import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../theory/density-balance';
 import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../theory/tension-brightness';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../theory/tension-space';
+import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../theory/tension-delay';
 import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
 
 export abstract class CachingLayer implements Layer {
@@ -64,6 +65,9 @@ export abstract class CachingLayer implements Layer {
 
     // Delay evolution: echo intensity builds with section
     result = this.applyDelayEvolution(result, state);
+
+    // Tension delay: echo feedback tracks real-time tension
+    result = this.applyTensionDelay(result, state);
 
     // Timbral morphing: FM index evolves within sections
     result = this.applyTimbralMorph(result, state);
@@ -338,6 +342,27 @@ export abstract class CachingLayer implements Layer {
     }
 
     return result;
+  }
+
+  /**
+   * Scale delay feedback by real-time tension.
+   * High tension = denser echoes, low tension = cleaner.
+   */
+  private applyTensionDelay(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTensionDelay(this.name)) return pattern;
+    if (!pattern.includes('.delayfeedback(')) return pattern;
+
+    const tension = state.tension?.overall ?? 0.5;
+    const mult = tensionDelayMultiplier(tension, state.mood);
+    if (Math.abs(mult - 1.0) < 0.03) return pattern;
+
+    return pattern.replace(
+      /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => {
+        const scaled = Math.min(0.85, parseFloat(val) * mult);
+        return `.delayfeedback(${scaled.toFixed(2)})`;
+      }
+    );
   }
 
   /**
