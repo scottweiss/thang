@@ -8,6 +8,7 @@ import { stereoWidth } from '../../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../../theory/micro-timing';
 import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../../theory/filter-envelope';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
+import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../../theory/delay-evolution';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -67,6 +68,25 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+        );
+      }
+    }
+
+    // Delay evolution: echo intensity evolves with section
+    if (shouldApplyDelayEvolution(state.section) && result.includes('.delay(')) {
+      const progress = state.sectionProgress ?? 0;
+      const wetMult = delayWetMultiplier(state.section, progress);
+      const fbMult = delayFeedbackMultiplier(state.section, progress);
+      if (Math.abs(wetMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.delay\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.delay(${Math.min(1.0, parseFloat(val) * wetMult).toFixed(2)})`
+        );
+      }
+      if (Math.abs(fbMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * fbMult).toFixed(2)})`
         );
       }
     }

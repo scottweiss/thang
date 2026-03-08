@@ -4,6 +4,7 @@ import { stereoWidth } from '../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../theory/micro-timing';
 import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../theory/filter-envelope';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../theory/spatial-depth';
+import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../theory/delay-evolution';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -33,6 +34,9 @@ export abstract class CachingLayer implements Layer {
 
     // Spatial depth: reverb breathes with section progress
     result = this.applySpatialDepth(result, state);
+
+    // Delay evolution: echo intensity builds with section
+    result = this.applyDelayEvolution(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -146,6 +150,45 @@ export abstract class CachingLayer implements Layer {
       result = result.replace(
         /\.roomsize\((\d+(?:\.\d+)?)\)/g,
         (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Scale .delay() and .delayfeedback() by section-progress multipliers.
+   * Builds cascade echoes, breakdowns create vast trails.
+   */
+  private applyDelayEvolution(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyDelayEvolution(state.section)) return pattern;
+    // Skip if pattern has no delay
+    if (!pattern.includes('.delay(')) return pattern;
+
+    const progress = state.sectionProgress ?? 0;
+    const wetMult = delayWetMultiplier(state.section, progress);
+    const fbMult = delayFeedbackMultiplier(state.section, progress);
+
+    let result = pattern;
+
+    if (Math.abs(wetMult - 1.0) > 0.02) {
+      result = result.replace(
+        /\.delay\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => {
+          const scaled = Math.min(1.0, parseFloat(val) * wetMult);
+          return `.delay(${scaled.toFixed(2)})`;
+        }
+      );
+    }
+
+    if (Math.abs(fbMult - 1.0) > 0.02) {
+      result = result.replace(
+        /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => {
+          // Cap total feedback at 0.85 to prevent runaway echoes
+          const scaled = Math.min(0.85, parseFloat(val) * fbMult);
+          return `.delayfeedback(${scaled.toFixed(2)})`;
+        }
       );
     }
 
