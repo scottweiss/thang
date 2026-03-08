@@ -258,6 +258,9 @@ import { arrivalEmphasisGain } from '../theory/section-arrival-emphasis';
 import { functionFmMultiplier } from '../theory/chord-function-color';
 import { rangeCenteringGain } from '../theory/melodic-range-centering';
 import { grooveStabilityGain } from '../theory/groove-stability-index';
+import { suspensionTensionGain } from '../theory/harmonic-suspension-tension';
+import { layerPriorityGain } from '../theory/dynamic-layer-priority';
+import { sectionIdentityFm } from '../theory/timbral-section-identity';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4593,6 +4596,54 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic suspension tension: sus chords build anticipation
+    {
+      const quality7 = this.state.currentChord?.quality ?? 'maj';
+      const ticks7 = this.state.ticksSinceChordChange ?? 0;
+      const stGain = suspensionTensionGain(quality7, ticks7, this.state.mood);
+      if (stGain > 1.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * stGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Dynamic layer priority: melody gets priority
+    {
+      const melodyActive = layerResults.some(r => r.name === 'melody');
+      const lpGain = layerPriorityGain(melodyActive, this.state.mood);
+      if (Math.abs(lpGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * lpGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Timbral section identity: each section has FM character
+    {
+      const siFm = sectionIdentityFm(this.state.mood, this.state.section);
+      if (Math.abs(siFm - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * siFm).toFixed(4)})`
             );
           }
         }
