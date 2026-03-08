@@ -140,6 +140,32 @@ function classifyPosition(
  * How deeply phrase articulation affects each mood.
  * Jazz/intimate moods get more expression; electronic moods less.
  */
+/**
+ * Get per-note gain accents based on phrase position.
+ * Returns gain multipliers: first notes are accented, last notes taper.
+ */
+export function phraseGainAccents(
+  steps: string[],
+  mood: Mood,
+  restToken: string = '~'
+): number[] {
+  const depth = MOOD_ARTICULATION_DEPTH[mood];
+  return steps.map((step, i) => {
+    if (step === restToken) return 1.0;
+    const pos = classifyPosition(steps, i, restToken);
+    const accent = POSITION_GAIN_ACCENT[pos];
+    return 1.0 + (accent - 1.0) * depth;
+  });
+}
+
+const POSITION_GAIN_ACCENT: Record<NotePosition, number> = {
+  first:   1.12,   // announce the phrase
+  middle:  0.95,   // slightly softer (legato feel)
+  last:    0.88,   // taper off
+  reentry: 1.15,   // re-entry after silence
+  solo:    1.05,   // isolated note, clear
+};
+
 const MOOD_ARTICULATION_DEPTH: Record<Mood, number> = {
   avril:     0.8,    // most expressive — intimate piano
   flim:      0.7,    // delicate expression

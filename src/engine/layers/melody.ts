@@ -22,6 +22,7 @@ import { ladderToScaleDegrees } from '../../theory/tendency-tones';
 import { applyBlueNotes } from '../../theory/blue-notes';
 import { shouldTransformMotif, sectionTransform, applyTransform } from '../../theory/motivic-transform';
 import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
+import { phraseGainAccents } from '../../theory/phrase-articulation';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -136,7 +137,12 @@ export class MelodyLayer extends CachingLayer {
     }
 
     // Per-note velocity dynamics — metric accent, contour accent, phrase taper
-    const dynamicGain = applyMelodicDynamics(gain, elements);
+    const rawDynamicGain = applyMelodicDynamics(gain, elements);
+    // Phrase-position accents: first notes crisp, middle legato, last notes taper
+    const accents = phraseGainAccents(elements, mood);
+    const dynamicGain = rawDynamicGain.split(' ')
+      .map((g, i) => (parseFloat(g) * (accents[i] ?? 1.0)).toFixed(4))
+      .join(' ');
 
     switch (mood) {
       case 'ambient':

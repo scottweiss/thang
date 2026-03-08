@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { phraseArticulation, articulationToGainPattern } from './phrase-articulation';
+import { phraseArticulation, articulationToGainPattern, phraseGainAccents } from './phrase-articulation';
 
 describe('phraseArticulation', () => {
   it('returns correct length', () => {
@@ -82,5 +82,44 @@ describe('articulationToGainPattern', () => {
     const mults = phraseArticulation(['C3', '~', 'G3'], 'downtempo');
     const pattern = articulationToGainPattern(mults);
     pattern.attack.split(' ').forEach(v => expect(parseFloat(v)).not.toBeNaN());
+  });
+});
+
+describe('phraseGainAccents', () => {
+  it('returns correct length', () => {
+    const accents = phraseGainAccents(['C3', '~', 'E3', 'G3'], 'lofi');
+    expect(accents).toHaveLength(4);
+  });
+
+  it('rests get neutral 1.0', () => {
+    const accents = phraseGainAccents(['C3', '~', 'E3'], 'lofi');
+    expect(accents[1]).toBe(1.0);
+  });
+
+  it('first note is accented (> 1)', () => {
+    const accents = phraseGainAccents(['C3', 'E3', 'G3'], 'avril');
+    expect(accents[0]).toBeGreaterThan(1.0);
+  });
+
+  it('last note tapers (< 1)', () => {
+    const accents = phraseGainAccents(['C3', 'E3', 'G3'], 'avril');
+    expect(accents[2]).toBeLessThan(1.0);
+  });
+
+  it('trance accents are closer to neutral', () => {
+    const avril = phraseGainAccents(['C3', 'E3', 'G3'], 'avril');
+    const trance = phraseGainAccents(['C3', 'E3', 'G3'], 'trance');
+    // Avril first note accent should be stronger than trance
+    expect(avril[0] - 1.0).toBeGreaterThan(trance[0] - 1.0);
+  });
+
+  it('all values are positive', () => {
+    const moods = ['ambient', 'downtempo', 'lofi', 'trance', 'avril', 'xtal', 'syro', 'blockhead', 'flim', 'disco'] as const;
+    for (const mood of moods) {
+      const accents = phraseGainAccents(['C3', 'E3', '~', 'G3', 'B3'], mood);
+      for (const a of accents) {
+        expect(a).toBeGreaterThan(0);
+      }
+    }
   });
 });
