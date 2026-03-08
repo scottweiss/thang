@@ -51,6 +51,10 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
 
       <div class="divider"></div>
 
+      <div class="energy-bar-container">
+        <div class="energy-bar" id="energyBar"></div>
+      </div>
+
       <div class="state-display">
         <div class="state-item">
           <div class="state-label">scale</div>
@@ -185,11 +189,26 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
     }
   });
 
+  const sectionEnergyMap: Record<string, number> = {
+    intro: 0.15, build: 0.4, peak: 1.0, breakdown: 0.25, groove: 0.7,
+  };
+  let smoothEnergy = 0.15;
+
   function updateState(state: GenerativeState): void {
     const scaleEl = app.querySelector('#scaleDisplay') as HTMLElement;
     const chordEl = app.querySelector('#chordDisplay') as HTMLElement;
     const sectionEl = app.querySelector('#sectionDisplay') as HTMLElement;
     const elapsedEl = app.querySelector('#elapsedDisplay') as HTMLElement;
+    const energyBar = app.querySelector('#energyBar') as HTMLElement;
+
+    // Smooth energy interpolation
+    const targetEnergy = sectionEnergyMap[state.section] ?? 0.5;
+    smoothEnergy += (targetEnergy - smoothEnergy) * 0.08;
+    if (energyBar) {
+      const pct = Math.round(smoothEnergy * 100);
+      energyBar.style.width = `${pct}%`;
+      energyBar.style.opacity = `${0.5 + smoothEnergy * 0.5}`;
+    }
 
     if (scaleEl) {
       const shortType = state.scale.type.replace('minor', 'min').replace('major', 'maj');
