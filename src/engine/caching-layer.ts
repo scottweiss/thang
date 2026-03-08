@@ -17,6 +17,7 @@ import { slowMultiplier, shouldApplyRhythmicAcceleration } from '../theory/rhyth
 import { chorusDepth, shouldApplyChorus } from '../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../theory/density-balance';
+import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../theory/tension-brightness';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -43,6 +44,9 @@ export abstract class CachingLayer implements Layer {
 
     // Filter envelope: smooth LPF sweep over section duration
     result = this.applyFilterEnvelope(result, state);
+
+    // Tension brightness: LPF tracks real-time tension (stacks on filter envelope)
+    result = this.applyTensionBrightness(result, state);
 
     // Frequency band separation: adjust HPF/LPF to avoid layer masking
     result = this.applyBandSeparation(result, state);
@@ -160,6 +164,24 @@ export abstract class CachingLayer implements Layer {
 
     // Only modulate if meaningfully different from 1.0
     if (mult > 0.98) return pattern;
+
+    // Scale static .lpf(NUMBER) values
+    return pattern.replace(
+      /\.lpf\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
+    );
+  }
+
+  /**
+   * Scale LPF by real-time tension for spectral responsiveness.
+   * High tension = brighter (filter opens), low tension = darker.
+   */
+  private applyTensionBrightness(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTensionBrightness(this.name)) return pattern;
+
+    const tension = state.tension?.overall ?? 0.5;
+    const mult = tensionBrightnessMultiplier(tension, state.mood);
+    if (Math.abs(mult - 1.0) < 0.03) return pattern;
 
     // Scale static .lpf(NUMBER) values
     return pattern.replace(

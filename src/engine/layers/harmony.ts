@@ -18,6 +18,7 @@ import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../../t
 import { chorusDepth, shouldApplyChorus } from '../../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../../theory/density-balance';
+import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../../theory/tension-brightness';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -57,6 +58,17 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
+        );
+      }
+    }
+
+    // Tension brightness: LPF tracks real-time tension
+    if (shouldApplyTensionBrightness(this.name)) {
+      const tbMult = tensionBrightnessMultiplier(state.tension?.overall ?? 0.5, state.mood);
+      if (Math.abs(tbMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.lpf\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.lpf(${Math.round(parseFloat(val) * tbMult)})`
         );
       }
     }
