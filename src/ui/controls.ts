@@ -59,6 +59,10 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
           <div class="state-value" id="chordDisplay">Cm7</div>
         </div>
         <div class="state-item">
+          <div class="state-label">section</div>
+          <div class="state-value" id="sectionDisplay">intro</div>
+        </div>
+        <div class="state-item">
           <div class="state-label">time</div>
           <div class="state-value" id="elapsedDisplay">0:00</div>
         </div>
@@ -118,6 +122,7 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
   function updateState(state: GenerativeState): void {
     const scaleEl = app.querySelector('#scaleDisplay') as HTMLElement;
     const chordEl = app.querySelector('#chordDisplay') as HTMLElement;
+    const sectionEl = app.querySelector('#sectionDisplay') as HTMLElement;
     const elapsedEl = app.querySelector('#elapsedDisplay') as HTMLElement;
 
     if (scaleEl) {
@@ -133,6 +138,14 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
         chordEl.classList.add('chord-flash');
         if (chordFlashTimer) clearTimeout(chordFlashTimer);
         chordFlashTimer = setTimeout(() => chordEl.classList.remove('chord-flash'), 600);
+      }
+    }
+
+    if (sectionEl) {
+      sectionEl.textContent = state.section;
+      if (state.sectionChanged) {
+        sectionEl.classList.add('chord-flash');
+        setTimeout(() => sectionEl.classList.remove('chord-flash'), 800);
       }
     }
 

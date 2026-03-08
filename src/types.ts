@@ -50,6 +50,8 @@ export interface GlobalParams {
   spaciousness: number;
 }
 
+export type Section = 'intro' | 'build' | 'peak' | 'breakdown' | 'groove';
+
 export interface GenerativeState {
   scale: ScaleState;
   currentChord: ChordState;
@@ -63,4 +65,7 @@ export interface GenerativeState {
   tick: number;
   chordChanged: boolean;
   scaleChanged: boolean;
+  section: Section;
+  sectionChanged: boolean;
+  activeLayers: Set<string>;
 }

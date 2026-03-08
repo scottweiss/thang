@@ -68,6 +68,11 @@ export class Visualizer {
       const palette = MOOD_PALETTES[state.mood];
       this.targetHue = palette.hues[state.progressionIndex % palette.hues.length];
     }
+
+    // Big pulse on section changes
+    if (state.sectionChanged) {
+      this.pulseIntensity = Math.max(this.pulseIntensity, 1.5);
+    }
   }
 
   start(): void {

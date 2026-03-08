@@ -4,6 +4,7 @@ import { buildScaleState, getRelatedScales } from '../theory/scales';
 import { ProgressionGenerator } from '../theory/progressions';
 import { smoothVoicing } from '../theory/voice-leading';
 import { EvolutionManager } from './evolution';
+import { SectionManager } from './section-manager';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -27,6 +28,7 @@ export class GenerativeController {
   private state: GenerativeState;
   private progression: ProgressionGenerator;
   private evolution: EvolutionManager;
+  private sections: SectionManager;
   private layers: Layer[];
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private onStateChange?: (state: GenerativeState) => void;
@@ -37,6 +39,7 @@ export class GenerativeController {
 
     this.progression = new ProgressionGenerator(initialScale, mood);
     this.evolution = new EvolutionManager();
+    this.sections = new SectionManager();
 
     this.state = {
       scale: initialScale,
@@ -56,6 +59,9 @@ export class GenerativeController {
       tick: 0,
       chordChanged: false,
       scaleChanged: false,
+      section: 'intro',
+      sectionChanged: false,
+      activeLayers: new Set(['drone', 'atmosphere']),
     };
 
     this.layers = [
@@ -89,6 +95,9 @@ export class GenerativeController {
     this.state.mood = mood;
     this.state.params.tempo = MOOD_TEMPOS[mood];
     this.progression.setMood(mood);
+    this.sections.reset(mood);
+    this.state.section = 'intro';
+    this.state.sectionChanged = true;
   }
 
   setDensity(v: number): void { this.state.params.density = v; }
@@ -105,6 +114,7 @@ export class GenerativeController {
 
     this.state.chordChanged = false;
     this.state.scaleChanged = false;
+    this.state.sectionChanged = false;
 
     if (scaleChange) {
       this.modulateScale();
@@ -115,6 +125,9 @@ export class GenerativeController {
       this.advanceChord();
       this.state.chordChanged = true;
     }
+
+    // Evolve sections (steers density/brightness, manages transitions)
+    this.sections.evolve(this.state, dt);
 
     this.state.tick++;
 
@@ -146,7 +159,12 @@ export class GenerativeController {
   }
 
   private async rebuildAll(): Promise<void> {
-    const layerCodes = this.layers.map(layer => layer.generate(this.state));
+    // Only include layers that are active in the current section
+    const layerCodes = this.layers
+      .filter(layer => this.state.activeLayers.has(layer.name))
+      .map(layer => layer.generate(this.state));
+
+    if (layerCodes.length === 0) return;
 
     const fullCode = `setCps(${this.state.params.tempo})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
