@@ -5,6 +5,19 @@ import { randomChoice } from '../random';
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
 
+// Velocity templates — per-step gain multipliers for human feel
+// Values are relative: 1.0 = full accent, 0.5 = ghost note
+const LOFI_VELOCITIES = [
+  '1 0.4 0.3 0.5 1 0.3 0.4 0.7 0.9 0.3 0.5 0.4 1 0.3 0.4 0.5',   // classic swing
+  '1 0.3 0.5 0.6 1 0.4 0.3 0.8 1 0.3 0.6 0.3 1 0.5 0.3 0.4',     // J Dilla feel
+  '0.9 0.4 0.4 0.7 1 0.3 0.5 0.5 0.8 0.4 0.3 0.6 1 0.4 0.5 0.3', // laid back
+];
+
+const DOWNTEMPO_VELOCITIES = [
+  '1 0.3 0.2 0.3 0.9 0.2 0.3 0.4 0.8 0.2 0.3 0.3 0.7 0.2 0.3 0.2', // spacious
+  '0.9 0.2 0.3 0.5 1 0.3 0.2 0.6 0.8 0.3 0.2 0.4 0.9 0.2 0.3 0.3', // breathing
+];
+
 // Lofi boom-bap patterns — J Dilla / Nujabes inspired
 // Syncopated kicks, snare on 2&4, ghost hats
 const LOFI_PATTERNS = [
@@ -125,9 +138,10 @@ export class TextureLayer extends CachingLayer {
     }
 
     // Downtempo: spacious, organic — more reverb, delay, wider stereo, gentle LPF
+    const dtGainPattern = this.applyVelocity(gain, randomChoice(DOWNTEMPO_VELOCITIES));
     return `sound("${pattern}")
       .slow(1)
-      .gain(${gain.toFixed(3)})
+      .gain("${dtGainPattern}")
       .lpf(${(1800 + brightness * 3000).toFixed(0)})
       .pan(sine.range(0.3, 0.7).slow(5))
       .room(${(room * 1.2).toFixed(2)})
@@ -151,10 +165,11 @@ export class TextureLayer extends CachingLayer {
       pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
     }
 
-    // Lofi: warm, crunchy — bit crush, heavy LPF, tight room, late swing
+    // Lofi: warm, crunchy — bit crush, heavy LPF, tight room, velocity groove
+    const lofiGainPattern = this.applyVelocity(gain, randomChoice(LOFI_VELOCITIES));
     return `sound("${pattern}")
       .slow(1)
-      .gain(${gain.toFixed(3)})
+      .gain("${lofiGainPattern}")
       .crush(${(10 + brightness * 4).toFixed(0)})
       .lpf(${(1500 + brightness * 2500).toFixed(0)})
       .hpf(80)
@@ -214,6 +229,11 @@ export class TextureLayer extends CachingLayer {
       .room(${(room * 0.8).toFixed(2)})
       .roomsize(3)
       .orbit(${this.orbit})`;
+  }
+
+  // Multiply base gain by velocity template values to create per-step gain pattern
+  private applyVelocity(baseGain: number, velocityTemplate: string): string {
+    return velocityTemplate.split(' ').map(v => (parseFloat(v) * baseGain).toFixed(3)).join(' ');
   }
 
   // Remove some hits from a pattern (for breakdowns)
