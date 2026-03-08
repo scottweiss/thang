@@ -23,6 +23,7 @@ import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominant
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
+import { headroomScalar, shouldApplyHeadroom } from '../theory/headroom';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
 import { HarmonyLayer } from './layers/harmony';
@@ -408,6 +409,21 @@ export class GenerativeController {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * trajGain).toFixed(4)})`;
             return `.gain((${expr}) * ${trajGain.toFixed(4)})`;
+          }
+        );
+      }
+    }
+
+    // Headroom management: reduce gain when many layers are sounding
+    if (shouldApplyHeadroom(layerResults.length)) {
+      const hrScalar = headroomScalar(layerResults.length);
+      for (const result of layerResults) {
+        result.code = result.code.replace(
+          /\.gain\(([^)]+)\)/,
+          (_, expr) => {
+            const num = parseFloat(expr);
+            if (!isNaN(num)) return `.gain(${(num * hrScalar).toFixed(4)})`;
+            return `.gain((${expr}) * ${hrScalar.toFixed(4)})`;
           }
         );
       }
