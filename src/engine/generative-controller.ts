@@ -282,6 +282,9 @@ import { sectionEnergyCurveGain } from '../theory/section-energy-curve';
 import { overlapAvoidanceGain } from '../theory/voice-overlap-avoidance';
 import { tensionColorLpf } from '../theory/harmonic-tension-color-map';
 import { phraseBoundaryGain } from '../theory/rhythmic-phrase-boundary';
+import { extensionBrightnessFm } from '../theory/chord-extension-brightness';
+import { resolutionWeightGain } from '../theory/melodic-resolution-weight';
+import { temporalDensityWaveGain } from '../theory/temporal-density-wave';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5409,6 +5412,52 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Chord extension brightness: richer chords get FM color
+    {
+      const ebFm = extensionBrightnessFm(this.state.currentChord.quality, this.state.mood);
+      if (Math.abs(ebFm - 1.0) > 0.005) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * ebFm).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic resolution weight: chord tones get gain emphasis
+    {
+      if (this.state.activeMotif && this.state.activeMotif.length > 0) {
+        const lastNote = this.state.activeMotif[this.state.activeMotif.length - 1];
+        const rwGain = resolutionWeightGain(lastNote, this.state.currentChord.notes, this.state.mood);
+        if (Math.abs(rwGain - 1.0) > 0.005) {
+          const melodyResult = layerResults.find(r => r.name === 'melody');
+          if (melodyResult) {
+            melodyResult.code = melodyResult.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rwGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Temporal density wave: long-cycle gain oscillation per layer
+    {
+      const layerIndexMap: Record<string, number> = { drone: 0, harmony: 1, melody: 2, texture: 3, arp: 4, atmosphere: 5 };
+      for (const result of layerResults) {
+        const idx = layerIndexMap[result.name] ?? 0;
+        const tdwGain = temporalDensityWaveGain(this.state.tick, idx, this.state.mood);
+        if (Math.abs(tdwGain - 1.0) > 0.005) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * tdwGain).toFixed(4)})`
+          );
         }
       }
     }
