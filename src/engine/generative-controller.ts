@@ -243,6 +243,9 @@ import { onsetBalanceGain } from '../theory/onset-density-balance';
 import { releaseMultiplier as sustainReleaseMult } from '../theory/sustain-release-curve';
 import { chromaticNeighborFm } from '../theory/chromatic-neighbor-emphasis';
 import { densityInversionGain } from '../theory/rhythmic-density-inversion';
+import { maskingAvoidanceGain } from '../theory/frequency-masking-avoidance';
+import { anchorPointGain } from '../theory/rhythmic-anchor-point';
+import { peakBrightnessGain } from '../theory/melodic-peak-brightness';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4580,6 +4583,57 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Frequency masking avoidance: reduce gain for overlapping layers
+    {
+      for (const result of layerResults) {
+        for (const other of layerResults) {
+          if (result.name !== other.name) {
+            const maGain = maskingAvoidanceGain(result.name, other.name, this.state.mood);
+            if (maGain < 0.97) {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${(parseFloat(val) * maGain).toFixed(4)})`
+              );
+              break; // only apply worst masker
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic anchor point: strong beats get stability emphasis
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const apGain = anchorPointGain(beatPos, this.state.mood);
+      if (Math.abs(apGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * apGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic peak brightness: highest notes get brightness boost
+    {
+      const noteToMidi5: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const currentMidi5 = noteToMidi5[this.state.currentChord?.root ?? 'C'] ?? 60;
+      const peakMidi = currentMidi5 + 7; // assume phrase peak is ~fifth above root
+      const pbGain = peakBrightnessGain(currentMidi5, peakMidi, this.state.mood);
+      if (Math.abs(pbGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * pbGain).toFixed(4)})`
+          );
         }
       }
     }
