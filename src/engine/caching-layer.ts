@@ -24,6 +24,7 @@ import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
 import { arrivalEmphasis } from '../theory/arrival-emphasis';
 import { syncedDelayTime } from '../theory/delay-sync';
 import { shouldApplyHemiola, hemiolaType, hemiolaAccentMask, claveAccentMask } from '../theory/hemiola';
+import { layerPhaseOffset, shouldApplyPhaseOffset } from '../theory/rhythmic-phase';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -110,6 +111,17 @@ export abstract class CachingLayer implements Layer {
 
     // Arrival emphasis: cadential resolution accent (gain + brightness boost)
     result = this.applyArrivalEmphasis(result, state);
+
+    // Rhythmic phase offset: shift arp timing for inter-layer phasing
+    if (shouldApplyPhaseOffset(this.name, state.mood)) {
+      const offset = layerPhaseOffset(this.name, state.mood, state.section);
+      if (offset > 0.01) {
+        result = result.replace(
+          /\.orbit\((\d+)\)/,
+          `.late(${offset.toFixed(4)}).orbit($1)`
+        );
+      }
+    }
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
