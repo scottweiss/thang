@@ -44,6 +44,7 @@ import { shouldApplyCompound, createCompoundMelody, compoundSeparation, compound
 import { shouldApplyRhythmicCadence, selectCadenceType, applyRhythmicCadence } from '../../theory/rhythmic-cadence';
 import { tessituraGainMap } from '../../theory/tessitura';
 import { detectInertiaDirection, inertiaBias, inertiaStrength } from '../../theory/melodic-inertia';
+import { applyMetricConsonance } from '../../theory/metric-consonance';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -130,6 +131,11 @@ export class MelodyLayer extends CachingLayer {
       const constrained = constrainRange(elements, mood);
       for (let ri = 0; ri < elements.length; ri++) elements[ri] = constrained[ri];
     }
+
+    // Metric consonance: chord tones on strong beats, passing tones on weak
+    elements = applyMetricConsonance(
+      elements, state.currentChord.notes, state.scale.notes, mood
+    );
 
     // Compound melody: split into interleaved register streams for implied polyphony
     if (shouldApplyCompound(state.tick, mood, state.section)) {
