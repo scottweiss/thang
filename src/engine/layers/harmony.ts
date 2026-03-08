@@ -50,6 +50,7 @@ import { accompGravityPull, nextChordBlend, blendVoicings, shouldApplyAccompGrav
 import { shouldApplySpectralHarmony, suggestSpectralEnrichment } from '../../theory/spectral-harmony';
 import { shouldApplyQuartal, quartalVoicing, quintalVoicing, selectVoicingType, quartalVoiceCount } from '../../theory/quartal-voicing';
 import { shouldApplyField, overtoneVoicing, fieldPartials, blendVoicings as blendOvertone } from '../../theory/harmonic-field';
+import { shouldApplyVoicingDensity, targetVoiceCount, thinVoicing } from '../../theory/voicing-density';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -792,6 +793,12 @@ export class HarmonyLayer implements Layer {
     if (hasSuspension && susResolutionVoicings) {
       const chordStart = `note("${voicingsToPattern(susResolutionVoicings)}")`;
       return this.buildSoundChain(chordStart, mood, gain, brightness, room);
+    }
+
+    // Voicing density: thin chord to target voice count based on tension/section
+    if (shouldApplyVoicingDensity(mood)) {
+      const voices = targetVoiceCount(mood, state.section, tension);
+      chordNotes = thinVoicing(chordNotes, voices);
     }
 
     // Harmonic animation: inner voices move to neighbor tones within held chords
