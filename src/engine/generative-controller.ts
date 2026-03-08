@@ -42,6 +42,8 @@ import { shouldApplyUnison, selectUnisonPattern, unisonAccentMask, unisonIntensi
 import { shouldApplySaturation, saturationLevel, motifInjectionCount, selectMotifFragment, saturatedLayers } from '../theory/motivic-saturation';
 import { fmIndexMultiplier, cadentialLpf, isResolutionChord } from '../theory/timbral-cadence';
 import { isStructuralDownbeat, downbeatGainBoost } from '../theory/structural-downbeat';
+import { totalSurprise, surpriseBrightness, surpriseGain } from '../theory/harmonic-surprise';
+import { outerIntervalTension, intervalReverb, intervalFmDepth } from '../theory/intervallic-tension-map';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -844,6 +846,65 @@ export class GenerativeController {
               if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
               return `.gain((${expr}) * ${boost.toFixed(4)})`;
             }
+          );
+        }
+      }
+    }
+
+    // Harmonic surprise: unexpected chords get brightness/gain flash
+    if (this.state.chordChanged && this.state.chordHistory.length > 0) {
+      const prevChord2 = this.state.chordHistory[this.state.chordHistory.length - 1];
+      const surprise = totalSurprise(
+        prevChord2.degree, this.state.currentChord.degree,
+        this.state.currentChord.quality
+      );
+      if (surprise > 0.15) {
+        const brightMult = surpriseBrightness(surprise, this.state.mood);
+        const gainMult = surpriseGain(surprise, this.state.mood);
+        for (const result of layerResults) {
+          if (brightMult > 1.01) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
+            );
+          }
+          if (gainMult > 1.01) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
+                return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
+    // Intervallic tension: melody-bass interval colors reverb and FM
+    {
+      const melodyMotif = this.state.activeMotif;
+      const bassNote = this.state.currentChord.notes[0] ?? null;
+      const melodyNote = melodyMotif && melodyMotif.length > 0
+        ? melodyMotif.find(n => n !== '~') ?? null
+        : null;
+      const outerTension = outerIntervalTension(melodyNote, bassNote);
+      const reverbMult = intervalReverb(outerTension, this.state.mood);
+      const fmMult2 = intervalFmDepth(outerTension, this.state.mood);
+      if (Math.abs(reverbMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.room\(([0-9.]+)\)/,
+            (_, val) => `.room(${(parseFloat(val) * reverbMult).toFixed(2)})`
+          );
+        }
+      }
+      if (Math.abs(fmMult2 - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmMult2).toFixed(2)})`
           );
         }
       }
