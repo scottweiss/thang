@@ -34,6 +34,8 @@ import { addAnacrusis } from '../../theory/anacrusis';
 import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
 import { anchorBias, melodicAnchorStrength } from '../../theory/melodic-anchor';
 import { gravityPlacementWeights, rhythmicGravityStrength } from '../../theory/rhythmic-gravity';
+import { elisionTendency } from '../../theory/phrase-elision';
+import { anticipationProbability, anticipationTones, anticipationBias, shouldAnticipate } from '../../theory/harmonic-anticipation';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -127,7 +129,9 @@ export class MelodyLayer extends CachingLayer {
     }
 
     // Phrase breathing: insert rests between phrases for natural phrasing
-    const breathRate = breathingRate(state.section, tension);
+    // Phrase elision reduces breathing for continuous flow (mood-dependent)
+    const rawBreathRate = breathingRate(state.section, tension);
+    const breathRate = rawBreathRate * (1.0 - elisionTendency(mood) * 0.5);
     if (breathRate > 0.05) {
       elements = insertBreaths(elements, breathRate, 4);
     }
@@ -765,34 +769,41 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
-    // Harmonic anticipation: pull the last notes toward the next chord's tones
-    // This creates forward momentum and smoother harmonic transitions
-    if (state.nextChordHint) {
-      const nextChordNotes = state.nextChordHint.notes.map(n => n.replace(/\d+$/, ''));
-      const nextChordIndices = ladder
-        .map((n, i) => ({ n: n.replace(/\d+$/, ''), i }))
-        .filter(x => nextChordNotes.includes(x.n))
-        .map(x => x.i);
+    // Harmonic anticipation: pull ending notes toward next chord's tones
+    // Uses mood/section-aware probability for forward momentum
+    if (state.nextChordHint && shouldAnticipate(mood)) {
+      const antProb = anticipationProbability(
+        state.ticksSinceChordChange, 8, mood, state.section
+      );
+      if (antProb > 0) {
+        const antTones = anticipationTones(state.currentChord, state.nextChordHint);
+        if (antTones.length > 0) {
+          const nextChordIndices = ladder
+            .map((n, i) => ({ n: n.replace(/\d+$/, ''), i }))
+            .filter(x => antTones.includes(x.n))
+            .map(x => x.i);
 
-      if (nextChordIndices.length > 0) {
-        // Pull the last 2-3 active notes toward next chord tones
-        for (let i = elements.length - 1, pulled = 0; i >= 0 && pulled < 2; i--) {
-          if (elements[i] !== '~') {
-            const currentIdx = ladder.indexOf(elements[i]);
-            if (currentIdx >= 0 && !nextChordIndices.includes(currentIdx)) {
-              // Find nearest next-chord tone
-              let nearest = nextChordIndices[0];
-              let nearestDist = Math.abs(currentIdx - nearest);
-              for (const nci of nextChordIndices) {
-                const d = Math.abs(currentIdx - nci);
-                if (d < nearestDist) { nearest = nci; nearestDist = d; }
+          for (let i = elements.length - 1, pulled = 0; i >= 0 && pulled < 2; i--) {
+            if (elements[i] !== '~') {
+              const bias = anticipationBias(elements[i], antTones, antProb);
+              if (bias > 1.0 && nextChordIndices.length > 0) {
+                // Already an anticipation tone — keep it
+              } else if (nextChordIndices.length > 0) {
+                const currentIdx = ladder.indexOf(elements[i]);
+                if (currentIdx >= 0) {
+                  let nearest = nextChordIndices[0];
+                  let nearestDist = Math.abs(currentIdx - nearest);
+                  for (const nci of nextChordIndices) {
+                    const d = Math.abs(currentIdx - nci);
+                    if (d < nearestDist) { nearest = nci; nearestDist = d; }
+                  }
+                  if (nearestDist <= 3 && Math.random() < antProb) {
+                    elements[i] = ladder[nearest];
+                  }
+                }
               }
-              // Only pull if within 3 ladder steps (subtle, not jarring)
-              if (nearestDist <= 3 && Math.random() < 0.5) {
-                elements[i] = ladder[nearest];
-              }
+              pulled++;
             }
-            pulled++;
           }
         }
       }

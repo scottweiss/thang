@@ -6,7 +6,7 @@ import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } fr
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
-import { anticipationWeight, anticipationGhostNote, shouldAnticipate } from '../../theory/harmonic-anticipation';
+import { anticipationProbability, shouldAnticipate } from '../../theory/harmonic-anticipation';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
@@ -140,14 +140,16 @@ export class DroneLayer implements Layer {
     }
 
     // Harmonic anticipation: blend a ghost note toward the next chord root
-    if (shouldAnticipate(state.ticksSinceChordChange, state.mood, !!state.nextChordHint)) {
-      const weight = anticipationWeight(state.ticksSinceChordChange, state.mood);
-      const nextRoot = state.nextChordHint!.root;
-      const currentRoot = bassFollowsChord(state.mood) ? state.currentChord.root : state.scale.root;
-      // Determine octave from the pattern (most drones use octave 1 or 2)
-      const octave = state.mood === 'xtal' ? 1 : 2;
-      const ghost = anticipationGhostNote(currentRoot, nextRoot, octave, weight);
-      if (ghost) {
+    if (state.nextChordHint && shouldAnticipate(state.mood)) {
+      const weight = anticipationProbability(
+        state.ticksSinceChordChange, 8, state.mood, state.section
+      );
+      if (weight > 0.1) {
+        const nextRoot = state.nextChordHint.root;
+        const octave = state.mood === 'xtal' ? 1 : 2;
+        // Very quiet ghost of the next root, fading in as chord change approaches
+        const ghostGain = (0.04 * weight).toFixed(4);
+        const ghost = `note("${nextRoot}${octave}").sound("sine").gain(${ghostGain}).lpf(200).attack(0.1).decay(1).sustain(0.02).release(0.5).orbit(${this.orbit})`;
         result = `stack(\n${result},\n${ghost}\n)`;
       }
     }
