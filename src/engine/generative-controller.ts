@@ -330,6 +330,9 @@ import { polymetricAccentGain } from '../theory/rhythmic-polymetric-accent';
 import { modalMixtureColorLpf } from '../theory/harmonic-modal-mixture-color';
 import { neighborToneEmphasisGain } from '../theory/melodic-neighbor-tone-emphasis';
 import { hemiolaPatternGain } from '../theory/rhythmic-hemiola-pattern';
+import { suspensionChainFm } from '../theory/harmonic-suspension-chain-fm';
+import { appoggiaturaWeightGain } from '../theory/melodic-appoggiatura-weight';
+import { additiveGroupingGain } from '../theory/rhythmic-additive-grouping';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6528,6 +6531,60 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * hpGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic suspension chain FM: enrich sustained suspension chains
+    {
+      // Estimate chain length from sustained sus chords
+      const q = this.state.currentChord.quality;
+      const isSus = q === 'sus2' || q === 'sus4';
+      const chainLen = isSus ? Math.min(this.state.ticksSinceChordChange, 4) : 0;
+      const scFm = suspensionChainFm(chainLen, this.state.mood, this.state.section);
+      if (scFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * scFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic appoggiatura weight: emphasize accented non-chord tones
+    {
+      const p = this.state.sectionProgress;
+      // Approximate leap-then-step pattern from section dynamics
+      const arrInterval = Math.round(Math.sin(p * Math.PI * 3) * 7);
+      const resInterval = Math.round(Math.cos(p * Math.PI * 3) * -1.5);
+      const awGain = appoggiaturaWeightGain(arrInterval, resInterval, this.state.mood, this.state.section);
+      if (awGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * awGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic additive grouping: asymmetric accent patterns (3+3+2)
+    {
+      const beatPos = this.state.tick % 16;
+      const agGain = additiveGroupingGain(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (agGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * agGain).toFixed(4)})`
             );
           }
         }
