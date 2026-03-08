@@ -38,6 +38,7 @@ export class Visualizer {
   private sectionEnergy = 0; // 0-1, how intense the current section is
   private targetSectionEnergy = 0;
   private pulseIntensity = 0;
+  private sectionFlash = 0; // horizontal wipe on section change
   private time = 0;
 
   constructor(container: HTMLElement) {
@@ -84,9 +85,10 @@ export class Visualizer {
       this.targetHue = palette.hues[state.progressionIndex % palette.hues.length];
     }
 
-    // Big pulse on section changes
+    // Big pulse on section changes + horizontal flash
     if (state.sectionChanged) {
       this.pulseIntensity = Math.max(this.pulseIntensity, 1.5);
+      this.sectionFlash = 1;
     }
   }
 
@@ -116,6 +118,7 @@ export class Visualizer {
     this.currentHue += (this.targetHue - this.currentHue) * 0.02;
     this.sectionEnergy += (this.targetSectionEnergy - this.sectionEnergy) * 0.03;
     this.pulseIntensity *= 0.97;
+    this.sectionFlash *= 0.94;
 
     // Background fade (creates trails)
     const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'avril' ? 0.04 : 0.06;
@@ -189,6 +192,27 @@ export class Visualizer {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, w, h);
     }
+
+    // Section transition flash — horizontal wipe of light
+    if (this.sectionFlash > 0.05) {
+      const flashProgress = 1 - this.sectionFlash;
+      const flashX = flashProgress * w * 1.4 - w * 0.2;
+      const flashWidth = w * 0.15;
+      const gradient = ctx.createLinearGradient(flashX - flashWidth, 0, flashX + flashWidth, 0);
+      gradient.addColorStop(0, 'transparent');
+      gradient.addColorStop(0.5, `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness + 20}%, ${this.sectionFlash * 0.12})`);
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Edge vignette — darkens corners, intensifies during peak
+    const vignetteAlpha = 0.15 + this.sectionEnergy * 0.1;
+    const vignette = ctx.createRadialGradient(w / 2, h / 2, w * 0.25, w / 2, h / 2, w * 0.75);
+    vignette.addColorStop(0, 'transparent');
+    vignette.addColorStop(1, `rgba(0, 0, 0, ${vignetteAlpha})`);
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
 
     // Cap particle count — higher during peak sections
     const maxParticles = 300 + Math.floor(this.sectionEnergy * 300);
