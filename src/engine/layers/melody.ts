@@ -43,6 +43,7 @@ import { shouldApplyAugDim, applyRhythmicTransform } from '../../theory/rhythmic
 import { shouldApplyCompound, createCompoundMelody, compoundSeparation, compoundPattern } from '../../theory/compound-melody';
 import { shouldApplyRhythmicCadence, selectCadenceType, applyRhythmicCadence } from '../../theory/rhythmic-cadence';
 import { tessituraGainMap } from '../../theory/tessitura';
+import { detectInertiaDirection, inertiaBias, inertiaStrength } from '../../theory/melodic-inertia';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -815,10 +816,20 @@ export class MelodyLayer extends CachingLayer {
           .filter(idx => idx >= 0);
         const dir = inferMelodicDirection(recentIndices);
 
+        // Melodic inertia: amplify direction to maintain momentum
+        const recentNotes = elements.slice(Math.max(0, i - 3), i).filter(e => e !== '~');
+        const inertiaDir = detectInertiaDirection(recentNotes);
+        const inertiaAmp = inertiaStrength(state.mood);
+        const amplifiedDir = inertiaDir === 'ascending'
+          ? dir + inertiaAmp * 0.5
+          : inertiaDir === 'descending'
+          ? dir - inertiaAmp * 0.5
+          : dir;
+
         const ctx: MelodicContext = {
           prevIndex: prevIdx,
           chordIndices: chordIndices,
-          direction: dir,
+          direction: amplifiedDir,
           tension,
           ladderPitches,
           chordPitches,
