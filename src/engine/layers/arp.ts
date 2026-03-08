@@ -31,6 +31,7 @@ import { shouldApplyHeterophony, selectVariation, rhythmicVariant, ornamentalVar
 import { shouldApplyOstinato, selectOstinatoType, generateOstinato, ostinatoLength } from '../../theory/ostinato';
 import { shouldApplyStretto, strettoEntry, transposeForStretto, strettoOffset, strettoInterval } from '../../theory/stretto';
 import { shouldApplyTintinnabuli, generateTVoice, selectPosition } from '../../theory/tintinnabuli';
+import { shouldApplyColorPedal, selectPedalTone, pedalOctave } from '../../theory/color-pedal';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -231,6 +232,14 @@ export class ArpLayer extends CachingLayer {
       if (ostPattern.length >= 2) {
         baseNotes = ostPattern;
       }
+    }
+
+    // Color pedal: add sustained common tone for impressionist shimmering
+    if (shouldApplyColorPedal(state.tick, mood, section)) {
+      const oct = pedalOctave(mood);
+      const pedalNote = selectPedalTone(state.scale.notes, state.scale.root, oct, state.tick);
+      // Add pedal as a prominent note in the pool (appears twice for emphasis)
+      baseNotes = [pedalNote, pedalNote, ...baseNotes.slice(0, 3)];
     }
 
     // Register awareness: get adjusted octave range to avoid melody collision
