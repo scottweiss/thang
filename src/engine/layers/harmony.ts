@@ -23,6 +23,7 @@ import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/te
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { shouldUsePlaning, planedVoicing } from '../../theory/harmonic-planing';
+import { smoothVoicing } from '../../theory/voice-leading';
 import { syncedDelayTime } from '../../theory/delay-sync';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
@@ -411,14 +412,13 @@ export class HarmonyLayer implements Layer {
     }
 
     // Guide tone anticipation — subtly pull inner voice toward next chord
+    // Only nudge inner voices (index > 0), never the root
     if (state.nextChordHint && !hasSuspension && Math.random() < 0.25) {
       const guides = findGuideTones(chordNotes, state.nextChordHint.notes);
       if (guides.length > 0) {
         const guide = guides[0]; // use strongest guide tone connection
-        // Find the matching note in our voicing and nudge it
         const guideIdx = chordNotes.findIndex(n => n === guide.current);
-        if (guideIdx >= 0 && guide.current !== guide.next) {
-          // Replace with the target guide tone — creates anticipation
+        if (guideIdx > 0 && guide.current !== guide.next) {
           chordNotes = [...chordNotes];
           chordNotes[guideIdx] = guide.next;
         }
@@ -428,13 +428,20 @@ export class HarmonyLayer implements Layer {
     // Harmonic density: richer chords at peaks, simpler at breakdowns
     chordNotes = adjustChordDensity(chordNotes, state.scale.notes, state.section, tension);
 
+    // Smooth voice leading: minimize total voice movement from previous voicing
+    if (this.lastVoicing && this.lastVoicing.length > 0 && state.chordChanged) {
+      chordNotes = smoothVoicing(this.lastVoicing, chordNotes);
+    }
+
     // Store voicing for future planing
     this.lastVoicing = [...chordNotes];
     this.lastRoot = chord.root;
 
-    // Use raw notes for sus2/sus4, suspensions, spread voicings, or extended chords
-    // Strudel's voicing() handles its own inversions
-    const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension || chordNotes.length > chord.notes.length;
+    // Use raw notes for sus2/sus4, suspensions, spread voicings, extended chords,
+    // or when smooth voice leading was applied (to preserve the optimized voicing)
+    const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4'
+      || hasSuspension || chordNotes.length > chord.notes.length
+      || chord.quality === 'add9' || chord.quality === 'min9';
     const chordStart = useRawNotes
       ? `note("${chordNotes.join(' ')}")`
       : `chord("${chord.symbol}").voicing()`;
