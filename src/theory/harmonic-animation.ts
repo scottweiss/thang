@@ -9,7 +9,7 @@
  * move while outer voices (root, top note) stay anchored.
  */
 
-import type { Mood, Section } from '../types';
+import type { Mood, Section, NoteName } from '../types';
 import { noteIndex, noteFromIndex } from './scales';
 
 /**
@@ -72,12 +72,12 @@ export function findScaleNeighbor(
   const match = note.match(/^([A-Gb#]+)(\d)$/);
   if (!match) return null;
 
-  const noteName = match[1];
+  const noteName = match[1] as NoteName;
   const octave = parseInt(match[2]);
   const pitch = noteIndex(noteName) + octave * 12;
 
   // Build pitch set from scale notes
-  const scalePitchClasses = scaleNotes.map(n => noteIndex(n));
+  const scalePitchClasses = scaleNotes.map(n => noteIndex(n as NoteName));
 
   // Find nearest scale pitch above
   for (let offset = 1; offset <= 3; offset++) {

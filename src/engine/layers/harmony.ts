@@ -26,6 +26,7 @@ import { shouldUsePlaning, planedVoicing } from '../../theory/harmonic-planing';
 import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../../theory/timbral-morph';
 import { smoothVoicing } from '../../theory/voice-leading';
 import { syncedDelayTime } from '../../theory/delay-sync';
+import { shouldAnimateHarmony, animateChordVoicing, voicingsToPattern } from '../../theory/harmonic-animation';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -454,6 +455,16 @@ export class HarmonyLayer implements Layer {
     const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4'
       || hasSuspension || chordNotes.length > chord.notes.length
       || chord.quality === 'add9' || chord.quality === 'min9';
+
+    // Harmonic animation: inner voices move to neighbor tones within held chords
+    // Only applies to raw note voicings with 3+ notes
+    if (useRawNotes && chordNotes.length >= 3 &&
+        shouldAnimateHarmony(mood, state.section)) {
+      const voicings = animateChordVoicing(chordNotes, state.scale.notes, 4);
+      const chordStart = `note("${voicingsToPattern(voicings)}")`;
+      return this.buildSoundChain(chordStart, mood, gain, brightness, room);
+    }
+
     const chordStart = useRawNotes
       ? `note("${chordNotes.join(' ')}")`
       : `chord("${chord.symbol}").voicing()`;
