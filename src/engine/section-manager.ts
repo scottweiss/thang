@@ -1,4 +1,5 @@
 import { Section, Mood, GenerativeState } from '../types';
+import { layerFadeInRate, layerFadeOutRate } from '../theory/layer-stagger';
 
 interface SectionConfig {
   activeLayers: string[];
@@ -121,18 +122,17 @@ export class SectionManager {
     state.params.brightness = Math.max(0.1, Math.min(0.9, state.params.brightness + brightnessDelta));
 
     // Interpolate layer gain multipliers toward targets (smooth fade in/out)
-    // Linear ramp: fade-in +0.33/tick = ~3 ticks (6s) to reach 1.0
-    //              fade-out -0.5/tick = ~2 ticks (4s) to reach 0.0
-    const FADE_IN_STEP = 0.33;
-    const FADE_OUT_STEP = 0.5;
+    // Per-layer stagger: drums enter first, melody enters last — like a real arrangement
     const activeSet = new Set(config.activeLayers);
     for (const layerName of ALL_LAYERS) {
       const target = activeSet.has(layerName) ? 1.0 : 0.0;
       const current = state.layerGainMultipliers[layerName] ?? 0;
       if (target > current) {
-        state.layerGainMultipliers[layerName] = Math.min(1, current + FADE_IN_STEP);
+        const fadeIn = layerFadeInRate(layerName);
+        state.layerGainMultipliers[layerName] = Math.min(1, current + fadeIn);
       } else if (target < current) {
-        state.layerGainMultipliers[layerName] = Math.max(0, current - FADE_OUT_STEP);
+        const fadeOut = layerFadeOutRate(layerName);
+        state.layerGainMultipliers[layerName] = Math.max(0, current - fadeOut);
       }
     }
 
