@@ -17,6 +17,7 @@ import { detectDirection } from '../../theory/contrapuntal-motion';
 import { selectMelodicNote, inferDirection as inferMelodicDirection } from '../../theory/melodic-gravity';
 import type { MelodicContext } from '../../theory/melodic-gravity';
 import { noteToPitch } from '../../theory/intervallic-consonance';
+import { RhythmicMemory } from '../../theory/rhythmic-memory';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -38,11 +39,13 @@ export class MelodyLayer extends CachingLayer {
   name = 'melody';
   orbit = 2;
   private motifMemory = new MotifMemory();
+  private rhythmMemory = new RhythmicMemory();
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
     if (this.moodChanged(state)) {
       this.motifMemory.clear(); // fresh motifs for new mood
+      this.rhythmMemory.clear();
       return true;
     }
     if (state.chordChanged) return true;
@@ -497,8 +500,19 @@ export class MelodyLayer extends CachingLayer {
       syro: 0.15, blockhead: 0.4, flim: 0.7, disco: 0.25,
     }[mood];
 
-    // Use phrase-aware density mask for note placement
-    const mask = phraseDensityMask(8, noteProbability, breathiness);
+    // Rhythmic memory: 30% chance to recall a stored rhythm for the first half
+    // This creates rhythmic continuity across chord changes
+    let mask: boolean[];
+    const recalledRhythm = this.rhythmMemory.count > 0 && Math.random() < 0.3
+      ? this.rhythmMemory.recall(state.tick, noteProbability)
+      : null;
+    if (recalledRhythm) {
+      // Develop the recalled rhythm and use it as placement mask
+      mask = this.rhythmMemory.develop(recalledRhythm, 8);
+    } else {
+      // Fresh density mask
+      mask = phraseDensityMask(8, noteProbability, breathiness);
+    }
 
     // Place motif notes at phrase-masked positions in first half
     let motifIdx = 0;
@@ -584,6 +598,9 @@ export class MelodyLayer extends CachingLayer {
         }
       }
     }
+
+    // Store the rhythm for future recall (before ornaments change the pattern)
+    this.rhythmMemory.store(elements, state.tick);
 
     // Add ornamental approach notes (mood and tension dependent)
     return addOrnaments(elements, ladder, mood, state.tension?.overall ?? 0.5);
