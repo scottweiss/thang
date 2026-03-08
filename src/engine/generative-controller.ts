@@ -140,6 +140,9 @@ import { spectralDecayLpf, shouldApplySpectralDecay } from '../theory/spectral-d
 import { intervalWeight } from '../theory/intervallic-palette';
 import { articulationContrastDecay } from '../theory/dynamic-articulation-contrast';
 import { trackingLpf } from '../theory/resonance-frequency-tracking';
+import { spectralEnvelopeLpf, shouldTrackSpectralEnvelope } from '../theory/spectral-envelope-tracking';
+import { canonDisplacement, shouldApplyCanonDisplacement } from '../theory/metric-displacement-canon';
+import { fieldTensionGain, fieldTensionBrightness } from '../theory/harmonic-field-tension';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3080,6 +3083,73 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Spectral envelope tracking: sustained notes darken naturally
+    if (shouldTrackSpectralEnvelope(this.state.mood, this.state.section)) {
+      const lpfMul = spectralEnvelopeLpf(
+        this.state.ticksSinceChordChange,
+        this.state.mood,
+        this.state.section
+      );
+      if (lpfMul < 0.98) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone' || result.name === 'atmosphere') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMul)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Metric displacement canon: staggered layer entries at section boundaries
+    // sectionProgress near 0 = just entered section; estimate ticks from progress
+    const estimatedSectionTick = Math.floor((this.state.sectionProgress ?? 1) * 20);
+    if (shouldApplyCanonDisplacement(this.state.mood, this.state.section, estimatedSectionTick)) {
+      for (const result of layerResults) {
+        const delay = canonDisplacement(result.name, this.state.mood, this.state.section);
+        if (delay > 0.005) {
+          const existing = result.code.match(/\.late\(([0-9.]+)\)/);
+          if (existing) {
+            const newLate = parseFloat(existing[1]) + delay;
+            result.code = result.code.replace(
+              /\.late\(([0-9.]+)\)/,
+              () => `.late(${newLate.toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic field tension: distance from tonal center modulates gain/brightness
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const fGain = fieldTensionGain(rootPc, tonicPc, this.state.mood, this.state.section);
+      const fBright = fieldTensionBrightness(rootPc, tonicPc, this.state.mood);
+      if (Math.abs(fGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * fGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+      if (fBright > 1.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * fBright)})`
             );
           }
         }
