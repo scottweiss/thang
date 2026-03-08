@@ -3,6 +3,7 @@ import { GenerativeState, Section } from '../../types';
 import { findSuspensions, pickBestSuspension } from '../../theory/suspension';
 import { getVoicingRange, applyVoicingSpread } from '../../theory/voicing-spread';
 import { findGuideTones } from '../../theory/guide-tones';
+import { adjustChordDensity } from '../../theory/harmonic-density';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -69,8 +70,8 @@ export class HarmonyLayer implements Layer {
 
     // Apply voicing spread — wider at peaks, tighter at breakdowns
     const voicingRange = getVoicingRange(state.section, tension);
-    const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension;
-    if (useRawNotes) {
+    const isSusChord = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension;
+    if (isSusChord) {
       chordNotes = applyVoicingSpread(chordNotes, voicingRange);
     }
 
@@ -89,8 +90,12 @@ export class HarmonyLayer implements Layer {
       }
     }
 
-    // Use raw notes for sus2/sus4, suspensions, or spread voicings
+    // Harmonic density: richer chords at peaks, simpler at breakdowns
+    chordNotes = adjustChordDensity(chordNotes, state.scale.notes, state.section, tension);
+
+    // Use raw notes for sus2/sus4, suspensions, spread voicings, or extended chords
     // Strudel's voicing() handles its own inversions
+    const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension || chordNotes.length > chord.notes.length;
     const chordStart = useRawNotes
       ? `note("${chordNotes.join(' ')}")`
       : `chord("${chord.symbol}").voicing()`;

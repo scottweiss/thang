@@ -10,6 +10,8 @@ import { getAdjustedOctaveRange } from '../../theory/register';
 import { applyMelodicDynamics } from '../../theory/melodic-dynamics';
 import { addOrnaments } from '../../theory/ornamentation';
 import { generateSequence, flattenSequence, sequenceDirection, shouldUseSequence } from '../../theory/melodic-sequence';
+import { registerShift, shouldShiftRegister } from '../../theory/register-evolution';
+import { insertBreaths, breathingRate, ensurePhraseBoundary } from '../../theory/phrase-breathing';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -58,9 +60,33 @@ export class MelodyLayer extends CachingLayer {
     const gain = 0.25 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
 
     // Build melodic phrase
-    const elements = (mood === 'ambient' || mood === 'xtal')
+    let elements = (mood === 'ambient' || mood === 'xtal')
       ? this.buildAmbientPhrase(state, density)
       : this.buildStructuredPhrase(state, density);
+
+    // Register evolution: shift melody register during builds/breakdowns
+    if (shouldShiftRegister(mood)) {
+      const progress = Math.min(1.0, (state.tick % 15) / 15);
+      const shift = registerShift(state.section, progress, 4) - 4; // delta from base octave 4
+      if (shift !== 0) {
+        elements = elements.map(e => {
+          if (e === '~') return e;
+          // Shift octave number in note name
+          const match = e.match(/^([A-Gb#]+)(\d)$/);
+          if (!match) return e;
+          const newOct = Math.max(2, Math.min(6, parseInt(match[2]) + shift));
+          return `${match[1]}${newOct}`;
+        });
+      }
+    }
+
+    // Phrase breathing: insert rests between phrases for natural phrasing
+    const breathRate = breathingRate(state.section, tension);
+    if (breathRate > 0.05) {
+      elements = insertBreaths(elements, breathRate, 4);
+    }
+    // Safety: ensure no runaway phrases
+    elements = ensurePhraseBoundary(elements, 10);
 
     // Report phrase density and step pattern for call-and-response and counterpoint
     state.layerPhraseDensity[this.name] = elements.filter(e => e !== '~').length / Math.max(1, elements.length);
