@@ -22,6 +22,7 @@ import { addPassingTones, shouldAddPassingTones } from '../../theory/arp-passing
 import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
 import { shouldApplyPolyrhythm, selectGrouping, polyrhythmAccentMask } from '../../theory/polyrhythm';
 import { shouldArpAnticipate, blendNextChordTones } from '../../theory/arp-anticipation';
+import { shouldEchoMotif, transposeMotif, selectEchoInterval } from '../../theory/imitative-echo';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -52,6 +53,7 @@ export class ArpLayer extends CachingLayer {
   name = 'arp';
   orbit = 4;
   private lastPlayedNote: string | null = null;
+  private echoCounter = 0;
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -85,6 +87,17 @@ export class ArpLayer extends CachingLayer {
 
     // Build arp notes from chord tones across octaves
     let baseNotes = chord.notes;
+
+    // Imitative echo: transpose melody motif and use as arp base (canonic imitation)
+    if (state.activeMotif && state.activeMotif.length >= 3 &&
+        shouldEchoMotif(mood, section)) {
+      const interval = selectEchoInterval(mood, this.echoCounter++);
+      const echoed = transposeMotif(state.activeMotif, state.scale.notes, interval);
+      const validEchoed = echoed.filter(n => n !== '~' && n.match(/^[A-G]/));
+      if (validEchoed.length >= 2) {
+        baseNotes = [...chord.notes, ...validEchoed.slice(0, 3)];
+      }
+    }
 
     // Thematic unity: occasionally blend melody motif notes into arp's note pool
     // Creates callbacks to the melody's material — feels composed rather than random
