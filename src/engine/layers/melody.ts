@@ -30,6 +30,7 @@ import { applyCadenceGesture } from '../../theory/cadence-gesture';
 import { addOctaveDoublings } from '../../theory/octave-doubling';
 import { constrainRange, shouldConstrainRange } from '../../theory/range-constraint';
 import { addAnacrusis } from '../../theory/anacrusis';
+import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -171,8 +172,16 @@ export class MelodyLayer extends CachingLayer {
     const rawDynamicGain = applyMelodicDynamics(gain, elements);
     // Phrase-position accents: first notes crisp, middle legato, last notes taper
     const accents = phraseGainAccents(elements, mood);
+    // Contour dynamics: ascending passages crescendo, descending diminuendo
+    const contour = shouldApplyContourDynamics(mood)
+      ? contourGainMultipliers(elements, mood)
+      : null;
     const dynamicGain = rawDynamicGain.split(' ')
-      .map((g, i) => (parseFloat(g) * (accents[i] ?? 1.0)).toFixed(4))
+      .map((g, i) => {
+        let v = parseFloat(g) * (accents[i] ?? 1.0);
+        if (contour) v *= contour[i] ?? 1.0;
+        return v.toFixed(4);
+      })
       .join(' ');
 
     switch (mood) {
