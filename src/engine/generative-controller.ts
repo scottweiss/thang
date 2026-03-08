@@ -201,6 +201,9 @@ import { extensionColorLpf } from '../theory/extension-color-temperature';
 import { alignmentGainBoost } from '../theory/rhythmic-phase-alignment';
 import { qualityDecay } from '../theory/quality-envelope-decay';
 import { structuralGravityGain } from '../theory/structural-pitch-gravity';
+import { stasisFmCompensation, stasisLpfModulation } from '../theory/harmonic-stasis-detection';
+import { tessituraGainCorrection } from '../theory/tessitura-tracking';
+import { subdivisionDecay } from '../theory/subdivision-articulation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3793,6 +3796,70 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic stasis detection: compensate for static harmony with timbral movement
+    {
+      const ticksSince = this.state.ticksSinceChordChange ?? 0;
+      const stasisFm = stasisFmCompensation(ticksSince, this.state.mood);
+      const stasisLpf = stasisLpfModulation(ticksSince, this.state.mood);
+      if (stasisFm > 1.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * stasisFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+      if (stasisLpf > 1.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * stasisLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Tessitura tracking: register-aware gain correction
+    {
+      // Estimate MIDI from chord root
+      const noteToMidi: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const rootMidi = noteToMidi[this.state.currentChord.root] ?? 60;
+      for (const result of layerResults) {
+        let layerMidi = rootMidi;
+        if (result.name === 'drone') layerMidi = rootMidi - 20;
+        else if (result.name === 'arp') layerMidi = rootMidi + 12;
+        else if (result.name === 'melody') layerMidi = rootMidi + 7;
+        const tGain = tessituraGainCorrection(layerMidi, result.name, this.state.mood);
+        if (Math.abs(tGain - 1.0) > 0.02) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * tGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Subdivision articulation: faster notes get shorter decay
+    {
+      // Estimate subdivision from section and mood
+      const subLevel = this.state.section === 'peak' ? 8 : this.state.section === 'build' ? 8 : 4;
+      const subDecay = subdivisionDecay(subLevel, this.state.mood);
+      if (Math.abs(subDecay - 1.0) > 0.05) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.decay\(([0-9.]+)\)/,
+              (_, val) => `.decay(${(parseFloat(val) * subDecay).toFixed(4)})`
             );
           }
         }
