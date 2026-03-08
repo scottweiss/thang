@@ -179,6 +179,9 @@ import { agogicDuration, noteImportance } from '../theory/agogic-accent';
 import { harmonicAcceleration } from '../theory/harmonic-rhythm-acceleration';
 import { commonToneWeight } from '../theory/pitch-set-intersection';
 import { contourDynamicGain } from '../theory/dynamic-contour';
+import { shapedTension } from '../theory/tension-curve-shaping';
+import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
+import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3769,6 +3772,60 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Tension curve shaping: custom envelope shapes per mood
+    {
+      const progress = this.state.sectionProgress ?? 0;
+      const shaped = shapedTension(progress, this.state.mood);
+      // Use shaped tension to modulate FM depth across layers
+      const fmMul = 0.85 + shaped * 0.3; // 0.85 at start, 1.15 at peak
+      if (Math.abs(fmMul - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * fmMul).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voicing register distribution: weight voicing quality for harmony
+    {
+      const chordMidi = this.state.currentChord.notes.map((n: string) => {
+        const noteMap: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+        return noteMap[n.replace(/\d+$/, '')] ?? 60;
+      });
+      const sw = spreadWeight(chordMidi, this.state.mood);
+      if (Math.abs(sw - 1.0) > 0.05) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * sw).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic phrase grouping: rest insertion at group boundaries
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const restProb = groupBoundaryRest(beatPos, this.state.mood);
+      if (restProb > 0.15) {
+        // Reduce gain at phrase boundaries to create breathing room
+        const breathGain = 1.0 - restProb * 0.4;
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
         }
