@@ -279,6 +279,9 @@ import { densityBreathingGain } from '../theory/rhythmic-density-breathing';
 import { intervalAttackMultiplier } from '../theory/interval-tension-envelope';
 import { pedalBrightnessLpf } from '../theory/harmonic-pedal-brightness';
 import { sectionEnergyCurveGain } from '../theory/section-energy-curve';
+import { overlapAvoidanceGain } from '../theory/voice-overlap-avoidance';
+import { tensionColorLpf } from '../theory/harmonic-tension-color-map';
+import { phraseBoundaryGain } from '../theory/rhythmic-phrase-boundary';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5404,6 +5407,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voice overlap avoidance: reduce lower-priority layer when registers overlap
+    {
+      const centers = this.state.layerCenterPitches ?? {};
+      for (const result of layerResults) {
+        for (const other of layerResults) {
+          if (result.name === other.name) continue;
+          const myPitch = centers[result.name] ?? 64;
+          const otherPitch = centers[other.name] ?? 64;
+          const distance = Math.abs(myPitch - otherPitch);
+          const oaGain = overlapAvoidanceGain(result.name, other.name, distance, this.state.mood);
+          if (Math.abs(oaGain - 1.0) > 0.01) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * oaGain).toFixed(4)})`
+            );
+            break; // only apply once per layer
+          }
+        }
+      }
+    }
+
+    // Harmonic tension color map: tension → filter warmth
+    {
+      const tcLpf = tensionColorLpf(this.state.tension.overall, this.state.mood);
+      if (Math.abs(tcLpf - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * tcLpf).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic phrase boundary: density drop at phrase edges
+    {
+      const phraseProgress = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const pbGain = phraseBoundaryGain(phraseProgress, this.state.mood, this.state.section);
+      if (Math.abs(pbGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * pbGain).toFixed(4)})`
             );
           }
         }
