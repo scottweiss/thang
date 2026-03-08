@@ -29,6 +29,7 @@ import { functionalBias } from '../theory/functional-harmony';
 import { shouldStartCadentialSequence, createCadentialPlan, nextCadentialDegree, advanceCadentialPlan, isCadentialPlanActive } from '../theory/cadential-sequence';
 import type { CadentialPlan } from '../theory/cadential-sequence';
 import { targetKeyArea, journeyBias, shouldModulate } from '../theory/harmonic-journey';
+import { tempoFeelMultiplier, shouldApplyTempoFeel } from '../theory/tempo-feel';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -650,7 +651,11 @@ export class GenerativeController {
     const tempoTraj = tempoTrajectoryMultiplier(
       this.state.section, this.state.sectionProgress ?? 0, this.state.mood
     );
-    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj;
+    // Tempo feel: subtle phrase-level tempo breathing for organic rhythm
+    const tempoFeel = shouldApplyTempoFeel(this.state.mood)
+      ? tempoFeelMultiplier(this.state.tick, this.state.mood, this.state.section)
+      : 1.0;
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
