@@ -67,6 +67,8 @@ import { gravityDurationMultiplier, shouldApplyHarmonicGravity } from '../theory
 import { closurePressure, tonicBias, shouldApplyClosure } from '../theory/tonal-closure';
 import { chordTimingOffset, shouldApplyChordTiming } from '../theory/chord-anticipation-delay';
 import { registerLpfMultiplier, registerFmMultiplier, shouldApplyRegisterWarmth } from '../theory/register-warmth';
+import { tensionFmColor, tensionDecayColor, shouldApplyTensionColor } from '../theory/harmonic-tension-color';
+import { echoDensityFeedback, shouldApplyEchoDensity } from '../theory/echo-density';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1398,6 +1400,43 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic tension color: FM depth and decay respond to tension level
+    if (shouldApplyTensionColor(this.state.mood)) {
+      const tension = this.state.tension?.overall ?? 0.5;
+      const fmColor = tensionFmColor(tension, this.state.mood);
+      const decColor = tensionDecayColor(tension, this.state.mood);
+      if (Math.abs(fmColor - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.fm\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmColor).toFixed(2)})`
+          );
+        }
+      }
+      if (Math.abs(decColor - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.decay\(([0-9.]+)\)/,
+            (_, val) => `.decay(${(parseFloat(val) * decColor).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Echo density: delay feedback adapts to musical density
+    if (shouldApplyEchoDensity(this.state.mood)) {
+      for (const result of layerResults) {
+        const density = this.state.layerPhraseDensity?.[result.name] ?? 0.5;
+        const fbMult = echoDensityFeedback(density, this.state.mood, this.state.section);
+        if (Math.abs(fbMult - 1.0) > 0.03) {
+          result.code = result.code.replace(
+            /\.room\(([0-9.]+)\)/,
+            (_, val) => `.room(${(parseFloat(val) * fbMult).toFixed(4)})`
+          );
         }
       }
     }

@@ -57,6 +57,7 @@ import { directionBias, biasInterval, shouldApplyBrightnessBias } from '../../th
 import { generateCell, applyCell, cellAdherence, shouldApplyRhythmicMotif } from '../../theory/rhythmic-motif';
 import { dynamicAccents, shouldApplyDynamicAccent } from '../../theory/dynamic-accent';
 import { isBreathMark, breathMarkGain, shouldApplyBreathMarks } from '../../theory/phrase-breath-mark';
+import { arcRegisterOffset, arcSemitoneShift, shouldApplyMelodicArc } from '../../theory/melodic-arc';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -140,6 +141,29 @@ export class MelodyLayer extends CachingLayer {
           if (!match) return e;
           const newOct = Math.max(2, Math.min(6, parseInt(match[2]) + shift));
           return `${match[1]}${newOct}`;
+        });
+      }
+    }
+
+    // Melodic arc: macro register trajectory across sections
+    if (shouldApplyMelodicArc(mood)) {
+      const arcOffset = arcRegisterOffset(state.sectionProgress ?? 0, mood, state.section);
+      const shift = arcSemitoneShift(arcOffset);
+      if (shift !== 0) {
+        const pcNamesArc = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const NOTE_PC_ARC: Record<string, number> = {
+          'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+          'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+          'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+        };
+        elements = elements.map(e => {
+          if (e === '~') return e;
+          const n = e.replace(/\d+$/, '');
+          const oct = parseInt(e.match(/\d+$/)?.[0] ?? '4');
+          const pc = NOTE_PC_ARC[n];
+          if (pc === undefined) return e;
+          const midi = Math.max(36, Math.min(84, pc + oct * 12 + shift));
+          return `${pcNamesArc[midi % 12]}${Math.floor(midi / 12)}`;
         });
       }
     }
