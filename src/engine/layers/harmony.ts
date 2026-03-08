@@ -2,6 +2,7 @@ import { Layer } from '../layer';
 import { GenerativeState, Section } from '../../types';
 import { findSuspensions, pickBestSuspension } from '../../theory/suspension';
 import { getVoicingRange, applyVoicingSpread } from '../../theory/voicing-spread';
+import { findGuideTones } from '../../theory/guide-tones';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -71,6 +72,21 @@ export class HarmonyLayer implements Layer {
     const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension;
     if (useRawNotes) {
       chordNotes = applyVoicingSpread(chordNotes, voicingRange);
+    }
+
+    // Guide tone anticipation — subtly pull inner voice toward next chord
+    if (state.nextChordHint && !hasSuspension && Math.random() < 0.25) {
+      const guides = findGuideTones(chordNotes, state.nextChordHint.notes);
+      if (guides.length > 0) {
+        const guide = guides[0]; // use strongest guide tone connection
+        // Find the matching note in our voicing and nudge it
+        const guideIdx = chordNotes.findIndex(n => n === guide.current);
+        if (guideIdx >= 0 && guide.current !== guide.next) {
+          // Replace with the target guide tone — creates anticipation
+          chordNotes = [...chordNotes];
+          chordNotes[guideIdx] = guide.next;
+        }
+      }
     }
 
     // Use raw notes for sus2/sus4, suspensions, or spread voicings
