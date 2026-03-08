@@ -195,6 +195,9 @@ import { spectralBalanceLpf } from '../theory/spectral-energy-distribution';
 import { rangeEdgeGain } from '../theory/pitch-range-expansion';
 import { anticipationOffset } from '../theory/harmonic-anticipation-timing';
 import { grooveGainMultiplier } from '../theory/groove-template-application';
+import { inversionGainAdjustment } from '../theory/inversion-context-preference';
+import { intraBarDensity } from '../theory/intra-bar-density';
+import { extensionColorLpf } from '../theory/extension-color-temperature';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3787,6 +3790,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Inversion context preference: adjust gain for non-root-position voicings
+    {
+      const inversionIdx = 0; // root position default (inversion handled by chord-inversion module)
+      const invGain = inversionGainAdjustment(inversionIdx, this.state.mood);
+      if (invGain < 0.99) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * invGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Intra-bar density modulation: vary density within bars
+    {
+      const barPos = ((this.state.sectionProgress ?? 0) * 4) % 1; // position within bar
+      const densityGain = intraBarDensity(barPos, this.state.mood);
+      if (Math.abs(densityGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * densityGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Extension color temperature: chord extensions color LPF
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const intervals = this.state.currentChord.notes.map((n: string) => {
+        const pc = noteToPC[n.replace(/\d+$/, '')] ?? 0;
+        return ((pc - rootPc) % 12 + 12) % 12;
+      });
+      const colorLpf = extensionColorLpf(intervals, this.state.mood);
+      if (Math.abs(colorLpf - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * colorLpf)})`
             );
           }
         }
