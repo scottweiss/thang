@@ -5,6 +5,7 @@ import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } fr
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
+import { anticipationWeight, anticipationGhostNote, shouldAnticipate } from '../../theory/harmonic-anticipation';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -67,11 +68,24 @@ export class DroneLayer implements Layer {
       }
     }
 
+    // Harmonic anticipation: blend a ghost note toward the next chord root
+    if (shouldAnticipate(state.ticksSinceChordChange, state.mood, !!state.nextChordHint)) {
+      const weight = anticipationWeight(state.ticksSinceChordChange, state.mood);
+      const nextRoot = state.nextChordHint!.root;
+      const currentRoot = bassFollowsChord(state.mood) ? state.currentChord.root : state.scale.root;
+      // Determine octave from the pattern (most drones use octave 1 or 2)
+      const octave = state.mood === 'xtal' ? 1 : 2;
+      const ghost = anticipationGhostNote(currentRoot, nextRoot, octave, weight);
+      if (ghost) {
+        result = `stack(\n${result},\n${ghost}\n)`;
+      }
+    }
+
     // Section transition fade
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
     if (multiplier < 1.0) {
       return result.replace(
-        /\.gain\(([^)]+)\)/,
+        /\.gain\(([^)]+)\)/g,
         (_, gainExpr) => {
           const num = parseFloat(gainExpr);
           if (!isNaN(num)) return `.gain(${(num * multiplier).toFixed(4)})`;

@@ -1,6 +1,7 @@
 import { GenerativeState, Mood, Section } from '../types';
 import { densityEnvelope } from '../theory/density-envelope';
 import { harmonicMomentumMultiplier } from '../theory/harmonic-momentum';
+import { resolutionTimingMultiplier } from '../theory/resolution-timing';
 
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
 const CHORD_TIMING: Record<Mood, [number, number]> = {
@@ -60,7 +61,7 @@ export class EvolutionManager {
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
       state.lastChordChange = state.elapsed;
-      const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall, state.sectionProgress ?? 0);
+      const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall, state.sectionProgress ?? 0, state.currentChord.degree, state.currentChord.quality);
       this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     }
 
@@ -91,7 +92,7 @@ export class EvolutionManager {
    * Chord changes accelerate during builds/peaks, slow during breakdowns.
    * High harmonic tension also speeds up changes (creates momentum).
    */
-  private getEffectiveChordTiming(mood: Mood, section: Section, tension?: number, sectionProgress?: number): [number, number] {
+  private getEffectiveChordTiming(mood: Mood, section: Section, tension?: number, sectionProgress?: number, chordDegree?: number, chordQuality?: import('../types').ChordQuality): [number, number] {
     const base = CHORD_TIMING[mood];
     const multiplier: Record<Section, number> = {
       intro: 1.5,      // slow changes, establish tonality
@@ -105,7 +106,11 @@ export class EvolutionManager {
     const tensionMod = tension !== undefined ? (1.1 - tension * 0.3) : 1.0;
     // Harmonic momentum: section progress shapes chord change rate
     const momentumMod = harmonicMomentumMultiplier(section, sectionProgress ?? 0);
-    return [base[0] * m * tensionMod * momentumMod, base[1] * m * tensionMod * momentumMod];
+    // Resolution pull: chords wanting to resolve change faster
+    const resMod = (chordDegree !== undefined && chordQuality)
+      ? resolutionTimingMultiplier(chordDegree, chordQuality, mood)
+      : 1.0;
+    return [base[0] * m * tensionMod * momentumMod * resMod, base[1] * m * tensionMod * momentumMod * resMod];
   }
 
   private randomBetween(min: number, max: number): number {
