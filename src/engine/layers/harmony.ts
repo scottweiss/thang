@@ -1,5 +1,16 @@
 import { Layer } from '../layer';
-import { GenerativeState } from '../../types';
+import { GenerativeState, Section } from '../../types';
+
+// Section shapes harmony presence — exposed in breakdown, full in peak
+const SECTION_GAIN: Record<Section, number> = {
+  intro: 0.5, build: 0.8, peak: 1.0, breakdown: 0.65, groove: 0.9,
+};
+const SECTION_FILTER_MULT: Record<Section, number> = {
+  intro: 0.7, build: 0.85, peak: 1.15, breakdown: 0.75, groove: 1.0,
+};
+const SECTION_ROOM_MULT: Record<Section, number> = {
+  intro: 1.3, build: 1.0, peak: 0.85, breakdown: 1.4, groove: 1.0,
+};
 
 export class HarmonyLayer implements Layer {
   name = 'harmony';
@@ -8,9 +19,12 @@ export class HarmonyLayer implements Layer {
   generate(state: GenerativeState): string {
     const chord = state.currentChord;
     const mood = state.mood;
-    const gain = 0.28 * (0.5 + state.params.density * 0.5);
-    const room = 0.4 + state.params.spaciousness * 0.4;
-    const brightness = state.params.brightness;
+    const sectionGain = SECTION_GAIN[state.section];
+    const sectionFilter = SECTION_FILTER_MULT[state.section];
+    const sectionRoom = SECTION_ROOM_MULT[state.section];
+    const gain = 0.28 * (0.5 + state.params.density * 0.5) * sectionGain;
+    const room = (0.4 + state.params.spaciousness * 0.4) * sectionRoom;
+    const brightness = state.params.brightness * sectionFilter;
 
     switch (mood) {
       case 'ambient':

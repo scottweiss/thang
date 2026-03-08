@@ -1,5 +1,13 @@
 import { Layer } from '../layer';
-import { GenerativeState } from '../../types';
+import { GenerativeState, Section } from '../../types';
+
+// Section shapes the drone's presence — subtle in sparse sections, full in peak
+const SECTION_GAIN: Record<Section, number> = {
+  intro: 0.6, build: 0.85, peak: 1.0, breakdown: 0.7, groove: 0.9,
+};
+const SECTION_FILTER_MULT: Record<Section, number> = {
+  intro: 0.6, build: 0.8, peak: 1.2, breakdown: 0.65, groove: 1.0,
+};
 
 export class DroneLayer implements Layer {
   name = 'drone';
@@ -9,9 +17,11 @@ export class DroneLayer implements Layer {
     const root = state.scale.root;
     const fifth = state.scale.notes[4] || state.scale.notes[0];
     const mood = state.mood;
-    const gain = 0.15 * (0.5 + state.params.density * 0.5);
+    const sectionGain = SECTION_GAIN[state.section];
+    const sectionFilter = SECTION_FILTER_MULT[state.section];
+    const gain = 0.15 * (0.5 + state.params.density * 0.5) * sectionGain;
     const room = 0.5 + state.params.spaciousness * 0.3;
-    const brightness = state.params.brightness;
+    const brightness = state.params.brightness * sectionFilter;
 
     // FM index evolves slowly with brightness for organic movement
     const fmSweep = `sine.range(${(0.5 + brightness * 0.5).toFixed(1)}, ${(1.5 + brightness * 2).toFixed(1)}).slow(17)`;
