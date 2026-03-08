@@ -213,6 +213,9 @@ import { syncopationGain } from '../theory/syncopation-depth';
 import { groundingGainMultiplier } from '../theory/voicing-weight-distribution';
 import { archGainMultiplier } from '../theory/contour-arc-scoring';
 import { layerDisplacement as polyDisplacement } from '../theory/displacement-layering';
+import { densityWaveGain } from '../theory/harmonic-density-wave';
+import { sequenceGainEmphasis } from '../theory/sequence-recognition';
+import { rotatedAccentGain } from '../theory/accent-rotation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3807,6 +3810,54 @@ export class GenerativeController {
               () => `.lpf(${Math.round(tracked)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic density wave: voice count breathing pattern
+    {
+      const dwGain = densityWaveGain(
+        this.state.sectionProgress ?? 0,
+        this.state.mood,
+        this.state.section
+      );
+      if (Math.abs(dwGain - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * dwGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Sequence recognition: boost transposed melodic repeats
+    {
+      const noteMap: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const chordNotes = this.state.currentChord.notes.map((n: string) => noteMap[n.replace(/\d+$/, '')] ?? 60);
+      const seqGain = sequenceGainEmphasis(chordNotes, this.state.mood);
+      if (seqGain > 1.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * seqGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Accent rotation: rotate accent patterns across layers
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      for (const result of layerResults) {
+        const rGain = rotatedAccentGain(beatPos, result.name, this.state.mood);
+        if (Math.abs(rGain - 1.0) > 0.02) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * rGain).toFixed(4)})`
+          );
         }
       }
     }
