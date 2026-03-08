@@ -10,8 +10,14 @@ const CHORD_TIMING: Record<Mood, [number, number]> = {
   avril: [20, 60],
 };
 
-const SCALE_CHANGE_MIN = 120;
-const SCALE_CHANGE_MAX = 300;
+// Scale modulation timing per mood — trance modulates often, ambient/avril stay put
+const SCALE_TIMING: Record<Mood, [number, number]> = {
+  ambient: [180, 400],
+  downtempo: [120, 280],
+  lofi: [100, 240],
+  trance: [80, 180],
+  avril: [200, 450],
+};
 
 export class EvolutionManager {
   private nextChordChange: number;
@@ -20,7 +26,8 @@ export class EvolutionManager {
   constructor() {
     const timing = CHORD_TIMING.downtempo;
     this.nextChordChange = this.randomBetween(timing[0], timing[1]);
-    this.nextScaleChange = this.randomBetween(SCALE_CHANGE_MIN, SCALE_CHANGE_MAX);
+    const scaleTiming = SCALE_TIMING.downtempo;
+    this.nextScaleChange = this.randomBetween(scaleTiming[0], scaleTiming[1]);
   }
 
   evolve(state: GenerativeState, dt: number): { chordChange: boolean; scaleChange: boolean } {
@@ -43,9 +50,15 @@ export class EvolutionManager {
     }
 
     if (timeSinceScale >= this.nextScaleChange) {
-      scaleChange = true;
-      state.lastScaleChange = state.elapsed;
-      this.nextScaleChange = this.randomBetween(SCALE_CHANGE_MIN, SCALE_CHANGE_MAX);
+      // Prefer modulating during breakdowns (natural resting point) —
+      // defer by up to 30s if we're not in breakdown or build
+      if (state.section === 'breakdown' || state.section === 'build' ||
+          timeSinceScale >= this.nextScaleChange + 30) {
+        scaleChange = true;
+        state.lastScaleChange = state.elapsed;
+        const scaleTiming = SCALE_TIMING[state.mood];
+        this.nextScaleChange = this.randomBetween(scaleTiming[0], scaleTiming[1]);
+      }
     }
 
     return { chordChange, scaleChange };
