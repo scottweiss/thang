@@ -31,7 +31,7 @@ export class MelodyLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4, blockhead: 10, flim: 12 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
@@ -215,6 +215,56 @@ export class MelodyLayer extends CachingLayer {
           .delaytime(0.125)
           .delayfeedback(0.4)
           .orbit(${this.orbit})`;
+
+      case 'blockhead':
+        // Warm FM piano tones — jazzy melodic phrases, cinematic feel
+        // Blockhead style: soulful, melodic, instrumental hip-hop
+        return `note("${elements.join(' ')}")
+          .sound("sine")
+          .fm(${(2.5 + brightness * 1).toFixed(1)})
+          .fmh(2)
+          .fmenv("exp")
+          .fmdecay(0.2)
+          .attack(0.003)
+          .decay(0.6)
+          .sustain(0.06)
+          .release(0.4)
+          .slow(2)
+          .gain(${(gain * 0.9).toFixed(3)})
+          .hpf(300)
+          .lpf(${(2000 + brightness * 2500).toFixed(0)})
+          .pan(sine.range(0.3, 0.7).slow(5))
+          .room(${(room * 0.7).toFixed(2)})
+          .roomsize(2)
+          .delay(0.25)
+          .delaytime(0.33)
+          .delayfeedback(0.25)
+          .orbit(${this.orbit})`;
+
+      case 'flim':
+        // Delicate crystalline bells — gentle, intimate, music-box-like
+        // Flim style: tender, intricate, sparkling
+        return `note("${elements.join(' ')}")
+          .sound("sine")
+          .fm(${(2.5 + brightness * 1.5).toFixed(1)})
+          .fmh(5)
+          .fmenv("exp")
+          .fmdecay(0.06)
+          .attack(0.003)
+          .decay(1.2)
+          .sustain(0.03)
+          .release(1)
+          .slow(4)
+          .gain(${(gain * 0.55).toFixed(3)})
+          .hpf(300)
+          .lpf(${(2200 + brightness * 2500).toFixed(0)})
+          .pan(sine.range(0.2, 0.8).slow(7))
+          .room(${(room * 1.2).toFixed(2)})
+          .roomsize(5)
+          .delay(0.45)
+          .delaytime(0.5)
+          .delayfeedback(0.45)
+          .orbit(${this.orbit})`;
     }
   }
 
@@ -275,6 +325,8 @@ export class MelodyLayer extends CachingLayer {
       avril: effectiveDensity * 0.25,
       xtal: effectiveDensity * 0.2,
       syro: effectiveDensity * 0.55,
+      blockhead: effectiveDensity * 0.35,
+      flim: effectiveDensity * 0.3,
     }[mood];
 
     const totalNotes = Math.max(1, Math.floor(noteCount * noteProbability));

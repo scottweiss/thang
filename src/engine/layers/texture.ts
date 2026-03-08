@@ -114,6 +114,36 @@ const SYRO_VELOCITIES = [
   '0.9 0.4 0.3 0.5 1 0.3 0.9 0.4 0.3 0.5 0.7 0.3 1 0.4 0.3 0.8',   // glitchy feel
 ];
 
+// Blockhead hip-hop patterns — heavy kicks, snares on 2 and 4, ghost hats, swing feel
+// Instrumental hip-hop: chunky, warm, cinematic drums
+const BLOCKHEAD_PATTERNS = [
+  'bd ~ hh ~ sd ~ hh bd ~ hh bd ~ sd ~ hh ~',   // classic hip-hop break
+  'bd ~ ~ hh sd ~ hh ~ bd hh ~ ~ sd ~ hh ~',    // syncopated swing
+  'bd hh ~ ~ sd ~ hh bd ~ ~ bd hh sd ~ ~ hh',   // ghost hat groove
+  'bd ~ hh ~ sd ~ ~ hh bd ~ hh ~ sd ~ hh ~',    // bouncy swing
+  'bd ~ ~ bd sd ~ hh ~ ~ hh bd ~ sd ~ hh ~',    // double kick swing
+];
+
+const BLOCKHEAD_VELOCITIES = [
+  '1 0.3 0.4 0.5 1 0.3 0.5 0.7 0.9 0.4 0.6 0.3 1 0.3 0.4 0.5',    // chunky swing
+  '1 0.4 0.3 0.6 0.9 0.3 0.4 0.8 1 0.3 0.5 0.4 0.9 0.4 0.5 0.3',  // laid back groove
+];
+
+// Flim gentle glitchy beats — soft taps, light hats, delicate percussion
+// IDM finger-drumming: restrained, detailed, tender
+const FLIM_PATTERNS = [
+  '~ ~ hh ~ ~ ~ hh ~ ~ hh ~ ~ ~ ~ hh ~',       // sparse taps
+  'hh ~ ~ ~ ~ hh ~ ~ hh ~ ~ ~ ~ hh ~ ~',       // gentle rhythm
+  '~ ~ hh ~ hh ~ ~ ~ ~ ~ hh ~ ~ ~ ~ hh',       // delicate detail
+  '~ hh ~ ~ ~ ~ hh ~ ~ ~ ~ hh ~ ~ hh ~',       // quiet pulse
+  'hh ~ ~ hh ~ ~ ~ ~ hh ~ ~ ~ ~ hh ~ ~',       // subtle pattern
+];
+
+const FLIM_VELOCITIES = [
+  '0.5 0.3 0.4 0.3 0.4 0.3 0.5 0.3 0.4 0.3 0.4 0.3 0.5 0.3 0.3 0.3', // very gentle
+  '0.4 0.3 0.5 0.3 0.3 0.4 0.3 0.3 0.5 0.3 0.3 0.4 0.4 0.3 0.5 0.3', // soft detail
+];
+
 export class TextureLayer extends CachingLayer {
   name = 'texture';
   orbit = 3;
@@ -124,7 +154,7 @@ export class TextureLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12, xtal: 10, syro: 4 }[state.mood] ?? 8;
+    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12, xtal: 10, syro: 4, blockhead: 8, flim: 10 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
@@ -138,7 +168,7 @@ export class TextureLayer extends CachingLayer {
     const brightness = state.params.brightness;
 
     // Play a transition fill on section changes (not for ambient/avril/xtal)
-    if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril' && mood !== 'xtal') {
+    if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril' && mood !== 'xtal' && mood !== 'flim') {
       const fill = this.getTransitionFill(state.section);
       if (fill) {
         const fillGain = gain * (mood === 'trance' ? 1.2 : 0.8);
@@ -173,6 +203,12 @@ export class TextureLayer extends CachingLayer {
 
       case 'syro':
         return this.buildSyroPattern(density, gain * 1.1, room * 0.4, brightness, state.section);
+
+      case 'blockhead':
+        return this.buildBlockheadPattern(density, gain, room * 0.7, brightness, state.section);
+
+      case 'flim':
+        return this.buildFlimPattern(density, gain * 0.6, room, brightness, state.section);
     }
   }
 
@@ -356,6 +392,58 @@ export class TextureLayer extends CachingLayer {
       .crush(${(12 + brightness * 3).toFixed(0)})
       .room(${(room * 0.3).toFixed(2)})
       .roomsize(0.5)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildBlockheadPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
+  ): string {
+    let pattern = randomChoice(BLOCKHEAD_PATTERNS);
+
+    if (section === 'breakdown') {
+      pattern = this.thinPattern(pattern, 0.4);
+    }
+    if (density > 0.5) {
+      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
+    }
+
+    // Blockhead: warm, punchy hip-hop — moderate reverb, bit of crush, swing feel
+    const bhGainPattern = this.applyVelocity(gain, randomChoice(BLOCKHEAD_VELOCITIES));
+    return `sound("${pattern}")
+      .slow(1)
+      .gain("${bhGainPattern}")
+      .lpf(${(1800 + brightness * 3000).toFixed(0)})
+      .hpf(60)
+      .pan(sine.range(0.35, 0.65).slow(5))
+      .room(${(room * 0.8).toFixed(2)})
+      .roomsize(2)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildFlimPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
+  ): string {
+    let pattern = randomChoice(FLIM_PATTERNS);
+
+    if (section === 'breakdown') {
+      pattern = this.thinPattern(pattern, 0.3);
+    }
+
+    // Flim: soft, delicate, gentle — lots of reverb, quiet, detailed
+    const flimGainPattern = this.applyVelocity(gain, randomChoice(FLIM_VELOCITIES));
+    return `sound("${pattern}")
+      .slow(2)
+      .gain("${flimGainPattern}")
+      .hpf(${(3000 + brightness * 2000).toFixed(0)})
+      .lpf(${(7000 + brightness * 4000).toFixed(0)})
+      .pan(sine.range(0.25, 0.75).slow(7))
+      .room(${(room * 1.1).toFixed(2)})
+      .roomsize(4)
+      .delay(0.15)
+      .delaytime(0.5)
+      .delayfeedback(0.2)
       .orbit(${this.orbit})`;
   }
 

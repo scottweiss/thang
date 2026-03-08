@@ -71,6 +71,19 @@ function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQua
         if (q === 'min') return 'min7';            // minor becomes minor 7
         return q;                                   // keep existing 7th chords
       });
+    case 'blockhead':
+      // Jazzy color — keep dom7s for jazz flavor, add sus4 on IV
+      return baseQualities.map((q, i) => {
+        if (i === 3 && Math.random() < 0.5) return 'sus4'; // IV sometimes sus4
+        return q;                                            // keep dom7s and min7s
+      });
+    case 'flim':
+      // Bright and open — mostly maj7 and sus2
+      return baseQualities.map((q, i) => {
+        if (i === 0 || i === 3) return 'sus2';     // I and IV become sus2 — open, bright
+        if (q === 'dom7') return 'maj7';            // soften dom7 to maj7
+        return q;
+      });
   }
 }
 

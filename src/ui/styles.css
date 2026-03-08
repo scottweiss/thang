@@ -27,6 +27,8 @@
 [data-mood="avril"] { --accent-h: 35; }
 [data-mood="xtal"] { --accent-h: 220; }
 [data-mood="syro"] { --accent-h: 300; }
+[data-mood="blockhead"] { --accent-h: 25; }
+[data-mood="flim"] { --accent-h: 170; }
 
 body {
   font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
@@ -159,7 +161,7 @@ body {
 /* ---- Mood selector ---- */
 .mood-selector {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
   gap: 0.4rem;
 }
 
@@ -396,7 +398,7 @@ body.immersive:hover {
   }
 
   .mood-selector {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
   }
 }
 

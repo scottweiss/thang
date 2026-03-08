@@ -20,6 +20,8 @@ const MOOD_PALETTES: Record<Mood, { bg: string; hues: number[]; saturation: numb
   avril: { bg: '#0a0806', hues: [35, 45, 25, 15], saturation: 25, lightness: 35 },
   xtal: { bg: '#04060e', hues: [200, 220, 240, 260], saturation: 45, lightness: 30 },
   syro: { bg: '#0a0410', hues: [280, 300, 320, 340], saturation: 55, lightness: 40 },
+  blockhead: { bg: '#0a0806', hues: [20, 35, 45, 15], saturation: 30, lightness: 35 },
+  flim: { bg: '#060a0a', hues: [160, 175, 190, 200], saturation: 35, lightness: 35 },
 };
 
 export class Visualizer {
@@ -123,7 +125,7 @@ export class Visualizer {
     this.sectionFlash *= 0.94;
 
     // Background fade (creates trails)
-    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'syro' ? 0.14 : this.currentMood === 'avril' ? 0.04 : this.currentMood === 'xtal' ? 0.03 : 0.06;
+    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'syro' ? 0.14 : this.currentMood === 'avril' ? 0.04 : this.currentMood === 'xtal' ? 0.03 : this.currentMood === 'flim' ? 0.04 : 0.06;
     ctx.fillStyle = palette.bg;
     ctx.globalAlpha = fadeAlpha + this.pulseIntensity * 0.05;
     ctx.fillRect(0, 0, w, h);
@@ -150,7 +152,7 @@ export class Visualizer {
     }
 
     // Draw connection lines between nearby particles (ambient/downtempo only)
-    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo' || this.currentMood === 'avril' || this.currentMood === 'xtal') && this.particles.length > 2) {
+    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo' || this.currentMood === 'avril' || this.currentMood === 'xtal' || this.currentMood === 'blockhead' || this.currentMood === 'flim') && this.particles.length > 2) {
       const connectDist = 80 + this.sectionEnergy * 60;
       ctx.strokeStyle = `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness + 10}%, 0.06)`;
       ctx.lineWidth = 0.5;
@@ -232,6 +234,8 @@ export class Visualizer {
       avril: 0.2,
       xtal: 0.4,
       syro: 3.0,
+      blockhead: 1.0,
+      flim: 0.3,
     }[this.currentMood];
     // Section energy modulates spawn rate — intro is sparse, peak floods particles
     const sectionMult = 0.4 + this.sectionEnergy * 0.8;
@@ -326,6 +330,26 @@ export class Visualizer {
         maxLife = 40 + Math.random() * 80;
         break;
       }
+      case 'blockhead': {
+        // Slow rising like downtempo but denser, warm colors
+        x = Math.random() * w;
+        y = h + 10;
+        vx = (Math.random() - 0.5) * 0.6;
+        vy = -(0.2 + Math.random() * 0.6);
+        size = 1.5 + Math.random() * 4.5;
+        maxLife = 160 + Math.random() * 250;
+        break;
+      }
+      case 'flim': {
+        // Gentle floating dust — like avril but cooler tones, small particles
+        x = Math.random() * w;
+        y = Math.random() * h * 0.4;
+        vx = (Math.random() - 0.5) * 0.12;
+        vy = 0.03 + Math.random() * 0.1;
+        size = 0.6 + Math.random() * 1.5;
+        maxLife = 350 + Math.random() * 450;
+        break;
+      }
     }
 
     // Section energy scales particle size — peak sections get bigger, more visible particles
@@ -396,6 +420,19 @@ export class Visualizer {
         p.vy += (Math.random() - 0.5) * 0.3;
         p.vx *= 0.96;
         p.vy *= 0.96;
+        break;
+      }
+      case 'blockhead': {
+        // Gentle sway — like downtempo but warmer, slightly denser
+        p.vx += Math.sin(this.time * 0.4 + p.y * 0.008) * 0.015;
+        p.vx *= 0.99;
+        break;
+      }
+      case 'flim': {
+        // Very gentle downward drift — like avril but subtler
+        p.vx += Math.sin(this.time * 0.15 + p.x * 0.004) * 0.003;
+        p.vx *= 0.997;
+        p.vy *= 0.999;
         break;
       }
     }

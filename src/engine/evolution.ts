@@ -10,6 +10,8 @@ const CHORD_TIMING: Record<Mood, [number, number]> = {
   avril: [20, 60],
   xtal: [18, 50],
   syro: [6, 20],
+  blockhead: [12, 40],
+  flim: [15, 45],
 };
 
 // Scale modulation timing per mood — trance modulates often, ambient/avril stay put
@@ -21,6 +23,8 @@ const SCALE_TIMING: Record<Mood, [number, number]> = {
   avril: [200, 450],
   xtal: [150, 350],
   syro: [70, 160],
+  blockhead: [100, 250],
+  flim: [120, 300],
 };
 
 export class EvolutionManager {

@@ -11,7 +11,7 @@ export class AtmosphereLayer extends CachingLayer {
     if (state.sectionChanged) return true;
 
     // Atmosphere is slow-evolving, regenerate infrequently
-    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6, avril: 15, xtal: 15, syro: 5 }[state.mood] ?? 12;
+    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6, avril: 15, xtal: 15, syro: 5, blockhead: 12, flim: 15 }[state.mood] ?? 12;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -44,6 +44,12 @@ export class AtmosphereLayer extends CachingLayer {
 
       case 'syro':
         return this.buildSyroAtmosphere(density, brightness, room, section);
+
+      case 'blockhead':
+        return this.buildBlockheadAtmosphere(density, brightness, room, section);
+
+      case 'flim':
+        return this.buildFlimAtmosphere(density, brightness, room, section);
     }
   }
 
@@ -237,6 +243,53 @@ export class AtmosphereLayer extends CachingLayer {
       .pan(sine.range(0.2, 0.8).slow(5))
       .room(${(room * 0.4).toFixed(2)})
       .roomsize(1.5)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildBlockheadAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+    // Cinematic vinyl texture — moderate crackle, warm low-pass filtered noise
+    // Blockhead style: warm vinyl bed, like a dusty record playing
+    const sectionGain = { intro: 0.6, build: 0.8, peak: 1.0, breakdown: 0.65, groove: 0.9 }[section];
+    const gain = 0.04 * (0.3 + density * 0.4) * sectionGain;
+
+    const crackleSteps: string[] = [];
+    for (let i = 0; i < 32; i++) {
+      crackleSteps.push(Math.random() < 0.18 ? 'hh' : '~');
+    }
+
+    return `sound("${crackleSteps.join(' ')}")
+      .slow(2)
+      .gain(${gain.toFixed(4)})
+      .hpf(${(3000 + brightness * 2000).toFixed(0)})
+      .lpf(${(6000 + brightness * 3000).toFixed(0)})
+      .pan(sine.range(0.3, 0.7).slow(9))
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(2)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildFlimAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+    // Very quiet digital shimmer — sparse high-frequency detail, gentle
+    // Flim style: delicate, barely-there digital dust
+    const sectionGain = { intro: 0.5, build: 0.7, peak: 1.0, breakdown: 0.6, groove: 0.8 }[section];
+    const gain = 0.02 * (0.2 + density * 0.3) * sectionGain;
+
+    const shimmerSteps: string[] = [];
+    for (let i = 0; i < 16; i++) {
+      shimmerSteps.push(Math.random() < 0.06 ? 'hh' : '~');
+    }
+
+    return `sound("${shimmerSteps.join(' ')}")
+      .slow(3)
+      .gain(${(gain * 0.3).toFixed(4)})
+      .hpf(${(5000 + brightness * 2000).toFixed(0)})
+      .lpf(${(9000 + brightness * 3000).toFixed(0)})
+      .pan(sine.range(0.2, 0.8).slow(13))
+      .room(${(room * 0.8).toFixed(2)})
+      .roomsize(4)
+      .delay(0.2)
+      .delaytime(0.66)
+      .delayfeedback(0.3)
       .orbit(${this.orbit})`;
   }
 

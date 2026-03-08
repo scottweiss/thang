@@ -176,6 +176,46 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
+
+      case 'blockhead':
+        // Warm sub bass — sine with slight saturation via low FM, solid hip-hop foundation
+        return `note("${root}2 ${fifth}1")
+          .sound("sine")
+          .fm(${(0.5 + brightness * 0.4).toFixed(1)})
+          .fmh(1)
+          .fmenv("exp")
+          .fmdecay(0.4)
+          .attack(0.01)
+          .decay(0.5)
+          .sustain(0.25)
+          .release(0.3)
+          .slow(2)
+          .gain(${(gain * 1.1).toFixed(3)})
+          .lpf(sine.range(${(250 + brightness * 200).toFixed(0)}, ${(500 + brightness * 400).toFixed(0)}).slow(9))
+          .pan(sine.range(0.4, 0.6).slow(7))
+          .room(${(room * 0.6).toFixed(2)})
+          .roomsize(2)
+          .orbit(${this.orbit})`;
+
+      case 'flim':
+        // Very soft sine pedal tone — gentle, barely there, slow breathing filter
+        return `note("${root}2")
+          .sound("sine")
+          .fm(${(0.2 + brightness * 0.2).toFixed(1)})
+          .fmh(1)
+          .fmenv("exp")
+          .fmdecay(1.5)
+          .attack(1.5)
+          .decay(3)
+          .sustain(0.15)
+          .release(2)
+          .slow(6)
+          .gain(${(gain * 0.35).toFixed(3)})
+          .lpf(sine.range(${(100 + brightness * 80).toFixed(0)}, ${(220 + brightness * 180).toFixed(0)}).slow(21))
+          .pan(sine.range(0.4, 0.6).slow(17))
+          .room(${(room * 1.3).toFixed(2)})
+          .roomsize(6)
+          .orbit(${this.orbit})`;
     }
   }
 }

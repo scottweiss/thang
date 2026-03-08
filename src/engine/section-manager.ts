@@ -60,6 +60,20 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.4, brightnessTarget: 0.45, duration: [12, 22] },
     groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.8, brightnessTarget: 0.7, duration: [20, 40] },
   },
+  blockhead: {
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.35, duration: [20, 40] },
+    build:     { activeLayers: ['drone', 'harmony', 'texture', 'atmosphere', 'melody'], densityTarget: 0.5, brightnessTarget: 0.45, duration: [25, 50] },
+    peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.7, brightnessTarget: 0.55, duration: [30, 60] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.4, duration: [20, 40] },
+    groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.65, brightnessTarget: 0.5, duration: [30, 55] },
+  },
+  flim: {
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [25, 45] },
+    build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'arp'], densityTarget: 0.35, brightnessTarget: 0.35, duration: [35, 55] },
+    peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.55, brightnessTarget: 0.5, duration: [40, 65] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [30, 50] },
+    groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.45, brightnessTarget: 0.4, duration: [35, 60] },
+  },
 };
 
 // Section flow: intro → build → peak → breakdown → groove → build → ...

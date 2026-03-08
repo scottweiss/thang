@@ -204,6 +204,60 @@ export class HarmonyLayer implements Layer {
           .delaytime(0.1875)
           .delayfeedback(0.45)
           .orbit(${this.orbit})`;
+
+      case 'blockhead':
+        // Warm Rhodes/e-piano — FM with bell-like percussive attack, jazzy warmth
+        // Blockhead style: cinematic, warm, jazzy chord comping
+        return `chord("${chord.symbol}")
+          .voicing()
+          .sound("sine")
+          .fm(${(2.5 + brightness * 1.5).toFixed(1)})
+          .fmh(2)
+          .fmenv("exp")
+          .fmdecay(0.3)
+          .attack(0.005)
+          .decay(0.8)
+          .sustain(0.1)
+          .release(0.5)
+          .slow(2)
+          .gain(${(gain * 1.0).toFixed(3)})
+          .hpf(180)
+          .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2800 + brightness * 2000).toFixed(0)}).slow(7))
+          .crush(${(12 + brightness * 2).toFixed(0)})
+          .pan(sine.range(0.3, 0.7).slow(5))
+          .detune(sine.range(-2, 2).slow(7))
+          .room(${(room * 0.7).toFixed(2)})
+          .roomsize(2.5)
+          .delay(0.2)
+          .delaytime(0.33)
+          .delayfeedback(0.25)
+          .orbit(${this.orbit})`;
+
+      case 'flim':
+        // Music-box bells — high harmonicity, fast FM decay, delicate sustain
+        // Flim style: intimate, crystalline, tender
+        return `chord("${chord.symbol}")
+          .voicing()
+          .sound("sine")
+          .fm(${(3 + brightness * 2).toFixed(1)})
+          .fmh(5)
+          .fmenv("exp")
+          .fmdecay(0.05)
+          .attack(0.003)
+          .decay(1.5)
+          .sustain(0.04)
+          .release(1.2)
+          .slow(4)
+          .gain(${(gain * 0.65).toFixed(3)})
+          .hpf(250)
+          .lpf(${(2000 + brightness * 2500).toFixed(0)})
+          .pan(sine.range(0.2, 0.8).slow(9))
+          .room(${(room * 1.2).toFixed(2)})
+          .roomsize(5)
+          .delay(0.4)
+          .delaytime(0.5)
+          .delayfeedback(0.45)
+          .orbit(${this.orbit})`;
     }
   }
 }

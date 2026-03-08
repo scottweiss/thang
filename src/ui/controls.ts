@@ -11,7 +11,7 @@ interface ControlsCallbacks {
   onForceSection?: () => void;
 }
 
-const MOODS: Mood[] = ['ambient', 'downtempo', 'lofi', 'trance', 'avril', 'xtal', 'syro'];
+const MOODS: Mood[] = ['ambient', 'downtempo', 'lofi', 'trance', 'avril', 'xtal', 'syro', 'blockhead', 'flim'];
 
 export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
   updateState: (state: GenerativeState) => void;
@@ -79,7 +79,7 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
 
       <div class="shortcuts-hint" id="shortcutsHint">
         <span class="shortcut-key">space</span> play
-        <span class="shortcut-key">1-7</span> mood
+        <span class="shortcut-key">1-9</span> mood
         <span class="shortcut-key">c</span> chord
         <span class="shortcut-key">s</span> section
         <span class="shortcut-key">&uarr;&darr;</span> density
@@ -154,7 +154,7 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
         e.preventDefault();
         playBtn.click();
         break;
-      case '1': case '2': case '3': case '4': case '5': case '6': case '7': {
+      case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': {
         const idx = parseInt(e.key) - 1;
         const mood = MOODS[idx];
         if (mood) {
