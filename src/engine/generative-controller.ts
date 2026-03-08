@@ -276,6 +276,9 @@ import { distanceReverbGain } from '../theory/harmonic-distance-reverb';
 import { phraseArcGain } from '../theory/phrase-arc-dynamics';
 import { rootMotionFm } from '../theory/harmonic-root-motion-color';
 import { densityBreathingGain } from '../theory/rhythmic-density-breathing';
+import { intervalAttackMultiplier } from '../theory/interval-tension-envelope';
+import { pedalBrightnessLpf } from '../theory/harmonic-pedal-brightness';
+import { sectionEnergyCurveGain } from '../theory/section-energy-curve';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5403,6 +5406,52 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Interval tension envelope: large leaps get crisper attack
+    {
+      const melodyResult = layerResults.find(r => r.name === 'melody');
+      if (melodyResult && this.state.activeMotif && this.state.activeMotif.length >= 2) {
+        const lastTwo = this.state.activeMotif.slice(-2);
+        const noteToMidi: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+        const m0 = noteToMidi[lastTwo[0]] ?? 60;
+        const m1 = noteToMidi[lastTwo[1]] ?? 60;
+        const interval = Math.abs(m1 - m0);
+        const atkMult = intervalAttackMultiplier(interval, this.state.mood);
+        if (Math.abs(atkMult - 1.0) > 0.01) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.attack\(([0-9.]+)\)/,
+            (_, val) => `.attack(${(parseFloat(val) * atkMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic pedal brightness: sustained bass darkens
+    {
+      const pbLpf = pedalBrightnessLpf(this.state.ticksSinceChordChange, this.state.mood);
+      if (Math.abs(pbLpf - 1.0) > 0.01) {
+        const droneResult = layerResults.find(r => r.name === 'drone');
+        if (droneResult) {
+          droneResult.code = droneResult.code.replace(
+            /\.lpf\(([0-9.]+)\)/,
+            (_, val) => `.lpf(${(parseFloat(val) * pbLpf).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Section energy curve: sigmoid energy within sections
+    {
+      const secGain = sectionEnergyCurveGain(this.state.sectionProgress ?? 0, this.state.mood, this.state.section);
+      if (Math.abs(secGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * secGain).toFixed(4)})`
+          );
         }
       }
     }
