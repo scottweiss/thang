@@ -27,6 +27,7 @@ import { shouldApplyHemiola, hemiolaType, hemiolaAccentMask, claveAccentMask } f
 import { layerPhaseOffset, shouldApplyPhaseOffset } from '../theory/rhythmic-phase';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../theory/tension-orchestration';
 import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../theory/harmonic-color';
+import { pitchPanPattern, shouldApplyPitchPan } from '../theory/pitch-pan';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -47,6 +48,18 @@ export abstract class CachingLayer implements Layer {
 
     // Dynamic stereo field: modulate pan range based on section/tension
     result = this.modulateStereo(result, state);
+
+    // Pitch-based panning: melody notes pan subtly by register (lower=left, higher=right)
+    if (this.name === 'melody' && shouldApplyPitchPan(state.mood)) {
+      const melSteps = state.layerStepPattern?.melody;
+      if (melSteps && melSteps.length > 0) {
+        const panStr = pitchPanPattern(melSteps, state.mood);
+        result = result.replace(
+          /\.pan\(sine\.range\([^)]+\)\.slow\([^)]+\)\)/,
+          `.pan("${panStr}")`
+        );
+      }
+    }
 
     // Micro-timing: add subtle timing offsets for human feel
     result = this.applyMicroTiming(result, state);

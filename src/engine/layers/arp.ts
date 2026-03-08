@@ -17,6 +17,7 @@ import { applyRegisterSpread, shouldApplyRegisterSpread } from '../../theory/reg
 import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
 import { smoothArpStart } from '../../theory/arp-voice-leading';
 import { shouldApplyHemiola, applyHemiolaToGain } from '../../theory/hemiola';
+import { applyGrooveLock } from '../../theory/groove-lock';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -563,6 +564,11 @@ export class ArpLayer extends CachingLayer {
         }
         result = filtered;
       }
+    }
+
+    // Groove lock: align arp strong beats with melody for rhythmic unity
+    if (melodySteps && melodySteps.length > 0) {
+      result = applyGrooveLock(result, melodySteps, state.mood, state.section);
     }
 
     // Track last played note for voice leading across chord changes
