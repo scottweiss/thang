@@ -7,6 +7,7 @@ import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 import { anticipationWeight, anticipationGhostNote, shouldAnticipate } from '../../theory/harmonic-anticipation';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
+import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -79,6 +80,28 @@ export class DroneLayer implements Layer {
             const num = parseFloat(gainExpr);
             if (!isNaN(num)) return `.gain(${(num * arcMult).toFixed(4)})`;
             return `.gain((${gainExpr}) * ${arcMult.toFixed(4)})`;
+          }
+        );
+      }
+    }
+
+    // Arrival emphasis: cadential resolution accent (gain boost)
+    if (state.chordHistory.length >= 2) {
+      const prev = state.chordHistory[state.chordHistory.length - 2];
+      const emphasis = arrivalEmphasis(
+        state.currentChord.degree,
+        prev.degree,
+        prev.quality,
+        state.ticksSinceChordChange,
+        state.mood
+      );
+      if (emphasis.gainBoost > 0.01) {
+        result = result.replace(
+          /\.gain\(([^)]+)\)/g,
+          (_, gainExpr) => {
+            const num = parseFloat(gainExpr);
+            if (!isNaN(num)) return `.gain(${(num * (1.0 + emphasis.gainBoost)).toFixed(4)})`;
+            return `.gain((${gainExpr}) * ${(1.0 + emphasis.gainBoost).toFixed(4)})`;
           }
         );
       }

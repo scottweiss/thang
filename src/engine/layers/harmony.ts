@@ -21,6 +21,7 @@ import { densityBalanceDegrade, shouldApplyDensityBalance } from '../../theory/d
 import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../../theory/tension-brightness';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
+import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -275,6 +276,35 @@ export class HarmonyLayer implements Layer {
             const num = parseFloat(gainExpr);
             if (!isNaN(num)) return `.gain(${(num * arcMult).toFixed(4)})`;
             return `.gain((${gainExpr}) * ${arcMult.toFixed(4)})`;
+          }
+        );
+      }
+    }
+
+    // Arrival emphasis: cadential resolution accent (gain + brightness boost)
+    if (state.chordHistory.length >= 2) {
+      const prev = state.chordHistory[state.chordHistory.length - 2];
+      const emphasis = arrivalEmphasis(
+        state.currentChord.degree,
+        prev.degree,
+        prev.quality,
+        state.ticksSinceChordChange,
+        state.mood
+      );
+      if (emphasis.brightnessBoost > 0.01) {
+        const bMult = 1.0 + emphasis.brightnessBoost;
+        result = result.replace(
+          /\.lpf\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.lpf(${Math.round(parseFloat(val) * bMult)})`
+        );
+      }
+      if (emphasis.gainBoost > 0.01) {
+        result = result.replace(
+          /\.gain\(([^)]+)\)/,
+          (_, gainExpr) => {
+            const num = parseFloat(gainExpr);
+            if (!isNaN(num)) return `.gain(${(num * (1.0 + emphasis.gainBoost)).toFixed(4)})`;
+            return `.gain((${gainExpr}) * ${(1.0 + emphasis.gainBoost).toFixed(4)})`;
           }
         );
       }

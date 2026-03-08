@@ -21,6 +21,7 @@ import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../th
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../theory/tension-space';
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../theory/tension-delay';
 import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
+import { arrivalEmphasis } from '../theory/arrival-emphasis';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -98,6 +99,9 @@ export abstract class CachingLayer implements Layer {
 
     // Gain arc: crescendo/decrescendo within sections
     result = this.applyGainArc(result, state);
+
+    // Arrival emphasis: cadential resolution accent (gain + brightness boost)
+    result = this.applyArrivalEmphasis(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -624,6 +628,45 @@ export abstract class CachingLayer implements Layer {
       /\.orbit\((\d+)\)/,
       `.nudge("${nudge}").orbit($1)`
     );
+  }
+
+  /**
+   * Apply cadential arrival emphasis — brief gain and brightness boost
+   * when a dominant chord resolves to tonic. Creates satisfying "landing" moments.
+   */
+  private applyArrivalEmphasis(pattern: string, state: GenerativeState): string {
+    // Need previous chord from history
+    if (state.chordHistory.length < 2) return pattern;
+    const prev = state.chordHistory[state.chordHistory.length - 2];
+
+    const emphasis = arrivalEmphasis(
+      state.currentChord.degree,
+      prev.degree,
+      prev.quality,
+      state.ticksSinceChordChange,
+      state.mood
+    );
+
+    // Skip if no meaningful emphasis
+    if (emphasis.gainBoost < 0.01 && emphasis.brightnessBoost < 0.01) return pattern;
+
+    let result = pattern;
+
+    // Brightness boost: open LPF further
+    if (emphasis.brightnessBoost > 0.01) {
+      const bMult = 1.0 + emphasis.brightnessBoost;
+      result = result.replace(
+        /\.lpf\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.lpf(${Math.round(parseFloat(val) * bMult)})`
+      );
+    }
+
+    // Gain boost: brief volume swell
+    if (emphasis.gainBoost > 0.01) {
+      result = this.applyGainMultiplier(result, 1.0 + emphasis.gainBoost);
+    }
+
+    return result;
   }
 
   protected moodChanged(state: GenerativeState): boolean {
