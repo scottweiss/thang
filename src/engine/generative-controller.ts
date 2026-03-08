@@ -30,6 +30,7 @@ import { shouldStartCadentialSequence, createCadentialPlan, nextCadentialDegree,
 import type { CadentialPlan } from '../theory/cadential-sequence';
 import { targetKeyArea, journeyBias, shouldModulate } from '../theory/harmonic-journey';
 import { tempoFeelMultiplier, shouldApplyTempoFeel } from '../theory/tempo-feel';
+import { EmotionalMemoryBank, isEmotionalLandmark } from '../theory/emotional-memory';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -80,6 +81,8 @@ export class GenerativeController {
   private ticksSinceLastSurprise = 20; // start with cooldown expired
   private arrivalActive = false;
   private tonalGravity = new TonalGravity('C', 'minor');
+  private emotionalMemory = new EmotionalMemoryBank();
+  private prevTension = 0.5;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -156,6 +159,8 @@ export class GenerativeController {
     this.evolution.resetTimings(mood);
     this.sections.reset(mood);
     this.tensionMemory.clear();
+    this.emotionalMemory.clear();
+    this.prevTension = 0.5;
     this.tonalGravity.reset(this.state.scale.root, this.state.scale.type);
     this.formTrajectory = { ticksElapsed: 0, formLength: moodFormLength(mood) };
     this.state.section = 'intro';
@@ -272,6 +277,30 @@ export class GenerativeController {
       this.state.tension.overall = ceiling;
     }
 
+    // Emotional memory: store significant musical moments for later recall
+    const landmark = isEmotionalLandmark(
+      this.state.tension.overall,
+      this.prevTension,
+      this.state.sectionChanged,
+      this.state.chordChanged,
+      false // harmonic surprise — could be detected from chord distance
+    );
+    if (landmark.isLandmark) {
+      this.emotionalMemory.store({
+        tick: this.state.tick,
+        section: this.state.section,
+        tension: this.state.tension.overall,
+        chord: {
+          root: this.state.currentChord.root,
+          quality: this.state.currentChord.quality,
+          degree: this.state.currentChord.degree,
+        },
+        type: landmark.type,
+        weight: landmark.weight,
+      });
+    }
+    this.prevTension = this.state.tension.overall;
+
     this.state.ticksSinceChordChange++;
     this.state.tick++;
 
@@ -355,6 +384,10 @@ export class GenerativeController {
     const combinedBias = phraseBias.map((pb, degree) =>
       pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
          * journeyBias(degree, keyArea, this.state.mood)
+         * this.emotionalMemory.chordRecallBias(
+             this.state.scale.notes[degree] ?? 'C', degree,
+             this.state.mood, this.state.section
+           )
     );
     let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
