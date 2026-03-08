@@ -12,6 +12,7 @@ import { addOrnaments } from '../../theory/ornamentation';
 import { generateSequence, flattenSequence, sequenceDirection, shouldUseSequence } from '../../theory/melodic-sequence';
 import { registerShift, shouldShiftRegister } from '../../theory/register-evolution';
 import { insertBreaths, breathingRate, ensurePhraseBoundary } from '../../theory/phrase-breathing';
+import { sectionContour, contourOffset, contourTargetIndex, contourPull } from '../../theory/melodic-contour';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -414,7 +415,7 @@ export class MelodyLayer extends CachingLayer {
       }
     } else {
       // Create a new motif via Narmour I-R model
-      rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour);
+      rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour, state.sectionProgress ?? 0, state.section);
       // Store it for future development
       this.motifMemory.store(rawMotif, state.tick);
     }
@@ -541,8 +542,19 @@ export class MelodyLayer extends CachingLayer {
 
   // Build a motif using Narmour implication-realization model
   // Small steps continue naturally, leaps resolve — cognitive melody theory
-  private buildMotif(ladder: string[], startIdx: number, length: number, _contour: Contour): string[] {
-    const indices = buildNarmourPhrase(ladder.length, startIdx, length);
+  // Contour bias shifts the starting point toward the section's melodic shape
+  private buildMotif(ladder: string[], startIdx: number, length: number, _contour: Contour, sectionProgress: number = 0, section: import('../../types').Section = 'groove'): string[] {
+    // Apply melodic contour: shift the starting pitch based on section shape
+    const shape = sectionContour(section);
+    const offset = contourOffset(shape, sectionProgress);
+    const pull = contourPull(shape, sectionProgress);
+
+    // Bias the start index toward the contour target
+    const targetIdx = contourTargetIndex(ladder, startIdx, offset);
+    const biasedStart = Math.round(startIdx + (targetIdx - startIdx) * pull);
+    const clampedStart = Math.max(0, Math.min(ladder.length - 1, biasedStart));
+
+    const indices = buildNarmourPhrase(ladder.length, clampedStart, length);
     return indices.map(i => ladder[i]);
   }
 
