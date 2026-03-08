@@ -23,6 +23,7 @@ import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/te
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { shouldUsePlaning, planedVoicing } from '../../theory/harmonic-planing';
+import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../../theory/timbral-morph';
 import { smoothVoicing } from '../../theory/voice-leading';
 import { syncedDelayTime } from '../../theory/delay-sync';
 
@@ -226,6 +227,17 @@ export class HarmonyLayer implements Layer {
             const crushed = Math.max(4, Math.min(16, parseFloat(val) + cOffset));
             return `.crush(${Math.round(crushed)})`;
           }
+        );
+      }
+    }
+
+    // Timbral morph: FM index evolves within sections (builds brighten, breakdowns warm)
+    if (shouldApplyTimbralMorph(state.section) && result.includes('.fm(')) {
+      const fmMult = fmMorphMultiplier(state.section, state.sectionProgress ?? 0);
+      if (Math.abs(fmMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.fm\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
         );
       }
     }
