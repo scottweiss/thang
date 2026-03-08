@@ -13,6 +13,7 @@ import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier
 import { crushOffset, shouldApplyCrushEvolution } from '../theory/crush-evolution';
 import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../theory/frequency-band';
 import { evolvedVelocity, applyVelocityEvolution } from '../theory/velocity-evolution';
+import { slowMultiplier, shouldApplyRhythmicAcceleration } from '../theory/rhythmic-acceleration';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -66,6 +67,9 @@ export abstract class CachingLayer implements Layer {
 
     // Velocity evolution: per-note dynamics morph with section progress
     result = this.applyVelocityEvolution(result, state);
+
+    // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
+    result = this.applyRhythmicAcceleration(result, state);
 
     // Gain arc: crescendo/decrescendo within sections
     result = this.applyGainArc(result, state);
@@ -378,6 +382,29 @@ export abstract class CachingLayer implements Layer {
 
     const evolved = applyVelocityEvolution(match[1], velocities);
     return pattern.replace(`.gain("${match[1]}")`, `.gain("${evolved}")`);
+  }
+
+  /**
+   * Modulate .slow() values for rhythmic acceleration/deceleration.
+   * Arp and drums speed up during builds, slow during breakdowns.
+   * Only modifies the main chain .slow(), not LFO .slow() calls.
+   */
+  private applyRhythmicAcceleration(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyRhythmicAcceleration(this.name, state.section)) return pattern;
+
+    const mult = slowMultiplier(this.name, state.section, state.sectionProgress ?? 0);
+    if (Math.abs(mult - 1.0) < 0.04) return pattern;
+
+    // Match .slow(N) on its own line (indented) — NOT inline after .range()
+    // Main chain: "      .slow(2)" — starts with whitespace
+    // LFO inline: ".range(200, 800).slow(23)" — preceded by )
+    return pattern.replace(
+      /^(\s+)\.slow\((\d+(?:\.\d+)?)\)/m,
+      (_match, indent, val) => {
+        const newSlow = Math.max(0.25, parseFloat(val) * mult);
+        return `${indent}.slow(${newSlow.toFixed(2)})`;
+      }
+    );
   }
 
   /**
