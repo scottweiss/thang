@@ -273,6 +273,9 @@ import { timbralDecayFm } from '../theory/timbral-decay-curve';
 import { voicingRegisterFm } from '../theory/chord-voicing-register';
 import { momentumTransferGain } from '../theory/rhythmic-momentum-transfer';
 import { distanceReverbGain } from '../theory/harmonic-distance-reverb';
+import { phraseArcGain } from '../theory/phrase-arc-dynamics';
+import { rootMotionFm } from '../theory/harmonic-root-motion-color';
+import { densityBreathingGain } from '../theory/rhythmic-density-breathing';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5400,6 +5403,55 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Phrase arc dynamics: gain follows natural phrase shape
+    {
+      const phraseProgress = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const paGain = phraseArcGain(phraseProgress, this.state.mood, this.state.section);
+      if (Math.abs(paGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * paGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic root motion color: step=warm, leap=bright FM
+    {
+      if (this.state.chordChanged && this.state.chordHistory.length >= 2) {
+        const prevRoot = this.state.chordHistory[this.state.chordHistory.length - 2]?.root ?? this.state.currentChord.root;
+        const rmFm = rootMotionFm(prevRoot, this.state.currentChord.root, this.state.mood);
+        if (Math.abs(rmFm - 1.0) > 0.01) {
+          for (const result of layerResults) {
+            if (result.name === 'harmony' || result.name === 'melody') {
+              result.code = result.code.replace(
+                /\.fm\(([0-9.]+)\)/,
+                (_, val) => `.fm(${(parseFloat(val) * rmFm).toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic density breathing: organic gain oscillation per layer
+    {
+      const layerIndexMap: Record<string, number> = { drone: 0, harmony: 1, melody: 2, texture: 3, arp: 4, atmosphere: 5 };
+      for (const result of layerResults) {
+        const idx = layerIndexMap[result.name] ?? 0;
+        const dbGain = densityBreathingGain(this.state.tick, idx, this.state.mood, this.state.section);
+        if (Math.abs(dbGain - 1.0) > 0.005) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * dbGain).toFixed(4)})`
+          );
         }
       }
     }
