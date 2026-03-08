@@ -10,6 +10,7 @@ import { complementaryDensity, callResponseAmount } from '../../theory/call-resp
 import { generateComplementaryRhythm, counterpointDensity } from '../../theory/rhythmic-counterpoint';
 import { generateArpSequence, moodArpStyles, biasStyleForMotion, ArpStyle } from '../../theory/arp-pattern';
 import { suggestCounterDirection } from '../../theory/contrapuntal-motion';
+import { shouldUseIsorhythm, moodTalea, isorhythmicPattern, isorhythmToStrudel } from '../../theory/isorhythm';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -65,6 +66,7 @@ export class ArpLayer extends CachingLayer {
     const room = (0.4 + state.params.spaciousness * 0.4) * (1.1 - tension * 0.2);
     const sectionMult = SECTION_DENSITY[state.section];
     const section = state.section;
+    this.lastMood = mood;
 
     // Build arp notes from chord tones across octaves
     let baseNotes = chord.notes;
@@ -222,9 +224,25 @@ export class ArpLayer extends CachingLayer {
       case 'xtal': {
         // Square chime pips — tiny clicks distinct from triangle melody and sine harmony
         const notes = this.spreadOctaves(baseNotes, 4, 6);
-        const fill = this.pickFill16(density * sectionMult * 0.15);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
-        return `note("${steps.join(' ')}")
+        const xtalGain = 0.1 * (0.3 + density * 0.3);
+
+        // Isorhythmic phasing: talea + color cycle independently for evolving patterns
+        const isoXtal = shouldUseIsorhythm(mood, section, state.sectionProgress ?? 0)
+          ? this.buildIsorhythmic(notes, 16, xtalGain)
+          : null;
+
+        let xtalSteps: string[];
+        let xtalGainStr: string;
+        if (isoXtal) {
+          xtalSteps = this.applyDisplacement(isoXtal.steps, state);
+          xtalGainStr = isoXtal.gainStr;
+        } else {
+          const fill = this.pickFill16(density * sectionMult * 0.15);
+          xtalSteps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
+          xtalGainStr = new Array(16).fill(xtalGain.toFixed(4)).join(' ');
+        }
+
+        return `note("${xtalSteps.join(' ')}")
           .sound("square")
           .fm(0.3)
           .fmh(3)
@@ -232,7 +250,7 @@ export class ArpLayer extends CachingLayer {
           .fmdecay(0.05)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.15))}
           .slow(6)
-          .gain(${(0.1 * (0.3 + density * 0.3)).toFixed(3)})
+          .gain("${xtalGainStr}")
           .hpf(300)
           .lpf(${(1800 + brightness * 2000).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(11))
@@ -248,12 +266,26 @@ export class ArpLayer extends CachingLayer {
         // Dense 16th note arps — acid-style, resonant filter sweep, multiple octaves
         // Syro style: restless, intricate, technical
         const notes = this.spreadOctaves(baseNotes, Math.max(2, adjLow), Math.min(5, adjHigh));
-        const syroPattern = this.pickStyle(mood, section, counterDir);
-        const fill = this.pickFill16(density * sectionMult * 1.2);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
         const syroGain = 0.12 * (0.5 + density * 0.5);
-        const syroVelGain = this.getVelocityGain(syroGain, 16, mood);
-        return `note("${steps.join(' ')}")
+
+        // Isorhythmic phasing: IDM-style evolving patterns from phase offset
+        const isoSyro = shouldUseIsorhythm(mood, section, state.sectionProgress ?? 0)
+          ? this.buildIsorhythmic(notes, 16, syroGain)
+          : null;
+
+        let syroSteps: string[];
+        let syroVelGain: string;
+        if (isoSyro) {
+          syroSteps = this.applyDisplacement(isoSyro.steps, state);
+          syroVelGain = isoSyro.gainStr;
+        } else {
+          const syroPattern = this.pickStyle(mood, section, counterDir);
+          const fill = this.pickFill16(density * sectionMult * 1.2);
+          syroSteps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
+          syroVelGain = this.getVelocityGain(syroGain, 16, mood);
+        }
+
+        return `note("${syroSteps.join(' ')}")
           .sound("sawtooth")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(1)
@@ -415,6 +447,30 @@ export class ArpLayer extends CachingLayer {
     const pattern = MOOD_VELOCITY[mood];
     const curve = velocityCurve(steps, pattern);
     return curve.map(v => (baseGain * v).toFixed(4)).join(' ');
+  }
+
+  /**
+   * Build isorhythmic note and gain patterns from chord tones.
+   * Talea (rhythm) and color (pitch) cycle independently, creating
+   * constantly evolving patterns from simple ingredients.
+   */
+  private buildIsorhythmic(
+    notes: string[], length: number, baseGain: number
+  ): { steps: string[]; gainStr: string } | null {
+    const talea = moodTalea(this.lastMood ?? 'ambient');
+    const color = notes.length > 0 ? notes : ['~'];
+    const pattern = isorhythmicPattern(color, talea, length);
+    if (pattern.length === 0) return null;
+
+    const { noteStr, gainStr: rawGains } = isorhythmToStrudel(pattern);
+    const steps = noteStr.split(' ');
+
+    // Scale gains by baseGain
+    const scaledGains = rawGains.split(' ')
+      .map(g => (parseFloat(g) * baseGain).toFixed(4))
+      .join(' ');
+
+    return { steps, gainStr: scaledGains };
   }
 
   /** Apply rhythmic displacement, syncopation, and counterpoint for groove */
