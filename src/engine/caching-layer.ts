@@ -2,6 +2,7 @@ import { Layer } from './layer';
 import { GenerativeState, Mood } from '../types';
 import { stereoWidth } from '../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../theory/micro-timing';
+import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../theory/filter-envelope';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -25,6 +26,9 @@ export abstract class CachingLayer implements Layer {
 
     // Micro-timing: add subtle timing offsets for human feel
     result = this.applyMicroTiming(result, state);
+
+    // Filter envelope: smooth LPF sweep over section duration
+    result = this.applyFilterEnvelope(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -85,6 +89,29 @@ export abstract class CachingLayer implements Layer {
         const max = Math.min(1, center + scaledHalf).toFixed(2);
         return `.pan(sine.range(${min}, ${max}).slow(${speed}))`;
       }
+    );
+  }
+
+  /**
+   * Scale LPF values by section-progress-based envelope.
+   * Builds gradually open the filter, breakdowns close it.
+   */
+  private applyFilterEnvelope(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyFilterEnvelope(state.section)) return pattern;
+
+    const mult = filterEnvelopeMultiplier(
+      state.section,
+      state.sectionProgress ?? 0,
+      state.tension?.overall ?? 0.5
+    );
+
+    // Only modulate if meaningfully different from 1.0
+    if (mult > 0.98) return pattern;
+
+    // Scale static .lpf(NUMBER) values
+    return pattern.replace(
+      /\.lpf\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
     );
   }
 

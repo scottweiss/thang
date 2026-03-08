@@ -82,4 +82,5 @@ export interface GenerativeState {
   nextChordHint?: ChordState;  // probable next chord for anticipation
   layerPhraseDensity: Record<string, number>;  // per-layer note density (0-1) for call-and-response
   layerStepPattern: Record<string, string[]>;  // per-layer step arrays for rhythmic counterpoint
+  sectionProgress: number;  // 0-1 how far through current section
 }

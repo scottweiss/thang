@@ -90,6 +90,7 @@ export class GenerativeController {
       ticksSinceChordChange: 0,
       layerPhraseDensity: {},
       layerStepPattern: {},
+      sectionProgress: 0,
     };
 
     this.layers = [
@@ -189,6 +190,7 @@ export class GenerativeController {
 
     // Evolve sections (steers density/brightness, manages transitions)
     this.sections.evolve(this.state, dt);
+    this.state.sectionProgress = this.sections.getSectionProgress();
 
     // Strategic silence: brief drop before climactic sections
     if (this.state.sectionChanged) {
