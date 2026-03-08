@@ -10,6 +10,7 @@ import { anticipationWeight, anticipationGhostNote, shouldAnticipate } from '../
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
+import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -68,6 +69,18 @@ export class DroneLayer implements Layer {
         result = result.replace(
           /\.resonance\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.resonance(${Math.round(parseFloat(val) * resMult)})`
+        );
+      }
+    }
+
+    // Ensemble thinning: reduce FM/reverb/delay when many layers play
+    const etCount = state.activeLayers.size;
+    if (shouldApplyEnsembleThinning(etCount)) {
+      const etRoomMult = ensembleRoomMultiplier(etCount, state.mood);
+      if (Math.abs(etRoomMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.room\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.room(${(parseFloat(val) * etRoomMult).toFixed(2)})`
         );
       }
     }

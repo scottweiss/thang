@@ -33,6 +33,7 @@ import { pickColorTone, shouldConsiderColorTones } from '../../theory/chord-colo
 import { applyDrop2, applyDrop3, pickDropVoicing } from '../../theory/drop-voicing';
 import { compingPattern, shouldComp } from '../../theory/comping-rhythm';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../../theory/stereo-placement';
+import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -314,6 +315,33 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.release\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
+        );
+      }
+    }
+
+    // Ensemble thinning: reduce FM/reverb/delay when many layers play
+    const layerCount = state.activeLayers.size;
+    if (shouldApplyEnsembleThinning(layerCount)) {
+      const mood = state.mood;
+      const etFmMult = ensembleFmMultiplier(layerCount, mood);
+      if (Math.abs(etFmMult - 1.0) > 0.03 && result.includes('.fm(') && !result.includes('.fm(sine')) {
+        result = result.replace(
+          /\.fm\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.fm(${(parseFloat(val) * etFmMult).toFixed(1)})`
+        );
+      }
+      const etRoomMult = ensembleRoomMultiplier(layerCount, mood);
+      if (Math.abs(etRoomMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.room\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.room(${(parseFloat(val) * etRoomMult).toFixed(2)})`
+        );
+      }
+      const etDelayMult = ensembleDelayMultiplier(layerCount, mood);
+      if (Math.abs(etDelayMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * etDelayMult).toFixed(2)})`
         );
       }
     }
