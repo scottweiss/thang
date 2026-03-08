@@ -38,6 +38,7 @@ import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../theory/e
 import { tensionDisplacementPattern, shouldApplyTensionRhythm } from '../theory/tension-rhythm';
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../theory/tension-register';
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../theory/textural-contrast';
+import { spectralLpfMultiplier, spectralHpfOffset, shouldApplySpectralBalance } from '../theory/spectral-balance';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -126,6 +127,9 @@ export abstract class CachingLayer implements Layer {
 
     // Frequency band separation: adjust HPF/LPF to avoid layer masking
     result = this.applyBandSeparation(result, state);
+
+    // Spectral balance: adjust LPF/HPF to separate layer frequency bands
+    result = this.applySpectralBalance(result, state);
 
     // Resonance sweep: filter Q rises in builds, drops in breakdowns
     result = this.applyResonanceSweep(result, state);
@@ -979,6 +983,36 @@ export abstract class CachingLayer implements Layer {
     }
 
     return result;
+  }
+
+  /**
+   * Adjust LPF/HPF to separate frequency bands between layers.
+   * Prevents spectral masking when many layers are active.
+   */
+  private applySpectralBalance(pattern: string, state: GenerativeState): string {
+    if (!shouldApplySpectralBalance(state.mood, state.activeLayers)) return pattern;
+
+    const tension = state.tension?.overall ?? 0.5;
+
+    // LPF adjustment
+    const lpfMult = spectralLpfMultiplier(this.name, state.activeLayers, tension, state.mood);
+    if (Math.abs(lpfMult - 1.0) > 0.02) {
+      pattern = pattern.replace(
+        /\.lpf\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+      );
+    }
+
+    // HPF adjustment
+    const hpfOff = spectralHpfOffset(this.name, state.activeLayers, tension, state.mood);
+    if (hpfOff > 5 && pattern.includes('.hpf(')) {
+      pattern = pattern.replace(
+        /\.hpf\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.hpf(${Math.round(parseFloat(val) + hpfOff)})`
+      );
+    }
+
+    return pattern;
   }
 
   /**
