@@ -28,6 +28,7 @@ import { shouldExchangeVoices, selectExchangeNotes } from '../../theory/voice-ex
 import { suggestPitchClassAdditions } from '../../theory/pitch-class-set';
 import { shouldApplyResultant, resultantGainMask } from '../../theory/resultant-rhythm';
 import { shouldApplyHeterophony, selectVariation, rhythmicVariant, ornamentalVariant, octaveVariant, shadowVariant } from '../../theory/heterophony';
+import { shouldApplyOstinato, selectOstinatoType, generateOstinato, ostinatoLength } from '../../theory/ostinato';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -192,6 +193,16 @@ export class ArpLayer extends CachingLayer {
     if (state.nextChordHint &&
         shouldArpAnticipate(mood, state.ticksSinceChordChange, true)) {
       baseNotes = blendNextChordTones(baseNotes, state.nextChordHint.notes, mood);
+    }
+
+    // Ostinato: lock into a repeating pattern for hypnotic grooves
+    if (shouldApplyOstinato(state.tick, mood, section)) {
+      const osType = selectOstinatoType(mood, section, state.tick);
+      const osLen = ostinatoLength(mood);
+      const ostPattern = generateOstinato(chord.notes, osType, osLen);
+      if (ostPattern.length >= 2) {
+        baseNotes = ostPattern;
+      }
     }
 
     // Register awareness: get adjusted octave range to avoid melody collision

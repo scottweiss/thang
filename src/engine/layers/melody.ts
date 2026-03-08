@@ -39,6 +39,7 @@ import { anticipationProbability, anticipationTones, anticipationBias, shouldAnt
 import { gestureDensityMult, gesturePitchBias } from '../../theory/gestural-archetype';
 import { generateTimbreMap, shouldApplyKFM, applyTimbreToFM } from '../../theory/klangfarbenmelodie';
 import { shouldFragment, fragmentLength, extractFragment, repeatFragment } from '../../theory/motivic-fragmentation';
+import { shouldApplyAugDim, applyRhythmicTransform } from '../../theory/rhythmic-augmentation';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -163,6 +164,11 @@ export class MelodyLayer extends CachingLayer {
       } else if (feel === 'halftime') {
         elements = applyHalftime(elements, intensity, '~');
       }
+    }
+
+    // Rhythmic augmentation/diminution: stretch during intros/breakdowns, compress during builds
+    if (shouldApplyAugDim(state.tick, mood, state.section)) {
+      elements = applyRhythmicTransform(elements, state.section, elements.length);
     }
 
     // Report phrase density, step pattern, and active motif for cross-layer coordination
