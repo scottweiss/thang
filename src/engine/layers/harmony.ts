@@ -31,6 +31,7 @@ import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../..
 import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../../theory/harmonic-color';
 import { pickColorTone, shouldConsiderColorTones } from '../../theory/chord-color';
 import { applyDrop2, applyDrop3, pickDropVoicing } from '../../theory/drop-voicing';
+import { compingPattern, shouldComp } from '../../theory/comping-rhythm';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -51,6 +52,22 @@ export class HarmonyLayer implements Layer {
 
   generate(state: GenerativeState): string {
     let result = this.buildPattern(state);
+
+    // Comping rhythm: replace sustained gain with rhythmic chord stabs
+    if (shouldComp(state.mood, state.section)) {
+      const comp = compingPattern(8, state.mood, state.section);
+      // Replace flat gain with per-step gain pattern
+      result = result.replace(
+        /\.gain\(([0-9.]+)\)/,
+        (_, baseGain) => {
+          const g = parseFloat(baseGain);
+          const gains = comp.map(v => (g * v).toFixed(4)).join(' ');
+          return `.gain("${gains}")`;
+        }
+      );
+      // Switch from slow sustain to per-beat articulation
+      result = result.replace(/\.slow\([2-9]\d*\)/, '.slow(1)');
+    }
 
     // Dynamic stereo field: modulate pan range for section/tension
     result = this.modulateStereo(result, state);
