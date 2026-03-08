@@ -34,6 +34,7 @@ import { EmotionalMemoryBank, isEmotionalLandmark } from '../theory/emotional-me
 import { shouldApplyNegativeHarmony, negativeRoot } from '../theory/negative-harmony';
 import { shouldModulate as shouldMetricModulate, modulationRatio, modulationEnvelope, modulationWindowTicks } from '../theory/metric-modulation';
 import { bestPivotChord, shouldUsePivot } from '../theory/pivot-modulation';
+import { macroDynamicGain, transitionDynamicAccent, shouldApplyMacroDynamics } from '../theory/macro-dynamics';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -648,6 +649,29 @@ export class GenerativeController {
             return `.gain((${expr}) * ${hrScalar.toFixed(4)})`;
           }
         );
+      }
+    }
+
+    // Macro dynamics: overall loudness contour across the piece
+    if (shouldApplyMacroDynamics(this.state.mood)) {
+      const macroGain = macroDynamicGain(
+        this.state.section, this.state.sectionProgress ?? 0, this.state.mood
+      );
+      const transAccent = transitionDynamicAccent(
+        this.state.section, this.state.sectionChanged ? 0 : 3
+      );
+      const macroMult = macroGain * transAccent;
+      if (Math.abs(macroMult - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * macroMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${macroMult.toFixed(4)})`;
+            }
+          );
+        }
       }
     }
 
