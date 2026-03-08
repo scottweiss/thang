@@ -61,6 +61,29 @@ const TRANCE_PATTERNS_BREAK = [
   'hh ~ ~ ~ ~ ~ ~ ~ hh ~ ~ ~ ~ ~ ~ ~',       // sparse hat
 ];
 
+// Transition fills — played for one cycle when entering a new section
+const FILLS_INTO_PEAK = [
+  'bd ~ sd hh bd hh sd hh bd hh sd hh sd sd sd sd', // building snare roll
+  'hh hh hh hh sd hh sd hh sd sd sd sd bd sd bd sd', // accelerating roll
+  'bd ~ ~ sd ~ sd sd ~ bd sd bd sd sd sd sd cp',     // classic fill into drop
+];
+
+const FILLS_INTO_BREAKDOWN = [
+  'bd ~ ~ ~ sd ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ cp',             // sparse exit
+  '~ ~ ~ ~ ~ ~ ~ ~ bd ~ ~ ~ ~ ~ ~ ~',               // single thud
+  'hh ~ hh ~ hh ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~',             // hat fade out
+];
+
+const FILLS_INTO_BUILD = [
+  '~ ~ hh ~ ~ ~ hh ~ ~ ~ hh hh ~ hh hh hh',        // hat ramp up
+  'bd ~ ~ ~ ~ ~ ~ ~ hh ~ hh ~ hh hh hh hh',        // kick + accelerating hats
+];
+
+const FILLS_INTO_GROOVE = [
+  'bd ~ hh sd ~ hh bd hh sd ~ bd hh sd hh bd cp',   // funky fill
+  'bd ~ ~ ~ sd ~ bd ~ sd hh ~ ~ sd ~ hh cp',        // groovy entrance
+];
+
 export class TextureLayer extends CachingLayer {
   name = 'texture';
   orbit = 3;
@@ -83,6 +106,21 @@ export class TextureLayer extends CachingLayer {
     const gain = 0.3 * density;
     const room = 0.3 + state.params.spaciousness * 0.3;
     const brightness = state.params.brightness;
+
+    // Play a transition fill on section changes (not for ambient/avril)
+    if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril') {
+      const fill = this.getTransitionFill(state.section);
+      if (fill) {
+        const fillGain = gain * (mood === 'trance' ? 1.2 : 0.8);
+        return `sound("${fill}")
+          .slow(1)
+          .gain(${fillGain.toFixed(3)})
+          .lpf(${(2000 + brightness * 4000).toFixed(0)})
+          .room(${(room * 0.6).toFixed(2)})
+          .roomsize(2)
+          .orbit(${this.orbit})`;
+      }
+    }
 
     switch (mood) {
       case 'ambient':
@@ -229,6 +267,17 @@ export class TextureLayer extends CachingLayer {
       .room(${(room * 0.8).toFixed(2)})
       .roomsize(3)
       .orbit(${this.orbit})`;
+  }
+
+  // Pick a fill pattern based on which section we're entering
+  private getTransitionFill(section: Section): string | null {
+    switch (section) {
+      case 'peak': return randomChoice(FILLS_INTO_PEAK);
+      case 'breakdown': return randomChoice(FILLS_INTO_BREAKDOWN);
+      case 'build': return randomChoice(FILLS_INTO_BUILD);
+      case 'groove': return randomChoice(FILLS_INTO_GROOVE);
+      default: return null; // no fill into intro
+    }
   }
 
   // Multiply base gain by velocity template values to create per-step gain pattern
