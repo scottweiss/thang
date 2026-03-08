@@ -249,6 +249,9 @@ import { peakBrightnessGain } from '../theory/melodic-peak-brightness';
 import { expectationFulfillmentGain } from '../theory/harmonic-expectation-fulfillment';
 import { texturalBreathingGain } from '../theory/textural-breathing-rate';
 import { voiceLeadingGain } from '../theory/voice-leading-smoothness';
+import { colorShiftLpf } from '../theory/harmonic-color-shift';
+import { reentryGain } from '../theory/rhythmic-expectation-reset';
+import { headroomGain } from '../theory/dynamic-headroom-management';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4586,6 +4589,51 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic color shift: chord quality influences LPF
+    {
+      const quality6 = this.state.currentChord?.quality ?? 'maj';
+      const csLpf = colorShiftLpf(quality6, this.state.mood);
+      if (Math.abs(csLpf - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * csLpf).toFixed(0)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic expectation reset: gain emphasis after silence
+    {
+      const ticksSilence = this.state.ticksSinceChordChange ?? 3;
+      const reGain = reentryGain(ticksSilence, this.state.mood);
+      if (reGain > 1.02) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * reGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Dynamic headroom management: reserve gain for peaks
+    {
+      const hrGain = headroomGain(this.state.mood, this.state.section);
+      if (hrGain < 0.97) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * hrGain).toFixed(4)})`
+          );
         }
       }
     }
