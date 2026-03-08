@@ -49,6 +49,7 @@ import { shouldApplyAmbiguity, suggestAmbiguousExtensions, ambiguityDarkenFactor
 import { accompGravityPull, nextChordBlend, blendVoicings, shouldApplyAccompGravity } from '../../theory/accompaniment-gravity';
 import { shouldApplySpectralHarmony, suggestSpectralEnrichment } from '../../theory/spectral-harmony';
 import { shouldApplyQuartal, quartalVoicing, quintalVoicing, selectVoicingType, quartalVoiceCount } from '../../theory/quartal-voicing';
+import { shouldApplyField, overtoneVoicing, fieldPartials, blendVoicings as blendOvertone } from '../../theory/harmonic-field';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -640,6 +641,13 @@ export class HarmonyLayer implements Layer {
       chordNotes = voiceType === 'quartal'
         ? quartalVoicing(rootName, 3, voices)
         : quintalVoicing(rootName, 3, voices);
+    }
+
+    // Harmonic field: overtone-series voicings for luminous sonority
+    if (!hasSuspension && shouldApplyField(state.tick, mood, state.section)) {
+      const partials = fieldPartials(mood, state.section);
+      const overtones = overtoneVoicing(chord.root, 3, partials);
+      chordNotes = blendOvertone(chordNotes, overtones, 0.4);
     }
 
     // Apply voicing spread — wider at peaks, tighter at breakdowns
