@@ -27,6 +27,7 @@ import { densityContour, shouldApplyDensityContour } from '../../theory/density-
 import { placePeak, moodPeakPosition, shouldPlacePeak } from '../../theory/phrase-peak';
 import { inverseDensityMultiplier, shouldApplyInverseDensity } from '../../theory/inverse-density';
 import { applyCadenceGesture } from '../../theory/cadence-gesture';
+import { addOctaveDoublings } from '../../theory/octave-doubling';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -705,7 +706,10 @@ export class MelodyLayer extends CachingLayer {
     const ornamented = addOrnaments(elements, ladder, mood, state.tension?.overall ?? 0.5);
 
     // Blue note inflections: chromatic color from parallel modes
-    return applyBlueNotes(ornamented, state.scale.notes, mood, state.tension?.overall ?? 0.5);
+    const blued = applyBlueNotes(ornamented, state.scale.notes, mood, state.tension?.overall ?? 0.5);
+
+    // Octave doubling: reinforce key notes at high energy for power
+    return addOctaveDoublings(blued, tension, state.section, mood);
   }
 
   // Build a pitch ladder from pentatonic notes across octaves
