@@ -351,6 +351,9 @@ import { anacrusisEmphasisGain } from '../theory/rhythmic-anacrusis-emphasis';
 import { retrogradeMotionGain } from '../theory/harmonic-retrograde-motion';
 import { goldenRatioPhrasingGain } from '../theory/melodic-golden-ratio-phrasing';
 import { impliedTempoLayerGain } from '../theory/rhythmic-implied-tempo-layer';
+import { chromaticMediantFm } from '../theory/harmonic-chromatic-mediant';
+import { sequenceTranspositionGain } from '../theory/melodic-sequence-transposition';
+import { tupletFeelGain } from '../theory/rhythmic-tuplet-feel';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6927,6 +6930,69 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${safeMul(val, itGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic chromatic mediant: FM color shift on third-related root motion
+    if (this.state.chordChanged && this.state.chordHistory.length >= 2) {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const prev = this.state.chordHistory[this.state.chordHistory.length - 2];
+      const curr = this.state.currentChord;
+      const prevPC = noteToPC[prev.root] ?? 0;
+      const currPC = noteToPC[curr.root] ?? 0;
+      const modeChanged = prev.quality !== curr.quality;
+      const cmFm = chromaticMediantFm(prevPC, currPC, modeChanged, this.state.mood, this.state.section);
+      if (cmFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${safeMul(val, cmFm, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic sequence transposition: reward transposed motif repetition
+    if (this.state.activeMotif && this.state.activeMotif.length >= 3) {
+      const motifNotes = this.state.activeMotif.map(n => safeP(n, 60));
+      const motifIntervals: number[] = [];
+      for (let i = 1; i < motifNotes.length; i++) {
+        motifIntervals.push(motifNotes[i] - motifNotes[i - 1]);
+      }
+      // Use last few center pitches as current fragment
+      const centers = Object.values(this.state.layerCenterPitches);
+      const curIntervals: number[] = [];
+      for (let i = 1; i < centers.length && i < motifIntervals.length + 1; i++) {
+        curIntervals.push(centers[i] - centers[i - 1]);
+      }
+      const stGain = sequenceTranspositionGain(motifIntervals, curIntervals, this.state.mood, this.state.section);
+      if (stGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, stGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic tuplet feel: triplet-over-duple accent
+    {
+      const beatPos = this.state.tick % 16;
+      const tfGain = tupletFeelGain(beatPos, this.state.mood, this.state.section);
+      if (tfGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, tfGain, 4)})`
             );
           }
         }
