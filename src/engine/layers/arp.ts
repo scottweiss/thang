@@ -11,6 +11,7 @@ import { generateComplementaryRhythm, counterpointDensity } from '../../theory/r
 import { generateArpSequence, moodArpStyles, biasStyleForMotion, ArpStyle } from '../../theory/arp-pattern';
 import { suggestCounterDirection } from '../../theory/contrapuntal-motion';
 import { shouldUseIsorhythm, moodTalea, isorhythmicPattern, isorhythmToStrudel } from '../../theory/isorhythm';
+import { complementWeights, weightLadder, selectComplement, shouldApplyComplement, complementStrength } from '../../theory/pitch-complement';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -79,6 +80,27 @@ export class ArpLayer extends CachingLayer {
       // Take 1-2 notes from the motif to enrich the arp palette
       const motifSample = state.activeMotif.slice(0, Math.min(2, state.activeMotif.length));
       baseNotes = [...chord.notes, ...motifSample];
+    }
+
+    // Pitch complementarity: enrich arp with scale notes the melody ISN'T playing
+    // Fills harmonic gaps rather than doubling — richer overall texture
+    if (shouldApplyComplement(mood) && state.activeMotif && state.activeMotif.length > 0) {
+      const str = complementStrength(mood);
+      const weights = complementWeights(state.activeMotif, state.scale.notes, chord.notes.map(n => n.replace(/\d+$/, '')), str);
+      // Add 1-2 complementary scale notes weighted by what melody isn't playing
+      const ladder = state.scale.notes;
+      const w = weightLadder(ladder, weights);
+      const extra: string[] = [];
+      const tries = Math.min(2, ladder.length);
+      for (let i = 0; i < tries; i++) {
+        const idx = selectComplement(ladder, w);
+        if (idx < ladder.length && !extra.includes(ladder[idx])) {
+          extra.push(ladder[idx]);
+        }
+      }
+      if (extra.length > 0) {
+        baseNotes = [...baseNotes, ...extra];
+      }
     }
 
     // Register awareness: get adjusted octave range to avoid melody collision
