@@ -76,6 +76,9 @@ import { spectralTiltLpf, shouldApplySpectralTilt } from '../theory/spectral-til
 import { pivotGainSwell, shouldApplyRhythmicPivot } from '../theory/rhythmic-pivot';
 import { crossfadeBlend, crossfadeFm, shouldCrossfade } from '../theory/cross-fade-texture';
 import { swingOffsets, shouldApplyIntraBeatSwing } from '../theory/intra-beat-swing';
+import { sustainMultiplier, shouldApplySustainCurve } from '../theory/sustain-envelope-curve';
+import { predictiveLpfMultiplier, shouldApplyPredictiveEq } from '../theory/predictive-eq';
+import { phaseLockCorrection, shouldApplyPhaseLock } from '../theory/grid-phase-lock';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
@@ -1453,6 +1456,26 @@ export class GenerativeController {
       }
     }
 
+    // Predictive EQ: look-ahead LPF adjustment before chord change
+    if (this.state.nextChordHint && shouldApplyPredictiveEq(
+      this.state.mood, true, this.state.ticksSinceChordChange
+    )) {
+      const predMult = predictiveLpfMultiplier(
+        this.state.currentChord.quality,
+        this.state.nextChordHint.quality,
+        this.state.ticksSinceChordChange,
+        this.state.mood
+      );
+      if (Math.abs(predMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * predMult)})`
+          );
+        }
+      }
+    }
+
     // Rhythmic pivot: gain swell approaching section boundaries
     if (shouldApplyRhythmicPivot(this.state.sectionProgress ?? 0, this.state.mood)) {
       const swell = pivotGainSwell(
@@ -1575,6 +1598,22 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.decay\(([0-9.]+)\)/,
             (_, val) => `.decay(${(parseFloat(val) * decMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Sustain envelope curve: sustain level modulated by section and layer role
+    if (shouldApplySustainCurve(this.state.mood)) {
+      for (const result of layerResults) {
+        const susMult = sustainMultiplier(
+          this.state.section, this.state.sectionProgress ?? 0,
+          this.state.mood, result.name
+        );
+        if (Math.abs(susMult - 1.0) > 0.03) {
+          result.code = result.code.replace(
+            /\.sustain\(([0-9.]+)\)/,
+            (_, val) => `.sustain(${(parseFloat(val) * susMult).toFixed(4)})`
           );
         }
       }
@@ -1743,6 +1782,22 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.orbit\((\d+)\)/,
             (m) => `.late(${lateVal.toFixed(4)})${m}`
+          );
+        }
+      }
+    }
+
+    // Grid phase lock: snap layers to harmonic rhythm grid
+    if (shouldApplyPhaseLock(this.state.mood, this.state.section, this.state.ticksSinceChordChange)) {
+      for (const result of layerResults) {
+        const corr = phaseLockCorrection(
+          result.name, this.state.ticksSinceChordChange,
+          this.state.mood, this.state.section
+        );
+        if (corr > 0.001) {
+          result.code = result.code.replace(
+            /\.orbit\((\d+)\)/,
+            (m) => `.late(${corr.toFixed(4)})${m}`
           );
         }
       }
