@@ -1,6 +1,7 @@
 import { CachingLayer } from '../caching-layer';
 import { GenerativeState, Section } from '../../types';
 import { randomChoice } from '../random';
+import { evolveDrumPattern } from '../../theory/drum-evolution';
 
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
@@ -206,10 +207,10 @@ export class TextureLayer extends CachingLayer {
         return this.buildAmbientPattern(density, gain, room, brightness);
 
       case 'downtempo':
-        return this.buildDowntempoPattern(density, gain * 0.8, room, brightness, state.section);
+        return this.buildDowntempoPattern(density, gain * 0.8, room, brightness, state.section, state.tick);
 
       case 'lofi':
-        return this.buildLofiPattern(density, gain, room * 0.7, brightness, state.section);
+        return this.buildLofiPattern(density, gain, room * 0.7, brightness, state.section, state.tick);
 
       case 'trance':
         return this.buildTrancePattern(density, gain * 1.2, room * 0.5, brightness, state.section);
@@ -218,19 +219,19 @@ export class TextureLayer extends CachingLayer {
         return this.buildAvrilPattern(density, gain, room, brightness);
 
       case 'xtal':
-        return this.buildXtalPattern(density, gain, room, brightness, state.section);
+        return this.buildXtalPattern(density, gain, room, brightness, state.section, state.tick);
 
       case 'syro':
-        return this.buildSyroPattern(density, gain * 1.1, room * 0.4, brightness, state.section);
+        return this.buildSyroPattern(density, gain * 1.1, room * 0.4, brightness, state.section, state.tick);
 
       case 'blockhead':
-        return this.buildBlockheadPattern(density, gain, room * 0.7, brightness, state.section);
+        return this.buildBlockheadPattern(density, gain, room * 0.7, brightness, state.section, state.tick);
 
       case 'flim':
         return this.buildFlimPattern(density, gain * 0.6, room, brightness, state.section);
 
       case 'disco':
-        return this.buildDiscoPattern(density, gain * 1.1, room * 0.5, brightness, state.section);
+        return this.buildDiscoPattern(density, gain * 1.1, room * 0.5, brightness, state.section, state.tick);
     }
   }
 
@@ -258,7 +259,7 @@ export class TextureLayer extends CachingLayer {
 
   private buildDowntempoPattern(
     density: number, gain: number, room: number,
-    brightness: number, section: Section
+    brightness: number, section: Section, tick: number = 0
   ): string {
     let pattern = randomChoice(DOWNTEMPO_PATTERNS);
 
@@ -268,6 +269,7 @@ export class TextureLayer extends CachingLayer {
     if (density > 0.5) {
       pattern = this.addGhostHats(pattern, (density - 0.5) * 0.25);
     }
+    pattern = this.evolveForSection(pattern, section, tick);
 
     // Downtempo: spacious, organic — more reverb, delay, wider stereo, gentle LPF
     const dtGainPattern = this.applyVelocity(gain, randomChoice(DOWNTEMPO_VELOCITIES));
@@ -286,7 +288,7 @@ export class TextureLayer extends CachingLayer {
 
   private buildLofiPattern(
     density: number, gain: number, room: number,
-    brightness: number, section: Section
+    brightness: number, section: Section, tick: number = 0
   ): string {
     let pattern = randomChoice(LOFI_PATTERNS);
 
@@ -296,6 +298,7 @@ export class TextureLayer extends CachingLayer {
     if (density > 0.5) {
       pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
     }
+    pattern = this.evolveForSection(pattern, section, tick);
 
     // Lofi: warm, crunchy — bit crush, heavy LPF, tight room, velocity groove
     const lofiGainPattern = this.applyVelocity(gain, randomChoice(LOFI_VELOCITIES));
@@ -365,7 +368,7 @@ export class TextureLayer extends CachingLayer {
 
   private buildXtalPattern(
     density: number, gain: number, room: number,
-    brightness: number, section: Section
+    brightness: number, section: Section, tick: number = 0
   ): string {
     let pattern = randomChoice(XTAL_PATTERNS);
 
@@ -375,6 +378,7 @@ export class TextureLayer extends CachingLayer {
     if (density > 0.5) {
       pattern = this.addGhostHats(pattern, (density - 0.5) * 0.2);
     }
+    pattern = this.evolveForSection(pattern, section, tick);
 
     // Xtal: warm, saturated breakbeats — heavy reverb, tape-like
     const xtalGainPattern = this.applyVelocity(gain * 0.7, randomChoice(XTAL_VELOCITIES));
@@ -394,7 +398,7 @@ export class TextureLayer extends CachingLayer {
 
   private buildSyroPattern(
     density: number, gain: number, room: number,
-    brightness: number, section: Section
+    brightness: number, section: Section, tick: number = 0
   ): string {
     let pattern = randomChoice(SYRO_PATTERNS);
 
@@ -403,6 +407,7 @@ export class TextureLayer extends CachingLayer {
     }
     // Always add ghost hats for density — syro is busy
     pattern = this.addGhostHats(pattern, 0.15 + density * 0.15);
+    pattern = this.evolveForSection(pattern, section, tick);
 
     // Syro: tight, dry, precise — minimal reverb, bright, crisp
     const syroGainPattern = this.applyVelocity(gain, randomChoice(SYRO_VELOCITIES));
@@ -419,7 +424,7 @@ export class TextureLayer extends CachingLayer {
 
   private buildBlockheadPattern(
     density: number, gain: number, room: number,
-    brightness: number, section: Section
+    brightness: number, section: Section, tick: number = 0
   ): string {
     let pattern = randomChoice(BLOCKHEAD_PATTERNS);
 
@@ -429,6 +434,7 @@ export class TextureLayer extends CachingLayer {
     if (density > 0.5) {
       pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
     }
+    pattern = this.evolveForSection(pattern, section, tick);
 
     // Blockhead: warm, punchy hip-hop — moderate reverb, bit of crush, swing feel
     const bhGainPattern = this.applyVelocity(gain, randomChoice(BLOCKHEAD_VELOCITIES));
@@ -471,7 +477,7 @@ export class TextureLayer extends CachingLayer {
 
   private buildDiscoPattern(
     density: number, gain: number, room: number,
-    brightness: number, section: Section
+    brightness: number, section: Section, tick: number = 0
   ): string {
     let pattern: string;
 
@@ -487,6 +493,7 @@ export class TextureLayer extends CachingLayer {
         pattern = this.addGhostHats(pattern, (density - 0.5) * 0.2);
       }
     }
+    pattern = this.evolveForSection(pattern, section, tick);
 
     // Disco: punchy, bright, tight — moderate reverb, open filter
     const discoGainPattern = this.applyVelocity(gain, randomChoice(DISCO_VELOCITIES));
@@ -530,5 +537,19 @@ export class TextureLayer extends CachingLayer {
       if (step !== '~') return step;
       return Math.random() < prob ? 'hh' : '~';
     }).join(' ');
+  }
+
+  // Evolve pattern based on section — builds add, breakdowns thin
+  private evolveForSection(pattern: string, section: Section, tick: number): string {
+    // Estimate section progress (sections last ~15-25 ticks)
+    const progress = Math.min(1.0, (tick % 20) / 20);
+    switch (section) {
+      case 'build':
+        return evolveDrumPattern(pattern, progress, 'build', 0.6);
+      case 'breakdown':
+        return evolveDrumPattern(pattern, progress, 'thin', 0.5);
+      default:
+        return pattern;
+    }
   }
 }
