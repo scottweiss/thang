@@ -33,6 +33,7 @@ import { tempoFeelMultiplier, shouldApplyTempoFeel } from '../theory/tempo-feel'
 import { EmotionalMemoryBank, isEmotionalLandmark } from '../theory/emotional-memory';
 import { shouldApplyNegativeHarmony, negativeRoot } from '../theory/negative-harmony';
 import { shouldModulate as shouldMetricModulate, modulationRatio, modulationEnvelope, modulationWindowTicks } from '../theory/metric-modulation';
+import { bestPivotChord, shouldUsePivot } from '../theory/pivot-modulation';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -354,6 +355,21 @@ export class GenerativeController {
       if (related.length > 0) {
         const candidates = related.slice(0, 3);
         const chosen = randomChoice(candidates);
+
+        // Pivot modulation: set current chord to a pivot before changing key
+        if (shouldUsePivot(this.state.tick, this.state.mood, this.state.section)) {
+          const pivot = bestPivotChord(this.state.scale.root, chosen.root);
+          if (pivot && pivot.quality !== 'dim') {
+            this.state.nextChordHint = {
+              symbol: `${pivot.root}${pivot.quality === 'min' ? 'm' : ''}`,
+              root: pivot.root,
+              quality: pivot.quality,
+              notes: getChordNotesWithOctave(pivot.root, pivot.quality, 3),
+              degree: pivot.fromDegree,
+            };
+          }
+        }
+
         this.state.scale = buildScaleState(chosen.root, chosen.type);
         this.progression.setScale(this.state.scale);
       }

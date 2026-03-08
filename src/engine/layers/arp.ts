@@ -27,6 +27,7 @@ import { arpRegisterOffset, shouldApplyRegisterComplement } from '../../theory/r
 import { shouldExchangeVoices, selectExchangeNotes } from '../../theory/voice-exchange';
 import { suggestPitchClassAdditions } from '../../theory/pitch-class-set';
 import { shouldApplyResultant, resultantGainMask } from '../../theory/resultant-rhythm';
+import { shouldApplyHeterophony, selectVariation, rhythmicVariant, ornamentalVariant, octaveVariant, shadowVariant } from '../../theory/heterophony';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -91,6 +92,31 @@ export class ArpLayer extends CachingLayer {
 
     // Build arp notes from chord tones across octaves
     let baseNotes = chord.notes;
+
+    // Heterophony: arp shadows the melody with variation instead of independent pattern
+    if (state.activeMotif && state.activeMotif.length >= 3 &&
+        shouldApplyHeterophony(state.tick, mood, section)) {
+      const variation = selectVariation(mood, section, state.tick);
+      let heteroNotes: string[];
+      switch (variation) {
+        case 'rhythmic':
+          heteroNotes = rhythmicVariant(state.activeMotif);
+          break;
+        case 'ornamental':
+          heteroNotes = ornamentalVariant(state.activeMotif, state.scale.notes);
+          break;
+        case 'octave':
+          heteroNotes = octaveVariant(state.activeMotif, -1);
+          break;
+        case 'shadow':
+          heteroNotes = shadowVariant(state.activeMotif, 1);
+          break;
+      }
+      const validHetero = heteroNotes.filter(n => n !== '~' && n.match(/^[A-G]/));
+      if (validHetero.length >= 2) {
+        baseNotes = [...chord.notes, ...validHetero.slice(0, 4)];
+      }
+    }
 
     // Imitative echo: transpose melody motif and use as arp base (canonic imitation)
     if (state.activeMotif && state.activeMotif.length >= 3 &&
