@@ -222,6 +222,9 @@ import { microPauseGain } from '../theory/micro-pause-anticipation';
 import { tendencyResolutionGain } from '../theory/melodic-tendency-resolution';
 import { orchestralWeightGain } from '../theory/dynamic-orchestral-weight';
 import { cadenceTimingGain } from '../theory/phrase-cadence-timing';
+import { rootStrengthGain } from '../theory/harmonic-root-strength';
+import { rhythmicVariation } from '../theory/rhythmic-variation-curve';
+import { warmthFmCorrection } from '../theory/spectral-warmth-tracking';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4557,6 +4560,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic root strength: bass note alignment with chord root
+    {
+      const noteToMidi: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const chordRootMidi = noteToMidi[this.state.currentChord?.root ?? 'C'] ?? 60;
+      const bassNoteMidi = chordRootMidi - 12; // assume bass is octave below
+      const rsGain = rootStrengthGain(bassNoteMidi, chordRootMidi, this.state.mood);
+      if (Math.abs(rsGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'drone' || result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rsGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic variation curve: complexity evolves within sections
+    {
+      const rvMult = rhythmicVariation(
+        this.state.sectionProgress ?? 0,
+        this.state.mood,
+        this.state.section
+      );
+      if (Math.abs(rvMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rvMult).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Spectral warmth tracking: FM ratio warmth correction
+    {
+      const fmRatio = this.state.mood === 'lofi' ? 2 : this.state.mood === 'syro' ? 5 : 3;
+      const wCorr = warmthFmCorrection(fmRatio, this.state.mood);
+      if (Math.abs(wCorr - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * wCorr).toFixed(4)})`
             );
           }
         }
