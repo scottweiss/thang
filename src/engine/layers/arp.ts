@@ -25,6 +25,7 @@ import { shouldArpAnticipate, blendNextChordTones } from '../../theory/arp-antic
 import { shouldEchoMotif, transposeMotif, selectEchoInterval } from '../../theory/imitative-echo';
 import { arpRegisterOffset, shouldApplyRegisterComplement } from '../../theory/register-complement';
 import { shouldExchangeVoices, selectExchangeNotes } from '../../theory/voice-exchange';
+import { suggestPitchClassAdditions } from '../../theory/pitch-class-set';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -140,6 +141,23 @@ export class ArpLayer extends CachingLayer {
       }
       if (extra.length > 0) {
         baseNotes = [...baseNotes, ...extra];
+      }
+    }
+
+    // Pitch-class set enrichment: add mood-appropriate interval color
+    if (section !== 'intro' && Math.random() < 0.25) {
+      const NOTE_PC: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const PC_NOTE = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+      const existingPCs = baseNotes
+        .map(n => NOTE_PC[n.replace(/\d+$/, '')])
+        .filter((pc): pc is number => pc !== undefined);
+      const additions = suggestPitchClassAdditions(existingPCs, mood, 1);
+      if (additions.length > 0) {
+        baseNotes = [...baseNotes, PC_NOTE[additions[0]]];
       }
     }
 
