@@ -333,6 +333,9 @@ import { hemiolaPatternGain } from '../theory/rhythmic-hemiola-pattern';
 import { suspensionChainFm } from '../theory/harmonic-suspension-chain-fm';
 import { appoggiaturaWeightGain } from '../theory/melodic-appoggiatura-weight';
 import { additiveGroupingGain } from '../theory/rhythmic-additive-grouping';
+import { pedalPointTensionFm } from '../theory/harmonic-pedal-point-tension';
+import { escapeToneColorLpf } from '../theory/melodic-escape-tone-color';
+import { metricModulationFeelGain } from '../theory/rhythmic-metric-modulation-feel';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6585,6 +6588,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * agGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic pedal point tension: FM enrichment from pedal-chord distance
+    {
+      const noteToPC177: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC177[this.state.currentChord.root] ?? 0;
+      const bassPc = noteToPC177[this.state.scale.root] ?? 0;
+      const ppFm = pedalPointTensionFm(bassPc, rootPc, this.state.mood, this.state.section);
+      if (ppFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'drone' || result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * ppFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic escape tone color: brightness on escape tones
+    {
+      const p = this.state.sectionProgress;
+      const arr = Math.round(Math.sin(p * Math.PI * 5) * 1.5);
+      const dep = Math.round(Math.cos(p * Math.PI * 5) * -5);
+      const etLpf = escapeToneColorLpf(arr, dep, this.state.mood, this.state.section);
+      if (etLpf > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * etLpf).toFixed(1)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic metric modulation feel: tempo illusion accents
+    {
+      const beatPos = this.state.tick % 16;
+      const mmGain = metricModulationFeelGain(beatPos, this.state.tick, this.state.sectionProgress, this.state.mood, this.state.section);
+      if (mmGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * mmGain).toFixed(4)})`
             );
           }
         }
