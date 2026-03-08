@@ -74,6 +74,8 @@ import { bloomMultiplier, bloomLpfMultiplier, bloomRoomMultiplier, shouldApplyBl
 import { detectPhase, releaseMultiplier, releaseReverbMultiplier, shouldApplyTensionResolution } from '../theory/tension-resolution-pair';
 import { spectralTiltLpf, shouldApplySpectralTilt } from '../theory/spectral-tilt';
 import { pivotGainSwell, shouldApplyRhythmicPivot } from '../theory/rhythmic-pivot';
+import { crossfadeBlend, crossfadeFm, shouldCrossfade } from '../theory/cross-fade-texture';
+import { swingOffsets, shouldApplyIntraBeatSwing } from '../theory/intra-beat-swing';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
@@ -1636,6 +1638,24 @@ export class GenerativeController {
       }
     }
 
+    // Cross-fade texture: smooth FM transitions on chord changes
+    if (shouldCrossfade(this.state.ticksSinceChordChange, this.state.mood)) {
+      const blend = crossfadeBlend(this.state.ticksSinceChordChange, this.state.mood);
+      if (blend > 0.05) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.fm\((\d+(?:\.\d+)?)\)/,
+            (_, val) => {
+              const current = parseFloat(val);
+              // Blend toward a neutral mid-point (creates smoother transition)
+              const blended = crossfadeFm(current * 0.8, current, blend);
+              return `.fm(${blended.toFixed(2)})`;
+            }
+          );
+        }
+      }
+    }
+
     // Echo density: delay feedback adapts to musical density
     if (shouldApplyEchoDensity(this.state.mood)) {
       for (const result of layerResults) {
@@ -1720,6 +1740,26 @@ export class GenerativeController {
         const offset = chordTimingOffset(result.name, this.state.mood, this.state.section);
         if (Math.abs(offset) > 0.005) {
           const lateVal = Math.max(0.001, offset + 0.05); // shift to positive range
+          result.code = result.code.replace(
+            /\.orbit\((\d+)\)/,
+            (m) => `.late(${lateVal.toFixed(4)})${m}`
+          );
+        }
+      }
+    }
+
+    // Intra-beat swing: per-note grace-note timing for humanization
+    if (shouldApplyIntraBeatSwing(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const noteCount = noteMatch[1].split(/\s+/).length;
+        const offsets = swingOffsets(noteCount, this.state.tick, this.state.mood, this.state.section);
+        // Apply average swing as a single .late() value (Strudel doesn't support per-note late)
+        const avgOffset = offsets.reduce((a, b) => a + b, 0) / offsets.length;
+        if (Math.abs(avgOffset) > 0.002) {
+          const lateVal = Math.max(0.001, avgOffset + 0.01);
           result.code = result.code.replace(
             /\.orbit\((\d+)\)/,
             (m) => `.late(${lateVal.toFixed(4)})${m}`

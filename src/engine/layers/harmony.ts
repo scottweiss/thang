@@ -56,6 +56,7 @@ import { shouldBassHold, superpositionStrength } from '../../theory/harmonic-rhy
 import { shouldAnticipateVoice, anticipationAmount, anticipatedPitch, nearestTarget } from '../../theory/anticipatory-voice';
 import { selectApproachType, approachOffset, shouldApplyApproach } from '../../theory/approach-pattern';
 import { shouldHoldPedal } from '../../theory/harmonic-pedal-tone';
+import { shouldApplyEllipsis, selectOmission, applyEllipsis } from '../../theory/harmonic-ellipsis';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -656,6 +657,14 @@ export class HarmonyLayer implements Layer {
       const partials = fieldPartials(mood, state.section);
       const overtones = overtoneVoicing(chord.root, 3, partials);
       chordNotes = blendOvertone(chordNotes, overtones, 0.4);
+    }
+
+    // Harmonic ellipsis: omit a chord tone for sparse/hollow voicing
+    if (!hasSuspension && shouldApplyEllipsis(state.tick, mood, state.section, chordNotes.length)) {
+      const omitIdx = selectOmission(chord.quality, state.tick, mood);
+      if (omitIdx !== null && omitIdx < chordNotes.length) {
+        chordNotes = applyEllipsis(chordNotes, omitIdx);
+      }
     }
 
     // Apply voicing spread — wider at peaks, tighter at breakdowns
