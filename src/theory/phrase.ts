@@ -122,7 +122,8 @@ export function phraseIntensityCurve(
 
   for (const phrase of phrases) {
     const len = phrase.noteCount;
-    const peakPos = Math.floor(len * 0.6); // peak at 60% through phrase
+    if (len <= 0) continue;
+    const peakPos = Math.max(1, Math.floor(len * 0.6)); // peak at 60% through phrase
 
     for (let i = 0; i < len; i++) {
       const slot = phrase.startSlot + i;
@@ -134,7 +135,7 @@ export function phraseIntensityCurve(
       } else {
         // Relax
         const remaining = len - peakPos;
-        curve[slot] = 1.0 - 0.5 * ((i - peakPos) / remaining);
+        curve[slot] = remaining > 0 ? 1.0 - 0.5 * ((i - peakPos) / remaining) : 0.5;
       }
     }
   }

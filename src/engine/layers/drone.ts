@@ -1,5 +1,6 @@
 import { Layer } from '../layer';
 import { GenerativeState, Section } from '../../types';
+import { generateBassPattern, bassFollowsChord } from '../../theory/bass-pattern';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -30,7 +31,10 @@ export class DroneLayer implements Layer {
   }
 
   private buildPattern(state: GenerativeState): string {
-    const root = state.scale.root;
+    // Use chord root for moods that follow harmonic changes
+    const root = bassFollowsChord(state.mood)
+      ? state.currentChord.root
+      : state.scale.root;
     const fifth = state.scale.notes[4] || state.scale.notes[0];
     const mood = state.mood;
     const sectionGain = SECTION_GAIN[state.section];
@@ -65,9 +69,10 @@ export class DroneLayer implements Layer {
           .roomsize(4)
           .orbit(${this.orbit})`;
 
-      case 'downtempo':
+      case 'downtempo': {
         // Warm FM bass — harmonicity 1 creates growl, slow FM sweep adds movement
-        return `note("${root}2 ${fifth}2")
+        const dtBass = generateBassPattern(root, fifth, 'downtempo', 2);
+        return `note("${dtBass.join(' ')}")
           .sound("sine")
           .fm(${(1 + brightness * 1.5).toFixed(1)})
           .fmh(1)
@@ -86,10 +91,12 @@ export class DroneLayer implements Layer {
           .room(${room.toFixed(2)})
           .roomsize(3)
           .orbit(${this.orbit})`;
+      }
 
-      case 'lofi':
+      case 'lofi': {
         // Warm sub bass — triangle + light FM for subtle tape saturation feel
-        return `note("${root}2 ${root}2 ${fifth}1 ${fifth}1")
+        const lofiBass = generateBassPattern(root, fifth, 'lofi', 4);
+        return `note("${lofiBass.join(' ')}")
           .sound("triangle")
           .fm(${(0.3 + brightness * 0.5).toFixed(1)})
           .fmh(1)
@@ -107,10 +114,12 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.7).toFixed(2)})
           .roomsize(2)
           .orbit(${this.orbit})`;
+      }
 
-      case 'trance':
+      case 'trance': {
         // Acid-tinged pulsing bass — higher FM and resonance for squelch
-        return `note("${root}2 ${root}2 ${fifth}2 ${root}2")
+        const tranceBass = generateBassPattern(root, fifth, 'trance', 4);
+        return `note("${tranceBass.join(' ')}")
           .sound("sawtooth")
           .fm(${(0.5 + brightness * 1).toFixed(1)})
           .fmh(0.5)
@@ -129,6 +138,7 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
           .orbit(${this.orbit})`;
+      }
 
       case 'avril':
         // Soft root note pedal — very quiet sine, slow attack, intimate
@@ -171,9 +181,10 @@ export class DroneLayer implements Layer {
           .roomsize(8)
           .orbit(${this.orbit})`;
 
-      case 'syro':
+      case 'syro': {
         // Acid 303-style bass — sawtooth, resonant but controlled to avoid masking upper layers
-        return `note("${root}2 ${root}2 ${fifth}2 ${root}2")
+        const syroBass = generateBassPattern(root, fifth, 'syro', 4);
+        return `note("${syroBass.join(' ')}")
           .sound("sawtooth")
           .fm(${(0.8 + brightness * 0.5).toFixed(1)})
           .fmh(0.5)
@@ -193,10 +204,12 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
+      }
 
-      case 'blockhead':
+      case 'blockhead': {
         // Warm sub bass — sine with slight saturation via low FM, solid hip-hop foundation
-        return `note("${root}2 ${fifth}1")
+        const bhBass = generateBassPattern(root, fifth, 'blockhead', 2);
+        return `note("${bhBass.join(' ')}")
           .sound("sine")
           .fm(${(0.5 + brightness * 0.4).toFixed(1)})
           .fmh(1)
@@ -213,6 +226,7 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.6).toFixed(2)})
           .roomsize(2)
           .orbit(${this.orbit})`;
+      }
 
       case 'flim':
         // Very soft sine pedal tone — gentle, barely there, slow breathing filter
@@ -234,9 +248,13 @@ export class DroneLayer implements Layer {
           .roomsize(6)
           .orbit(${this.orbit})`;
 
-      case 'disco':
+      case 'disco': {
         // Funky disco slap bass — GM soundfont, octave jumps, rhythmic
-        return `note("${root}2 ${root}2 ${fifth}2 ${root}2 ~ ${root}2 ${fifth}1 ${root}2")
+        const discoBass = generateBassPattern(root, fifth, 'disco', 4);
+        // Expand to 8 steps with rests for rhythmic pattern
+        const discoExpanded = [discoBass[0], discoBass[1], discoBass[2], discoBass[3],
+                               '~', discoBass[0], `${fifth}${1}`, discoBass[0]];
+        return `note("${discoExpanded.join(' ')}")
           .sound("gm_slap_bass_1")
           .attack(0.003)
           .decay(0.2)
@@ -250,6 +268,7 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
+      }
     }
   }
 }

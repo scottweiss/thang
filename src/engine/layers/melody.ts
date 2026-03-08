@@ -7,6 +7,7 @@ import { buildNarmourPhrase, applyChordToneGravity } from '../../theory/narmour'
 import { phraseDensityMask } from '../../theory/phrase';
 import { MotifMemory } from '../../theory/motif-memory';
 import { getAdjustedOctaveRange } from '../../theory/register';
+import { applyMelodicDynamics } from '../../theory/melodic-dynamics';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -59,6 +60,9 @@ export class MelodyLayer extends CachingLayer {
       ? this.buildAmbientPhrase(state, density)
       : this.buildStructuredPhrase(state, density);
 
+    // Per-note velocity dynamics — metric accent, contour accent, phrase taper
+    const dynamicGain = applyMelodicDynamics(gain, elements);
+
     switch (mood) {
       case 'ambient':
         // Triangle to distinguish from sine/4 harmony
@@ -73,7 +77,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.4)
           .slow(5)
-          .gain(${(gain * 0.7).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.7, elements)}")
           .pan(sine.range(0.15, 0.85).slow(7))
           .room(${room.toFixed(2)})
           .roomsize(4)
@@ -95,7 +99,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.15)
           .slow(3)
-          .gain(${gain.toFixed(3)})
+          .gain("${dynamicGain}")
           .hpf(350)
           .lpf(${(2500 + brightness * 3500).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(5))
@@ -119,7 +123,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.12)
           .slow(2)
-          .gain(${(gain * 1.0).toFixed(3)})
+          .gain("${dynamicGain}")
           .hpf(500)
           .lpf(${(1800 + brightness * 2500).toFixed(0)})
           .detune(sine.range(-2, 2).slow(3))
@@ -143,7 +147,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.05)
           .release(0.1)
           .slow(1)
-          .gain(${(gain * 1.0).toFixed(3)})
+          .gain("${dynamicGain}")
           .hpf(300)
           .lpf(${(3000 + brightness * 5000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(3))
@@ -167,7 +171,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.3)
           .slow(4)
-          .gain(${(gain * 0.6).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.6, elements)}")
           .hpf(300)
           .lpf(${(2000 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
@@ -191,7 +195,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.6)
           .slow(5)
-          .gain(${(gain * 0.5).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.5, elements)}")
           .hpf(250)
           .lpf(${(1500 + brightness * 1500).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(9))
@@ -215,7 +219,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.08)
           .slow(1)
-          .gain(${(gain * 0.8).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.8, elements)}")
           .hpf(600)
           .lpf(${(3000 + brightness * 4000).toFixed(0)})
           .crush(${(10 + brightness * 3).toFixed(0)})
@@ -240,7 +244,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.2)
           .slow(2)
-          .gain(${(gain * 0.85).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.85, elements)}")
           .hpf(400)
           .lpf(${(2200 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(5))
@@ -264,7 +268,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.01)
           .release(0.1)
           .slow(4)
-          .gain(${(gain * 0.6).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.6, elements)}")
           .hpf(400)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
@@ -288,7 +292,7 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.1)
           .slow(1)
-          .gain(${(gain * 0.95).toFixed(3)})
+          .gain("${applyMelodicDynamics(gain * 0.95, elements)}")
           .hpf(500)
           .lpf(${(3500 + brightness * 4000).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(3))
