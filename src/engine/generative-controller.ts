@@ -25,6 +25,7 @@ import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from
 import { selectInversion, applyInversion, extractBassNote } from '../theory/chord-inversion';
 import { shouldApplyRelativeSub, relativeSubChord } from '../theory/relative-sub';
 import { reharmCooldown } from '../theory/reharm-density';
+import { functionalBias } from '../theory/functional-harmony';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -326,9 +327,15 @@ export class GenerativeController {
     // Either force a cadential target or let Markov decide
     // Phrase-level bias steers toward half cadences (antecedent) or tonic (consequent)
     const phraseBias = phraseCadenceBias(this.state.tick, this.state.mood, this.state.section);
+    // Functional harmony: bias toward functionally strong progressions (T→S→D→T)
+    const currentDegree = this.progression.getCurrentDegree();
+    const currentQuality = this.state.currentChord.quality;
+    const combinedBias = phraseBias.map((pb, degree) =>
+      pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
+    );
     let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
-      : this.progression.next(phraseBias);
+      : this.progression.next(combinedBias);
 
     // Reharmonization density: scale down substitution probability when
     // too many consecutive reharms have occurred (prevents harmonic fatigue)
