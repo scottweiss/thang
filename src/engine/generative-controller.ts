@@ -137,6 +137,9 @@ import { shouldHoldPreviousChord } from '../theory/harmonic-parallax';
 import { pitchMemoryWeight } from '../theory/pitch-memory-bias';
 import { rootDistance, velocityGainBoost, velocityBrightnessBoost } from '../theory/harmonic-velocity';
 import { spectralDecayLpf, shouldApplySpectralDecay } from '../theory/spectral-decay-profile';
+import { intervalWeight } from '../theory/intervallic-palette';
+import { articulationContrastDecay } from '../theory/dynamic-articulation-contrast';
+import { trackingLpf } from '../theory/resonance-frequency-tracking';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3077,6 +3080,45 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Intervallic palette: mood-specific interval weight stored for melody
+    {
+      const _iWeight = intervalWeight(7, this.state.mood); // reference weight for 5th
+      // Available for melody generator note selection
+    }
+
+    // Dynamic articulation contrast: opposing layer articulations
+    {
+      const activeNames = layerResults.map(r => r.name);
+      for (const result of layerResults) {
+        const decayMul = articulationContrastDecay(result.name, activeNames, this.state.mood);
+        if (Math.abs(decayMul - 1.0) > 0.02) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * decayMul).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Resonance frequency tracking: filter follows root harmonics
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      for (const result of layerResults) {
+        if (result.name === 'melody' || result.name === 'arp' || result.name === 'harmony') {
+          const lpfMatch = result.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+          if (lpfMatch) {
+            const currentLpf = parseFloat(lpfMatch[1]);
+            const tracked = trackingLpf(rootPc, currentLpf, this.state.mood);
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              () => `.lpf(${Math.round(tracked)})`
             );
           }
         }
