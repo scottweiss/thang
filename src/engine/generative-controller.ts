@@ -25,6 +25,7 @@ import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMulti
 import type { SurpriseType } from '../theory/surprise-events';
 import { headroomScalar, shouldApplyHeadroom } from '../theory/headroom';
 import { shouldFireArrival, arrivalGainBoost, shouldForceRoot } from '../theory/arrival-moment';
+import { TonalGravity } from '../theory/tonal-gravity';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
 import { HarmonyLayer } from './layers/harmony';
@@ -64,6 +65,7 @@ export class GenerativeController {
   private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
   private ticksSinceLastSurprise = 20; // start with cooldown expired
   private arrivalActive = false;
+  private tonalGravity = new TonalGravity('C', 'minor');
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -140,6 +142,7 @@ export class GenerativeController {
     this.evolution.resetTimings(mood);
     this.sections.reset(mood);
     this.tensionMemory.clear();
+    this.tonalGravity.reset(this.state.scale.root, this.state.scale.type);
     this.formTrajectory = { ticksElapsed: 0, formLength: moodFormLength(mood) };
     this.state.section = 'intro';
     this.state.sectionChanged = true;
@@ -264,6 +267,18 @@ export class GenerativeController {
   private modulateScale(): void {
     const tension = this.state.tension?.overall ?? 0.5;
     const sectionProgress = this.sections.getSectionProgress();
+
+    // Tonal gravity: if we've wandered too far, pull back home
+    if (this.tonalGravity.shouldReturnHome(
+      this.state.scale.root, this.state.scale.type, this.state.mood
+    )) {
+      const home = this.tonalGravity.getHome();
+      this.state.scale = buildScaleState(home.root, home.type);
+      this.progression.setScale(this.state.scale);
+      this.tonalGravity.record(home.root, home.type, this.state.tick);
+      return;
+    }
+
     const newScaleType = pickContextualScale(
       this.state.mood,
       tension,
@@ -285,6 +300,9 @@ export class GenerativeController {
         this.progression.setScale(this.state.scale);
       }
     }
+
+    // Record the new tonal position
+    this.tonalGravity.record(this.state.scale.root, this.state.scale.type, this.state.tick);
   }
 
   private advanceChord(): void {
