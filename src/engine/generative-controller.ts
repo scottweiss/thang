@@ -79,6 +79,9 @@ import { swingOffsets, shouldApplyIntraBeatSwing } from '../theory/intra-beat-sw
 import { sustainMultiplier, shouldApplySustainCurve } from '../theory/sustain-envelope-curve';
 import { predictiveLpfMultiplier, shouldApplyPredictiveEq } from '../theory/predictive-eq';
 import { phaseLockCorrection, shouldApplyPhaseLock } from '../theory/grid-phase-lock';
+import { onsetHpfBoost, onsetLpfReduction, isInOnsetPhase, shouldCarveOnset } from '../theory/spectral-onset-carve';
+import { gravityMultiplier, shouldEscalate } from '../theory/gravity-escalation';
+import { punchGainMultiplier, shouldApplyPunch, detectAttacks } from '../theory/transient-punch';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
@@ -522,6 +525,12 @@ export class GenerativeController {
     const closureBias = shouldApplyClosure(this.state.mood)
       ? tonicBias(closurePressure(sectionProgress, this.state.mood, this.state.section))
       : 1.0;
+    // Gravity escalation: stronger resolution pull at high harmonic momentum
+    // Estimate momentum from chord change frequency (shorter ticksSinceChordChange = higher momentum)
+    const estimatedMomentum = this.state.ticksSinceChordChange <= 1 ? 4 : this.state.ticksSinceChordChange <= 2 ? 3 : 2;
+    const gravEsc = shouldEscalate(estimatedMomentum, this.state.mood)
+      ? gravityMultiplier(estimatedMomentum, this.state.mood, this.state.section)
+      : 1.0;
     const combinedBias = phraseBias.map((pb, degree) => {
       let bias = pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
          * journeyBias(degree, keyArea, this.state.mood)
@@ -532,6 +541,10 @@ export class GenerativeController {
       // Boost I, IV, V when closure pressure is high
       if (closureBias > 1.05 && (degree === 0 || degree === 3 || degree === 4)) {
         bias *= closureBias;
+      }
+      // Gravity escalation: boost tonic resolution at high momentum
+      if (gravEsc > 1.05 && degree === 0) {
+        bias *= gravEsc;
       }
       return bias;
     });
@@ -761,6 +774,29 @@ export class GenerativeController {
       }
     }
 
+    // Spectral onset carve: preemptive frequency carving during layer fade-in
+    if (shouldCarveOnset(this.state.mood)) {
+      for (const result of layerResults) {
+        const mult = this.state.layerGainMultipliers[result.name] ?? 1.0;
+        if (isInOnsetPhase(mult)) {
+          const hpfBoost = onsetHpfBoost(mult, this.state.mood, layerResults.length);
+          if (hpfBoost > 5) {
+            result.code = result.code.replace(
+              /\.hpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.hpf(${Math.round(parseFloat(val) + hpfBoost)})`
+            );
+          }
+          const lpfMult = onsetLpfReduction(mult, this.state.mood);
+          if (lpfMult < 0.97) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+            );
+          }
+        }
+      }
+    }
+
     // Texture gradient: smooth density interpolation during section transitions
     if (shouldApplyGradient(this.state.sectionProgress ?? 0, this.state.sectionChanged, this.state.mood)) {
       const densityMult = gradientDensityMultiplier(
@@ -973,6 +1009,31 @@ export class GenerativeController {
             /\.lpf\((\d+(?:\.\d+)?)\)/,
             (_, val) => `.lpf(${Math.round(cadentialLpf(parseFloat(val), tension, true, this.state.mood))})`
           );
+        }
+      }
+    }
+
+    // Transient punch: attack-phase brightness/gain boost for punchy builds
+    if (shouldApplyPunch(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const notes = noteMatch[1].split(/\s+/);
+        const attacks = detectAttacks(notes);
+        const hasAttack = attacks.some(a => a);
+        if (hasAttack) {
+          const gainMult = punchGainMultiplier(this.state.mood, this.state.section, true);
+          if (gainMult > 1.01) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
+                return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+              }
+            );
+          }
         }
       }
     }
