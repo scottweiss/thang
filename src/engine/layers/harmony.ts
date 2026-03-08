@@ -10,6 +10,7 @@ import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../../theor
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
 import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../../theory/delay-evolution';
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../../theory/hpf-sweep';
+import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -99,6 +100,21 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.hpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.hpf(${Math.round(parseFloat(val) + offset)})`
+        );
+      }
+    }
+
+    // Gain arc: crescendo/decrescendo within sections
+    if (shouldApplyGainArc(state.section)) {
+      const arcMult = gainArcMultiplier(state.section, state.sectionProgress ?? 0);
+      if (Math.abs(arcMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.gain\(([^)]+)\)/,
+          (_, gainExpr) => {
+            const num = parseFloat(gainExpr);
+            if (!isNaN(num)) return `.gain(${(num * arcMult).toFixed(4)})`;
+            return `.gain((${gainExpr}) * ${arcMult.toFixed(4)})`;
+          }
         );
       }
     }

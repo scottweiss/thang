@@ -7,6 +7,7 @@ import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../
 import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../theory/delay-evolution';
 import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-morph';
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
+import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -45,6 +46,9 @@ export abstract class CachingLayer implements Layer {
 
     // HPF sweep: build-up tension via rising high-pass filter
     result = this.applyHpfSweep(result, state);
+
+    // Gain arc: crescendo/decrescendo within sections
+    result = this.applyGainArc(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -220,6 +224,19 @@ export abstract class CachingLayer implements Layer {
       /\.fm\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.fm(${(parseFloat(val) * mult).toFixed(1)})`
     );
+  }
+
+  /**
+   * Scale gain by section-progress arc for natural crescendo/decrescendo.
+   * Builds crescendo, breakdowns decrescendo, peaks sustain.
+   */
+  private applyGainArc(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyGainArc(state.section)) return pattern;
+
+    const mult = gainArcMultiplier(state.section, state.sectionProgress ?? 0);
+    if (Math.abs(mult - 1.0) < 0.03) return pattern;
+
+    return this.applyGainMultiplier(pattern, mult);
   }
 
   /**
