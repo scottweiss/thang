@@ -152,6 +152,9 @@ import { centroidCorrectionLpf } from '../theory/spectral-centroid-correction';
 import { complementGain } from '../theory/rhythmic-complement';
 import { shouldChainSuspension, suspensionSustainMul } from '../theory/harmonic-suspension-flow';
 import { shouldRecallTimbre } from '../theory/timbral-recall';
+import { beatingFmCorrection } from '../theory/overtone-beating';
+import { qaGainEmphasis } from '../theory/phrase-question-answer';
+import { compressionMultiplier } from '../theory/dynamic-compression';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3092,6 +3095,70 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Overtone beating: FM correction for beating management
+    {
+      // Estimate beating from chord intervals
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const pcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      if (pcs.length >= 2) {
+        // Check for close intervals that create beating (semitones/whole tones)
+        let minInterval = 12;
+        for (let i = 0; i < pcs.length; i++) {
+          for (let j = i + 1; j < pcs.length; j++) {
+            const diff = Math.abs(pcs[i] - pcs[j]);
+            const interval = Math.min(diff, 12 - diff);
+            minInterval = Math.min(minInterval, interval);
+          }
+        }
+        // Convert semitone interval to approximate beating frequency
+        const beatingHz = minInterval <= 2 ? (10 - minInterval * 3) : 0;
+        const fmCorr = beatingFmCorrection(beatingHz, this.state.mood);
+        if (Math.abs(fmCorr - 1.0) > 0.02) {
+          for (const result of layerResults) {
+            if (result.name === 'harmony') {
+              result.code = result.code.replace(
+                /\.fm\(([0-9.]+)\)/,
+                (_, val) => `.fm(${(parseFloat(val) * fmCorr).toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Phrase question-answer: gain emphasis on answer phrases
+    {
+      const phraseIdx = Math.floor((this.state.sectionProgress ?? 0) / 0.25);
+      const qaGain = qaGainEmphasis(phraseIdx, this.state.mood, this.state.section);
+      if (Math.abs(qaGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * qaGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Dynamic compression: section-aware gain compression
+    {
+      for (const result of layerResults) {
+        const gainMatch = result.code.match(/\.gain\(([0-9.]+)\)/);
+        if (gainMatch) {
+          const currentGain = parseFloat(gainMatch[1]);
+          const compMul = compressionMultiplier(currentGain, this.state.mood, this.state.section);
+          if (Math.abs(compMul - 1.0) > 0.02) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * compMul).toFixed(4)})`
             );
           }
         }
