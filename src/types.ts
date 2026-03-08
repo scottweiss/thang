@@ -52,6 +52,13 @@ export interface GlobalParams {
 
 export type Section = 'intro' | 'build' | 'peak' | 'breakdown' | 'groove';
 
+export interface TensionState {
+  structural: number;   // from section position (0-1)
+  harmonic: number;     // from chord distance to tonic (0-1)
+  rhythmic: number;     // from density (0-1)
+  overall: number;      // weighted combination (0-1)
+}
+
 export interface GenerativeState {
   scale: ScaleState;
   currentChord: ChordState;
@@ -69,4 +76,5 @@ export interface GenerativeState {
   sectionChanged: boolean;
   activeLayers: Set<string>;
   layerGainMultipliers: Record<string, number>;
+  tension: TensionState;
 }

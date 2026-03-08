@@ -1,4 +1,4 @@
-import { GenerativeState, Mood } from '../types';
+import { GenerativeState, Mood, Section } from '../types';
 import { randomWalk } from './random';
 
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
@@ -55,7 +55,7 @@ export class EvolutionManager {
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
       state.lastChordChange = state.elapsed;
-      const timing = CHORD_TIMING[state.mood];
+      const timing = this.getEffectiveChordTiming(state.mood, state.section);
       this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     }
 
@@ -79,6 +79,23 @@ export class EvolutionManager {
     this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     const scaleTiming = SCALE_TIMING[mood];
     this.nextScaleChange = this.randomBetween(scaleTiming[0], scaleTiming[1]);
+  }
+
+  /**
+   * Section-sensitive harmonic rhythm.
+   * Chord changes accelerate during builds/peaks, slow during breakdowns.
+   */
+  private getEffectiveChordTiming(mood: Mood, section: Section): [number, number] {
+    const base = CHORD_TIMING[mood];
+    const multiplier: Record<Section, number> = {
+      intro: 1.5,      // slow changes, establish tonality
+      build: 0.7,      // accelerating changes build momentum
+      peak: 0.5,       // fastest changes, maximum energy
+      breakdown: 2.0,  // slow down, let chords breathe
+      groove: 0.8,     // moderately fast, keep interest
+    };
+    const m = multiplier[section];
+    return [base[0] * m, base[1] * m];
   }
 
   private randomBetween(min: number, max: number): number {

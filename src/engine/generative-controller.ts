@@ -3,6 +3,7 @@ import { evaluate, hush } from '../strudel/bridge';
 import { buildScaleState, getRelatedScales } from '../theory/scales';
 import { ProgressionGenerator } from '../theory/progressions';
 import { smoothVoicing } from '../theory/voice-leading';
+import { computeTension } from './tension';
 import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
 import { randomChoice } from './random';
@@ -72,6 +73,7 @@ export class GenerativeController {
         drone: 1.0, harmony: 0.0, melody: 0.0,
         texture: 0.0, arp: 0.0, atmosphere: 1.0,
       },
+      tension: { structural: 0.15, harmonic: 0, rhythmic: 0.5, overall: 0.2 },
     };
 
     this.layers = [
@@ -169,6 +171,16 @@ export class GenerativeController {
 
     // Evolve sections (steers density/brightness, manages transitions)
     this.sections.evolve(this.state, dt);
+
+    // Compute tension arc from current state
+    const harmonicDistance = this.state.currentChord.degree === 0 ? 0
+      : Math.abs(this.state.currentChord.degree - 3.5) / 3.5;
+    this.state.tension = computeTension(
+      this.state.section,
+      this.state.params.density,
+      this.state.params.brightness,
+      harmonicDistance,
+    );
 
     this.state.tick++;
 
