@@ -10,6 +10,7 @@ import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../theory/resonance-sweep';
 import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../theory/envelope-evolution';
+import { crushOffset, shouldApplyCrushEvolution } from '../theory/crush-evolution';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -48,6 +49,9 @@ export abstract class CachingLayer implements Layer {
 
     // Timbral morphing: FM index evolves within sections
     result = this.applyTimbralMorph(result, state);
+
+    // Crush evolution: bit depth modulates for digital character
+    result = this.applyCrushEvolution(result, state);
 
     // HPF sweep: build-up tension via rising high-pass filter
     result = this.applyHpfSweep(result, state);
@@ -248,6 +252,27 @@ export abstract class CachingLayer implements Layer {
     return pattern.replace(
       /\.fm\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.fm(${(parseFloat(val) * mult).toFixed(1)})`
+    );
+  }
+
+  /**
+   * Modulate .crush() values by section-progress offset.
+   * Builds get grittier (lower bit depth), breakdowns clean up.
+   */
+  private applyCrushEvolution(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyCrushEvolution(state.section)) return pattern;
+    if (!pattern.includes('.crush(')) return pattern;
+
+    const offset = crushOffset(state.section, state.sectionProgress ?? 0);
+    if (Math.abs(offset) < 0.3) return pattern;
+
+    return pattern.replace(
+      /\.crush\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => {
+        // Clamp crush to 4-16 range (4 = very gritty, 16 = clean)
+        const crushed = Math.max(4, Math.min(16, parseFloat(val) + offset));
+        return `.crush(${Math.round(crushed)})`;
+      }
     );
   }
 

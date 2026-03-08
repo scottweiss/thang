@@ -13,6 +13,7 @@ import { hpfSweepOffset, shouldApplyHpfSweep } from '../../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../../theory/envelope-evolution';
+import { crushOffset, shouldApplyCrushEvolution } from '../../theory/crush-evolution';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -113,6 +114,20 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.hpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.hpf(${Math.round(parseFloat(val) + offset)})`
+        );
+      }
+    }
+
+    // Crush evolution: bit depth modulates for digital character
+    if (shouldApplyCrushEvolution(state.section) && result.includes('.crush(')) {
+      const cOffset = crushOffset(state.section, state.sectionProgress ?? 0);
+      if (Math.abs(cOffset) >= 0.3) {
+        result = result.replace(
+          /\.crush\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => {
+            const crushed = Math.max(4, Math.min(16, parseFloat(val) + cOffset));
+            return `.crush(${Math.round(crushed)})`;
+          }
         );
       }
     }
