@@ -1,6 +1,7 @@
 import { CachingLayer } from '../caching-layer';
 import { GenerativeState, Section } from '../../types';
 import { randomChoice, shuffle } from '../random';
+import { euclideanFillPositions } from '../../theory/euclidean';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -12,15 +13,6 @@ const SECTION_DENSITY: Record<Section, number> = {
   breakdown: 0.35,
   groove: 0.85,
 };
-
-// Rhythmic fill templates — which of 8 or 16 steps get notes
-// These create actual rhythmic patterns instead of random placement
-const FILL_8_SPARSE = [0, 3, 6];           // dotted rhythm
-const FILL_8_MEDIUM = [0, 2, 3, 5, 7];     // syncopated
-const FILL_8_DENSE  = [0, 1, 2, 3, 5, 6, 7]; // near-full
-const FILL_16_SPARSE = [0, 4, 7, 12];       // 4-on-floor feel
-const FILL_16_MEDIUM = [0, 2, 4, 6, 8, 10, 12, 14]; // 8th notes
-const FILL_16_DENSE  = [0, 1, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14]; // rolling 16ths with gaps
 
 export class ArpLayer extends CachingLayer {
   name = 'arp';
@@ -349,18 +341,16 @@ export class ArpLayer extends CachingLayer {
     return result;
   }
 
-  // Select which 8-step positions get notes based on density
+  // Generate Euclidean fill positions for 8-step patterns
   private pickFill8(effectiveDensity: number): number[] {
-    if (effectiveDensity < 0.3) return FILL_8_SPARSE;
-    if (effectiveDensity < 0.65) return FILL_8_MEDIUM;
-    return FILL_8_DENSE;
+    const pulses = Math.max(1, Math.round(effectiveDensity * 7));
+    return euclideanFillPositions(pulses, 8);
   }
 
-  // Select which 16-step positions get notes based on density
+  // Generate Euclidean fill positions for 16-step patterns
   private pickFill16(effectiveDensity: number): number[] {
-    if (effectiveDensity < 0.3) return FILL_16_SPARSE;
-    if (effectiveDensity < 0.65) return FILL_16_MEDIUM;
-    return FILL_16_DENSE;
+    const pulses = Math.max(1, Math.round(effectiveDensity * 14));
+    return euclideanFillPositions(pulses, 16);
   }
 
   // Build steps using rhythmic fill positions instead of random
