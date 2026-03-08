@@ -7250,6 +7250,13 @@ export class GenerativeController {
       }
     }
 
+    // Sanitize any literal NaN values that slipped through regex replacements.
+    // Replace the token "NaN" with "1" wherever it appears as a standalone value.
+    for (const result of layerResults) {
+      if (result.code.includes('NaN')) {
+        result.code = result.code.replace(/\bNaN\b/g, '1');
+      }
+    }
     const layerCodes = layerResults.map(r => r.code);
     // Apply rubato: subtle tempo variation based on section and tension
     const rubato = rubatoMultiplier(this.state.mood, this.state.section, this.state.tension?.overall ?? 0.5);
@@ -7299,15 +7306,6 @@ export class GenerativeController {
       ? beatWarpMultiplier(this.state.sectionProgress ?? 0, this.state.mood, this.state.section)
       : 1.0;
     const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic * cadAccel * beatWarp;
-    // Sanitize any literal NaN values that slipped through regex replacements.
-    // Replace the token "NaN" with "1" wherever it appears as a standalone value.
-    // This catches .param(NaN), .param((NaN) * 1.02), note("NaN"), etc.
-    for (const result of layerResults) {
-      if (result.code.includes('NaN')) {
-        // Replace NaN as a word boundary token (not inside identifiers)
-        result.code = result.code.replace(/\bNaN\b/g, '1');
-      }
-    }
     const effectiveTempoSafe = isNaN(effectiveTempo) ? this.state.params.tempo : effectiveTempo;
     const fullCode = `setCps(${effectiveTempoSafe.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
