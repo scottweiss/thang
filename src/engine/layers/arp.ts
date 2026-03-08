@@ -74,26 +74,27 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'downtempo': {
+        // Square tick — rhythmic clicks distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['up', 'updown', 'broken']);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.buildFromFill(notes, pattern, 8, fill);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(2.5)
-          .fmh(3)
+          .sound("square")
+          .fm(0.3)
+          .fmh(0.5)
           .fmenv("exp")
-          .fmdecay(0.12)
-          .attack(0.002)
-          .decay(0.5)
-          .sustain(0.03)
-          .release(0.4)
+          .fmdecay(0.04)
+          .attack(0.001)
+          .decay(0.1)
+          .sustain(0.01)
+          .release(0.06)
           .slow(3)
-          .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
-          .hpf(300)
-          .lpf(${(2000 + brightness * 3000).toFixed(0)})
-          .room(${(room * 0.8).toFixed(2)})
-          .roomsize(2)
+          .gain(${(0.16 * (0.5 + density * 0.5)).toFixed(3)})
+          .hpf(400)
+          .lpf(${(2500 + brightness * 3500).toFixed(0)})
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1)
           .delay(0.3)
           .delaytime(0.33)
           .delayfeedback(0.3)
@@ -101,29 +102,30 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'lofi': {
+        // Triangle pluck — warm tick, distinct from square melody
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'down']);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.buildFromFill(notes, pattern, 8, fill);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(3.5)
-          .fmh(1)
+          .sound("triangle")
+          .fm(0.4)
+          .fmh(3)
           .fmenv("exp")
-          .fmdecay(0.08)
-          .attack(0.003)
-          .decay(0.35)
-          .sustain(0.05)
-          .release(0.25)
+          .fmdecay(0.04)
+          .attack(0.001)
+          .decay(0.08)
+          .sustain(0.01)
+          .release(0.05)
           .slow(2)
-          .gain(${(0.14 * (0.5 + density * 0.5)).toFixed(3)})
-          .hpf(350)
-          .lpf(${(1200 + brightness * 2000).toFixed(0)})
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(1.5)
-          .delay(0.25)
+          .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
+          .hpf(450)
+          .lpf(${(1500 + brightness * 2500).toFixed(0)})
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.2)
           .delaytime(0.375)
-          .delayfeedback(0.2)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})`;
       }
 
@@ -157,59 +159,57 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'avril': {
-        // Very sparse broken chord — high FM bell sound, long decay
-        // Like occasional piano notes ringing out in an empty room
+        // Square pip — tiny gentle clicks, distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 4, 5);
         const fill = this.pickFill16(density * sectionMult * 0.2);
         const steps = this.buildFromFill(notes, 'broken', 16, fill);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(5)
-          .fmh(3)
+          .sound("square")
+          .fm(0.3)
+          .fmh(0.5)
           .fmenv("exp")
-          .fmdecay(0.1)
-          .attack(0.003)
-          .decay(1.5)
-          .sustain(0.02)
-          .release(1.5)
+          .fmdecay(0.04)
+          .attack(0.001)
+          .decay(0.12)
+          .sustain(0.01)
+          .release(0.08)
           .slow(5)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
-          .hpf(250)
-          .lpf(${(2000 + brightness * 2500).toFixed(0)})
-          .room(${(room * 1.3).toFixed(2)})
-          .roomsize(6)
+          .hpf(300)
+          .lpf(${(2200 + brightness * 2500).toFixed(0)})
+          .room(${(room * 0.6).toFixed(2)})
+          .roomsize(3)
           .delay(0.5)
           .delaytime(0.66)
-          .delayfeedback(0.5)
+          .delayfeedback(0.45)
           .orbit(${this.orbit})`;
       }
 
       case 'xtal': {
-        // Very sparse broken arps — high octave bells with massive reverb/delay
-        // SAW 85-92: ethereal, floating, distant chimes
+        // Square chime pips — tiny clicks distinct from triangle melody and sine harmony
         const notes = this.spreadOctaves(baseNotes, 4, 6);
         const fill = this.pickFill16(density * sectionMult * 0.15);
         const steps = this.buildFromFill(notes, 'broken', 16, fill);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(0.8)
-          .fmh(5)
+          .sound("square")
+          .fm(0.3)
+          .fmh(3)
           .fmenv("exp")
-          .fmdecay(0.8)
-          .attack(0.03)
-          .decay(2)
-          .sustain(0.02)
-          .release(2.5)
+          .fmdecay(0.05)
+          .attack(0.001)
+          .decay(0.15)
+          .sustain(0.01)
+          .release(0.1)
           .slow(6)
           .gain(${(0.1 * (0.3 + density * 0.3)).toFixed(3)})
           .hpf(300)
           .lpf(${(1800 + brightness * 2000).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(11))
-          .room(${(room * 1.5).toFixed(2)})
-          .roomsize(8)
-          .delay(0.55)
-          .delaytime(0.75)
-          .delayfeedback(0.55)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(2)
+          .delay(0.35)
+          .delaytime(0.5)
+          .delayfeedback(0.3)
           .orbit(${this.orbit})`;
       }
 
@@ -245,61 +245,59 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'blockhead': {
-        // Jazzy broken chord comping — spread across mid octaves, warm FM
-        // Blockhead style: Rhodes-like comping, jazzy broken chords
+        // Triangle tick — percussive, distinct from sawtooth melody and square harmony
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'up']);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.buildFromFill(notes, pattern, 8, fill);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(2.5)
-          .fmh(2)
+          .sound("triangle")
+          .fm(0.4)
+          .fmh(4)
           .fmenv("exp")
-          .fmdecay(0.2)
-          .attack(0.003)
-          .decay(0.5)
-          .sustain(0.04)
-          .release(0.35)
+          .fmdecay(0.04)
+          .attack(0.001)
+          .decay(0.1)
+          .sustain(0.01)
+          .release(0.06)
           .slow(2)
-          .gain(${(0.14 * (0.5 + density * 0.5)).toFixed(3)})
-          .hpf(250)
-          .lpf(${(1800 + brightness * 2500).toFixed(0)})
+          .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
+          .hpf(350)
+          .lpf(${(2000 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(5))
-          .room(${(room * 0.7).toFixed(2)})
-          .roomsize(2)
-          .delay(0.25)
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1)
+          .delay(0.2)
           .delaytime(0.33)
-          .delayfeedback(0.25)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
       }
 
       case 'flim': {
-        // Intricate delicate arps — high octave, very sparse, crystalline bells
-        // Flim style: gentle, sparkling, music-box arpeggios
+        // Square click — tiny percussive pips, distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 4, 6);
         const fill = this.pickFill16(density * sectionMult * 0.2);
         const steps = this.buildFromFill(notes, 'broken', 16, fill);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(2)
-          .fmh(5)
+          .sound("square")
+          .fm(0.3)
+          .fmh(3)
           .fmenv("exp")
-          .fmdecay(0.06)
-          .attack(0.003)
-          .decay(1.8)
-          .sustain(0.02)
-          .release(2)
+          .fmdecay(0.03)
+          .attack(0.001)
+          .decay(0.08)
+          .sustain(0.01)
+          .release(0.05)
           .slow(5)
-          .gain(${(0.09 * (0.3 + density * 0.4)).toFixed(3)})
-          .hpf(300)
-          .lpf(${(2200 + brightness * 2500).toFixed(0)})
+          .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
+          .hpf(400)
+          .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(11))
-          .room(${(room * 1.4).toFixed(2)})
-          .roomsize(7)
-          .delay(0.5)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(2)
+          .delay(0.4)
           .delaytime(0.66)
-          .delayfeedback(0.5)
+          .delayfeedback(0.4)
           .orbit(${this.orbit})`;
       }
     }

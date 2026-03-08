@@ -12,7 +12,7 @@ const ALL_LAYERS = ['drone', 'harmony', 'melody', 'texture', 'arp', 'atmosphere'
 // Section configurations per mood
 const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
   ambient: {
-    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [30, 50] },
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [15, 25] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'melody'], densityTarget: 0.4, brightnessTarget: 0.45, duration: [40, 80] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.6, brightnessTarget: 0.55, duration: [50, 100] },
     breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.35, duration: [40, 70] },
@@ -40,14 +40,14 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.75, brightnessTarget: 0.65, duration: [25, 45] },
   },
   avril: {
-    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [30, 50] },
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [15, 25] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.35, duration: [40, 70] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.5, brightnessTarget: 0.45, duration: [50, 80] },
     breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [35, 60] },
     groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.4, brightnessTarget: 0.4, duration: [45, 75] },
   },
   xtal: {
-    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [35, 60] },
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [15, 30] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'texture'], densityTarget: 0.35, brightnessTarget: 0.35, duration: [40, 75] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.55, brightnessTarget: 0.5, duration: [55, 100] },
     breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [40, 70] },
@@ -61,14 +61,14 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.8, brightnessTarget: 0.7, duration: [20, 40] },
   },
   blockhead: {
-    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.35, duration: [20, 40] },
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.35, duration: [10, 20] },
     build:     { activeLayers: ['drone', 'harmony', 'texture', 'atmosphere', 'melody'], densityTarget: 0.5, brightnessTarget: 0.45, duration: [25, 50] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.7, brightnessTarget: 0.55, duration: [30, 60] },
     breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.4, duration: [20, 40] },
     groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.65, brightnessTarget: 0.5, duration: [30, 55] },
   },
   flim: {
-    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [25, 45] },
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [12, 22] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'arp'], densityTarget: 0.35, brightnessTarget: 0.35, duration: [35, 55] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.55, brightnessTarget: 0.5, duration: [40, 65] },
     breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [30, 50] },
@@ -113,7 +113,23 @@ export class SectionManager {
     state.params.density = Math.max(0.15, Math.min(1.0, state.params.density + densityDelta));
     state.params.brightness = Math.max(0.1, Math.min(0.9, state.params.brightness + brightnessDelta));
 
-    // Update active layers
+    // Interpolate layer gain multipliers toward targets (smooth fade in/out)
+    // Linear ramp: fade-in +0.33/tick = ~3 ticks (6s) to reach 1.0
+    //              fade-out -0.5/tick = ~2 ticks (4s) to reach 0.0
+    const FADE_IN_STEP = 0.33;
+    const FADE_OUT_STEP = 0.5;
+    const activeSet = new Set(config.activeLayers);
+    for (const layerName of ALL_LAYERS) {
+      const target = activeSet.has(layerName) ? 1.0 : 0.0;
+      const current = state.layerGainMultipliers[layerName] ?? 0;
+      if (target > current) {
+        state.layerGainMultipliers[layerName] = Math.min(1, current + FADE_IN_STEP);
+      } else if (target < current) {
+        state.layerGainMultipliers[layerName] = Math.max(0, current - FADE_OUT_STEP);
+      }
+    }
+
+    // Update active layers (includes layers still fading out)
     state.activeLayers = new Set(config.activeLayers);
 
     // Check if it's time to transition
@@ -166,6 +182,10 @@ export class SectionManager {
     this.sectionElapsed = 0;
     const config = SECTION_CONFIGS[mood].intro;
     this.sectionDuration = this.randomBetween(config.duration[0], config.duration[1]);
+  }
+
+  getIntroLayers(mood: Mood): string[] {
+    return SECTION_CONFIGS[mood].intro.activeLayers;
   }
 
   private randomBetween(min: number, max: number): number {

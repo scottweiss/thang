@@ -51,16 +51,17 @@ export class MelodyLayer extends CachingLayer {
 
     switch (mood) {
       case 'ambient':
+        // Triangle to distinguish from sine/4 harmony
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(1.5)
-          .fmh(4)
+          .sound("triangle")
+          .fm(0.8)
+          .fmh(3)
           .fmenv("exp")
-          .fmdecay(0.3)
+          .fmdecay(0.2)
           .attack(0.01)
-          .decay(0.8)
-          .sustain(0.05)
-          .release(0.5)
+          .decay(0.6)
+          .sustain(0.03)
+          .release(0.4)
           .slow(5)
           .gain(${(gain * 0.7).toFixed(3)})
           .pan(sine.range(0.15, 0.85).slow(7))
@@ -72,47 +73,49 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'downtempo':
+        // Triangle lead — cuts through sine harmony, plucky attack
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(2)
-          .fmh(3)
+          .sound("triangle")
+          .fm(0.8)
+          .fmh(5)
           .fmenv("exp")
-          .fmdecay(0.15)
-          .attack(0.002)
-          .decay(0.4)
-          .sustain(0.05)
-          .release(0.3)
+          .fmdecay(0.08)
+          .attack(0.001)
+          .decay(0.25)
+          .sustain(0.02)
+          .release(0.15)
           .slow(3)
           .gain(${gain.toFixed(3)})
           .hpf(350)
-          .lpf(${(2000 + brightness * 3000).toFixed(0)})
+          .lpf(${(2500 + brightness * 3500).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(5))
-          .room(${(room * 0.8).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.6).toFixed(2)})
+          .roomsize(1.5)
           .delay(0.3)
           .delaytime(0.375)
           .delayfeedback(0.3)
           .orbit(${this.orbit})`;
 
       case 'lofi':
+        // Square pluck — retro/chiptune edge, distinct from triangle harmony
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(3)
-          .fmh(2)
+          .sound("square")
+          .fm(0.5)
+          .fmh(0.5)
           .fmenv("exp")
-          .fmdecay(0.1)
-          .attack(0.003)
-          .decay(0.3)
-          .sustain(0.05)
-          .release(0.2)
+          .fmdecay(0.06)
+          .attack(0.001)
+          .decay(0.2)
+          .sustain(0.02)
+          .release(0.12)
           .slow(2)
-          .gain(${(gain * 1.1).toFixed(3)})
-          .hpf(400)
-          .lpf(${(1500 + brightness * 2000).toFixed(0)})
+          .gain(${(gain * 1.0).toFixed(3)})
+          .hpf(500)
+          .lpf(${(1800 + brightness * 2500).toFixed(0)})
           .detune(sine.range(-2, 2).slow(3))
           .pan(sine.range(0.35, 0.65).slow(4))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(1.5)
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1)
           .delay(0.2)
           .delaytime(0.3)
           .delayfeedback(0.2)
@@ -142,42 +145,41 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'avril':
-        // Higher octave bell tones — very sparse, lots of room and delay
+        // Triangle bell lead — distinct from sine harmony, gentle pluck
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(4)
-          .fmh(4)
+          .sound("triangle")
+          .fm(0.8)
+          .fmh(6)
           .fmenv("exp")
-          .fmdecay(0.1)
-          .attack(0.003)
-          .decay(1)
-          .sustain(0.03)
-          .release(0.8)
+          .fmdecay(0.06)
+          .attack(0.001)
+          .decay(0.25)
+          .sustain(0.02)
+          .release(0.3)
           .slow(4)
           .gain(${(gain * 0.6).toFixed(3)})
           .hpf(300)
-          .lpf(${(1800 + brightness * 2000).toFixed(0)})
+          .lpf(${(2000 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
-          .room(${(room * 1.2).toFixed(2)})
-          .roomsize(5)
+          .room(${(room * 1.0).toFixed(2)})
+          .roomsize(4)
           .delay(0.45)
           .delaytime(0.5)
           .delayfeedback(0.4)
           .orbit(${this.orbit})`;
 
       case 'xtal':
-        // Ethereal floating tones — sparse, high octave, drenched in reverb and delay
-        // SAW 85-92: hazy, distant, nostalgic
+        // Triangle floating tones — distinct from sine harmony, hazy and nostalgic
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(1)
-          .fmh(3)
+          .sound("triangle")
+          .fm(0.5)
+          .fmh(4)
           .fmenv("exp")
-          .fmdecay(0.5)
-          .attack(0.05)
-          .decay(1.5)
-          .sustain(0.04)
-          .release(1.2)
+          .fmdecay(0.3)
+          .attack(0.01)
+          .decay(0.8)
+          .sustain(0.03)
+          .release(0.6)
           .slow(5)
           .gain(${(gain * 0.5).toFixed(3)})
           .hpf(250)
@@ -216,50 +218,48 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'blockhead':
-        // Warm FM piano tones — jazzy melodic phrases, cinematic feel
-        // Blockhead style: soulful, melodic, instrumental hip-hop
+        // Sawtooth lead — buzzy, cuts through square harmony, jazzy phrasing
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(${(2.5 + brightness * 1).toFixed(1)})
-          .fmh(2)
+          .sound("sawtooth")
+          .fm(0.5)
+          .fmh(5)
           .fmenv("exp")
-          .fmdecay(0.2)
-          .attack(0.003)
-          .decay(0.6)
-          .sustain(0.06)
-          .release(0.4)
+          .fmdecay(0.06)
+          .attack(0.001)
+          .decay(0.3)
+          .sustain(0.03)
+          .release(0.2)
           .slow(2)
-          .gain(${(gain * 0.9).toFixed(3)})
-          .hpf(300)
-          .lpf(${(2000 + brightness * 2500).toFixed(0)})
+          .gain(${(gain * 0.85).toFixed(3)})
+          .hpf(400)
+          .lpf(${(2200 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(5))
-          .room(${(room * 0.7).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(1.5)
           .delay(0.25)
           .delaytime(0.33)
           .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
       case 'flim':
-        // Delicate crystalline bells — gentle, intimate, music-box-like
-        // Flim style: tender, intricate, sparkling
+        // Triangle pluck — distinct from sine harmony bells, shorter envelope
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(${(2.5 + brightness * 1.5).toFixed(1)})
-          .fmh(5)
+          .sound("triangle")
+          .fm(0.6)
+          .fmh(7)
           .fmenv("exp")
-          .fmdecay(0.06)
-          .attack(0.003)
-          .decay(1.2)
-          .sustain(0.03)
-          .release(1)
+          .fmdecay(0.04)
+          .attack(0.001)
+          .decay(0.15)
+          .sustain(0.01)
+          .release(0.1)
           .slow(4)
-          .gain(${(gain * 0.55).toFixed(3)})
-          .hpf(300)
-          .lpf(${(2200 + brightness * 2500).toFixed(0)})
+          .gain(${(gain * 0.6).toFixed(3)})
+          .hpf(400)
+          .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
-          .room(${(room * 1.2).toFixed(2)})
-          .roomsize(5)
+          .room(${(room * 0.8).toFixed(2)})
+          .roomsize(3)
           .delay(0.45)
           .delaytime(0.5)
           .delayfeedback(0.45)
@@ -279,6 +279,14 @@ export class MelodyLayer extends CachingLayer {
       } else {
         elements.push('~');
       }
+    }
+    // Guarantee at least one note so the pattern isn't all rests
+    const hasNote = elements.some(e => e !== '~');
+    if (!hasNote) {
+      const pos = Math.floor(Math.random() * 16);
+      const note = randomChoice(penta);
+      const octave = weightedChoice([4, 5], [3, 2]);
+      elements[pos] = `${note}${octave}`;
     }
     return elements;
   }

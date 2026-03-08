@@ -3,10 +3,10 @@ import { GenerativeState, Section } from '../../types';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
-  intro: 0.6, build: 0.85, peak: 1.0, breakdown: 0.7, groove: 0.9,
+  intro: 0.8, build: 0.85, peak: 1.0, breakdown: 0.7, groove: 0.9,
 };
 const SECTION_FILTER_MULT: Record<Section, number> = {
-  intro: 0.6, build: 0.8, peak: 1.2, breakdown: 0.65, groove: 1.0,
+  intro: 0.75, build: 0.8, peak: 1.2, breakdown: 0.65, groove: 1.0,
 };
 
 export class DroneLayer implements Layer {
@@ -14,6 +14,22 @@ export class DroneLayer implements Layer {
   orbit = 0;
 
   generate(state: GenerativeState): string {
+    const pattern = this.buildPattern(state);
+    const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
+    if (multiplier < 1.0) {
+      return pattern.replace(
+        /\.gain\(([^)]+)\)/,
+        (_, gainExpr) => {
+          const num = parseFloat(gainExpr);
+          if (!isNaN(num)) return `.gain(${(num * multiplier).toFixed(4)})`;
+          return `.gain((${gainExpr}) * ${multiplier.toFixed(4)})`;
+        }
+      );
+    }
+    return pattern;
+  }
+
+  private buildPattern(state: GenerativeState): string {
     const root = state.scale.root;
     const fifth = state.scale.notes[4] || state.scale.notes[0];
     const mood = state.mood;

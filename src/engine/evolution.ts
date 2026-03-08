@@ -72,6 +72,13 @@ export class EvolutionManager {
     return { chordChange, scaleChange };
   }
 
+  resetTimings(mood: Mood): void {
+    const timing = CHORD_TIMING[mood];
+    this.nextChordChange = this.randomBetween(timing[0], timing[1]);
+    const scaleTiming = SCALE_TIMING[mood];
+    this.nextScaleChange = this.randomBetween(scaleTiming[0], scaleTiming[1]);
+  }
+
   private randomBetween(min: number, max: number): number {
     return min + Math.random() * (max - min);
   }

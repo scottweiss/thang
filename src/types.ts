@@ -68,4 +68,5 @@ export interface GenerativeState {
   section: Section;
   sectionChanged: boolean;
   activeLayers: Set<string>;
+  layerGainMultipliers: Record<string, number>;
 }

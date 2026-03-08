@@ -67,6 +67,10 @@ export class GenerativeController {
       section: 'intro',
       sectionChanged: false,
       activeLayers: new Set(['drone', 'atmosphere']),
+      layerGainMultipliers: {
+        drone: 1.0, harmony: 0.0, melody: 0.0,
+        texture: 0.0, arp: 0.0, atmosphere: 1.0,
+      },
     };
 
     this.layers = [
@@ -100,9 +104,23 @@ export class GenerativeController {
     this.state.mood = mood;
     this.state.params.tempo = MOOD_TEMPOS[mood];
     this.progression.setMood(mood);
+    this.evolution.resetTimings(mood);
     this.sections.reset(mood);
     this.state.section = 'intro';
     this.state.sectionChanged = true;
+    // Reset gain multipliers to intro state
+    const introLayers = new Set(this.sections.getIntroLayers(mood));
+    this.state.activeLayers = introLayers;
+    this.state.layerGainMultipliers = {
+      drone: introLayers.has('drone') ? 1.0 : 0.0,
+      harmony: introLayers.has('harmony') ? 1.0 : 0.0,
+      melody: introLayers.has('melody') ? 1.0 : 0.0,
+      texture: introLayers.has('texture') ? 1.0 : 0.0,
+      arp: introLayers.has('arp') ? 1.0 : 0.0,
+      atmosphere: introLayers.has('atmosphere') ? 1.0 : 0.0,
+    };
+    this.rebuildAll();
+    this.onStateChange?.(this.state);
   }
 
   setDensity(v: number): void { this.state.params.density = v; }
@@ -120,6 +138,8 @@ export class GenerativeController {
     this.state.sectionChanged = true;
     // Trigger section advance by setting elapsed past duration
     this.sections.forceAdvance(this.state);
+    // Kick-start gain interpolation immediately so new layers aren't silent
+    this.sections.evolve(this.state, 0);
     this.rebuildAll();
     this.onStateChange?.(this.state);
   }
@@ -179,19 +199,75 @@ export class GenerativeController {
   }
 
   private async rebuildAll(): Promise<void> {
-    // Only include layers that are active in the current section
-    const layerCodes = this.layers
-      .filter(layer => this.state.activeLayers.has(layer.name))
-      .map(layer => layer.generate(this.state));
+    // Include layers that are active OR still fading out (multiplier > threshold)
+    const FADE_THRESHOLD = 0.01;
+    const activeLayers = this.layers.filter(layer =>
+      this.state.activeLayers.has(layer.name) ||
+      (this.state.layerGainMultipliers[layer.name] ?? 0) > FADE_THRESHOLD
+    );
+    if (activeLayers.length === 0) return;
 
-    if (layerCodes.length === 0) return;
+    const layerResults: { name: string; code: string }[] = [];
 
+    for (const layer of activeLayers) {
+      try {
+        const code = layer.generate(this.state);
+        if (this.validateLayerCode(code, layer.name)) {
+          layerResults.push({ name: layer.name, code });
+        }
+      } catch (e) {
+        console.warn(`[${layer.name}] generate() threw:`, e);
+      }
+    }
+
+    if (layerResults.length === 0) return;
+
+    const layerCodes = layerResults.map(r => r.code);
     const fullCode = `setCps(${this.state.params.tempo})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
       await evaluate(fullCode);
     } catch (e) {
-      console.warn('Pattern evaluation error:', e);
+      console.warn('Full stack evaluation failed, trying layers individually:', e);
+      // Fall back to evaluating layers one at a time to isolate the broken one
+      const workingCodes: string[] = [];
+      for (const result of layerResults) {
+        const singleCode = `setCps(${this.state.params.tempo})\n${result.code}`;
+        try {
+          await evaluate(singleCode);
+          workingCodes.push(result.code);
+        } catch (layerErr) {
+          console.warn(`[${result.name}] individual evaluation failed:`, layerErr);
+        }
+      }
+      // Re-evaluate all working layers as a stack
+      if (workingCodes.length > 0) {
+        const fallbackCode = `setCps(${this.state.params.tempo})\nstack(\n${workingCodes.join(',\n')}\n)`;
+        try {
+          await evaluate(fallbackCode);
+        } catch (finalErr) {
+          console.warn('Fallback stack evaluation also failed:', finalErr);
+        }
+      }
     }
+  }
+
+  private validateLayerCode(code: string, layerName: string): boolean {
+    // Check for empty note patterns
+    if (/note\(\s*""\s*\)/.test(code)) {
+      console.warn(`[${layerName}] empty note pattern`);
+      return false;
+    }
+    // Check for all-rest patterns
+    if (/note\(\s*"(~\s*)+"\s*\)/.test(code)) {
+      console.warn(`[${layerName}] all-rest note pattern`);
+      return false;
+    }
+    // Check for NaN or undefined in the code string
+    if (/\bNaN\b/.test(code) || /\bundefined\b/.test(code)) {
+      console.warn(`[${layerName}] NaN or undefined in generated code`);
+      return false;
+    }
+    return true;
   }
 }
