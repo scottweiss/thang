@@ -3,7 +3,7 @@ import { GenerativeState, Section } from '../../types';
 import { getPentatonicSubset } from '../../theory/scales';
 import { randomChoice, weightedChoice } from '../random';
 import { noteIndex } from '../../theory/scales';
-import { buildNarmourPhrase } from '../../theory/narmour';
+import { buildNarmourPhrase, applyChordToneGravity } from '../../theory/narmour';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -344,7 +344,16 @@ export class MelodyLayer extends CachingLayer {
       [section.motifLen[0], section.motifLen[1]],
       [3, 2]
     );
-    const motif = this.buildMotif(ladder, anchorIdx, motifLen, contour);
+    const rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour);
+    // Apply chord-tone gravity: pull ending notes toward chord tones for resolution
+    const motif = chordIndices.length > 0
+      ? applyChordToneGravity(
+          rawMotif.map(n => ladder.indexOf(n)),
+          chordIndices,
+          ladder.length,
+          section.useCallResponse ? 2 : 1  // Stronger pull during call-response sections
+        ).map(i => ladder[Math.max(0, Math.min(ladder.length - 1, i))])
+      : rawMotif;
 
     const noteCount = 16;
     const elements: string[] = new Array(noteCount).fill('~');

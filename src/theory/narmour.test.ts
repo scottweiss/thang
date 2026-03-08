@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { narmourNext, buildNarmourPhrase } from './narmour';
+import { narmourNext, buildNarmourPhrase, applyChordToneGravity } from './narmour';
 
 describe('narmourNext', () => {
   it('small interval implies process (same direction tendency)', () => {
@@ -73,5 +73,50 @@ describe('buildNarmourPhrase', () => {
   it('clamps out-of-range anchor', () => {
     const phrase = buildNarmourPhrase(10, 15, 3);
     expect(phrase[0]).toBe(9); // clamped to max
+  });
+});
+
+describe('applyChordToneGravity', () => {
+  it('last note lands on nearest chord tone', () => {
+    const phrase = [3, 4, 5, 6]; // ending on 6
+    const chordTones = [0, 4, 7]; // nearest to 6 is 7
+    const result = applyChordToneGravity(phrase, chordTones, 10, 1);
+    expect(result[result.length - 1]).toBe(7);
+  });
+
+  it('preserves earlier notes with strength 1', () => {
+    const phrase = [3, 4, 5, 6];
+    const chordTones = [0, 4, 7];
+    const result = applyChordToneGravity(phrase, chordTones, 10, 1);
+    expect(result.slice(0, 3)).toEqual([3, 4, 5]);
+  });
+
+  it('pulls multiple ending notes with higher strength', () => {
+    const phrase = [1, 3, 5, 6];
+    const chordTones = [0, 4, 7];
+    const result = applyChordToneGravity(phrase, chordTones, 10, 2);
+    // Last note should be on chord tone
+    expect(chordTones).toContain(result[result.length - 1]);
+    // Second-to-last should have moved toward chord tone
+    expect(result[2]).not.toBe(5); // should have shifted
+  });
+
+  it('returns original phrase if no chord tones', () => {
+    const phrase = [1, 2, 3];
+    expect(applyChordToneGravity(phrase, [], 10)).toEqual([1, 2, 3]);
+  });
+
+  it('returns empty array for empty phrase', () => {
+    expect(applyChordToneGravity([], [0, 4], 10)).toEqual([]);
+  });
+
+  it('all indices stay within bounds', () => {
+    const phrase = [0, 1, 8, 9];
+    const chordTones = [0, 5, 9];
+    const result = applyChordToneGravity(phrase, chordTones, 10, 3);
+    result.forEach(idx => {
+      expect(idx).toBeGreaterThanOrEqual(0);
+      expect(idx).toBeLessThan(10);
+    });
   });
 });

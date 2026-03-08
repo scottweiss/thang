@@ -74,3 +74,49 @@ export function buildNarmourPhrase(
 
   return phrase;
 }
+
+/**
+ * Apply chord-tone gravity to a phrase: pull the last note(s) toward
+ * the nearest chord tone for musical closure.
+ *
+ * @param phrase        Array of ladder indices
+ * @param chordIndices  Indices in the ladder that are chord tones
+ * @param ladderSize    Total pitches in the ladder
+ * @param strength      How many ending notes are pulled (1-3)
+ */
+export function applyChordToneGravity(
+  phrase: number[], chordIndices: number[], ladderSize: number, strength: number = 1
+): number[] {
+  if (phrase.length === 0 || chordIndices.length === 0) return phrase;
+
+  const result = [...phrase];
+  const pullCount = Math.min(strength, result.length);
+
+  for (let i = 0; i < pullCount; i++) {
+    const idx = result.length - 1 - i;
+    const current = result[idx];
+
+    // Find nearest chord tone
+    let nearest = chordIndices[0];
+    let minDist = Math.abs(current - nearest);
+    for (const ct of chordIndices) {
+      const dist = Math.abs(current - ct);
+      if (dist < minDist) {
+        minDist = dist;
+        nearest = ct;
+      }
+    }
+
+    // Pull toward it: last note lands on chord tone,
+    // second-to-last moves halfway there
+    if (i === 0) {
+      result[idx] = nearest;
+    } else {
+      // Approach notes: move partway toward the chord tone
+      const step = Math.sign(nearest - current) * Math.max(1, Math.ceil(minDist / 2));
+      result[idx] = Math.max(0, Math.min(ladderSize - 1, current + step));
+    }
+  }
+
+  return result;
+}
