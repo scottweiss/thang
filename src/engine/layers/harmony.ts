@@ -27,6 +27,7 @@ import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../../theory/timbral
 import { smoothVoicing } from '../../theory/voice-leading';
 import { syncedDelayTime } from '../../theory/delay-sync';
 import { shouldAnimateHarmony, animateChordVoicing, voicingsToPattern } from '../../theory/harmonic-animation';
+import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -337,14 +338,20 @@ export class HarmonyLayer implements Layer {
       }
     }
 
-    const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
-    if (multiplier < 1.0) {
+    let combinedMultiplier = state.layerGainMultipliers[this.name] ?? 1.0;
+    if (shouldApplyTensionOrchestration(state.mood)) {
+      combinedMultiplier *= tensionOrchestrationGain(
+        this.name, state.tension?.overall ?? 0.5, state.mood
+      );
+    }
+
+    if (Math.abs(combinedMultiplier - 1.0) > 0.02) {
       return result.replace(
         /\.gain\(([^)]+)\)/,
         (_, gainExpr) => {
           const num = parseFloat(gainExpr);
-          if (!isNaN(num)) return `.gain(${(num * multiplier).toFixed(4)})`;
-          return `.gain((${gainExpr}) * ${multiplier.toFixed(4)})`;
+          if (!isNaN(num)) return `.gain(${(num * combinedMultiplier).toFixed(4)})`;
+          return `.gain((${gainExpr}) * ${combinedMultiplier.toFixed(4)})`;
         }
       );
     }

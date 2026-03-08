@@ -25,6 +25,7 @@ import { arrivalEmphasis } from '../theory/arrival-emphasis';
 import { syncedDelayTime } from '../theory/delay-sync';
 import { shouldApplyHemiola, hemiolaType, hemiolaAccentMask, claveAccentMask } from '../theory/hemiola';
 import { layerPhaseOffset, shouldApplyPhaseOffset } from '../theory/rhythmic-phase';
+import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../theory/tension-orchestration';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -123,10 +124,16 @@ export abstract class CachingLayer implements Layer {
       }
     }
 
-    // Apply layer gain multiplier for smooth section transitions
-    const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
-    if (multiplier < 1.0) {
-      return this.applyGainMultiplier(result, multiplier);
+    // Tension orchestration: dynamic layer balance based on tension
+    let combinedMultiplier = state.layerGainMultipliers[this.name] ?? 1.0;
+    if (shouldApplyTensionOrchestration(state.mood)) {
+      combinedMultiplier *= tensionOrchestrationGain(
+        this.name, state.tension?.overall ?? 0.5, state.mood
+      );
+    }
+
+    if (Math.abs(combinedMultiplier - 1.0) > 0.02) {
+      return this.applyGainMultiplier(result, combinedMultiplier);
     }
     return result;
   }

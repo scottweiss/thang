@@ -8,6 +8,7 @@ import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theor
 import { anticipationWeight, anticipationGhostNote, shouldAnticipate } from '../../theory/harmonic-anticipation';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
+import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -120,15 +121,20 @@ export class DroneLayer implements Layer {
       }
     }
 
-    // Section transition fade
-    const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
-    if (multiplier < 1.0) {
+    // Section transition fade + tension orchestration
+    let combinedMultiplier = state.layerGainMultipliers[this.name] ?? 1.0;
+    if (shouldApplyTensionOrchestration(state.mood)) {
+      combinedMultiplier *= tensionOrchestrationGain(
+        this.name, state.tension?.overall ?? 0.5, state.mood
+      );
+    }
+    if (Math.abs(combinedMultiplier - 1.0) > 0.02) {
       return result.replace(
         /\.gain\(([^)]+)\)/g,
         (_, gainExpr) => {
           const num = parseFloat(gainExpr);
-          if (!isNaN(num)) return `.gain(${(num * multiplier).toFixed(4)})`;
-          return `.gain((${gainExpr}) * ${multiplier.toFixed(4)})`;
+          if (!isNaN(num)) return `.gain(${(num * combinedMultiplier).toFixed(4)})`;
+          return `.gain((${gainExpr}) * ${combinedMultiplier.toFixed(4)})`;
         }
       );
     }
