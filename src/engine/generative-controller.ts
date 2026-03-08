@@ -59,6 +59,8 @@ import { detectCadence, cadentialGainBoost, cadentialReverbBoost, shouldApplyCad
 import { TimbralMemoryBank, blendTimbre } from '../theory/timbral-memory';
 import { isPhraseEnding, overlapGainBoost, shouldApplyPhraseOverlap } from '../theory/phrase-overlap';
 import { elasticTempoMultiplier, shouldApplyElasticity } from '../theory/rhythmic-elasticity';
+import { cadentialAccelMultiplier, shouldAccelerate, phraseProgressFromSection } from '../theory/cadential-acceleration';
+import { densityWaveMultiplier, shouldApplyDensityWave } from '../theory/density-wave';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1319,6 +1321,23 @@ export class GenerativeController {
       this.prevEnergy = energy;
     }
 
+    // Density wave: rhythmic density breathing within sections
+    if (shouldApplyDensityWave(this.state.mood, this.state.section)) {
+      const dwMult = densityWaveMultiplier(this.state.tick, this.state.mood, this.state.section);
+      if (Math.abs(dwMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * dwMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${dwMult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
+
     // Spectral centroid: auto-correct overall brightness balance
     {
       const lpfValues: number[] = [];
@@ -1404,7 +1423,15 @@ export class GenerativeController {
     const elastic = shouldApplyElasticity(this.state.mood, this.state.section)
       ? elasticTempoMultiplier(this.state.tension?.overall ?? 0.5, this.state.mood, this.state.section)
       : 1.0;
-    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic;
+    // Cadential acceleration: phrases speed up approaching cadences
+    const cadAccel = shouldAccelerate(this.state.mood, this.state.section)
+      ? cadentialAccelMultiplier(
+          phraseProgressFromSection(this.state.sectionProgress ?? 0),
+          this.state.mood,
+          this.state.section
+        )
+      : 1.0;
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic * cadAccel;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {

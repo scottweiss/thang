@@ -52,6 +52,7 @@ import { buildGravityMap, gravityScore, pitchGravityStrength } from '../../theor
 import { classifyGesture, shouldInjectSurprise, shouldInjectStability, suggestGesture, type GestureType } from '../../theory/gestural-entropy';
 import { anticipationDelay, violationTendency } from '../../theory/temporal-expectancy';
 import { intervalVariety, suggestIntervalBias, biasOffset, varietyAppetite } from '../../theory/intervallic-variety';
+import { selectTargetTone, targetPull, biasTowardTarget, shouldApplyTargeting } from '../../theory/melodic-target';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -294,6 +295,35 @@ export class MelodyLayer extends CachingLayer {
             }
           }
         }
+      }
+    }
+
+    // Melodic target: bias phrase endings toward target chord tones
+    if (shouldApplyTargeting(mood)) {
+      const NOTE_PC_MT: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const target = selectTargetTone(state.currentChord.notes, mood, state.section, state.tick);
+      const targetName = target.replace(/\d+$/, '');
+      const targetOct = parseInt(target.match(/\d+$/)?.[0] ?? '4');
+      const targetMidi = (NOTE_PC_MT[targetName] ?? 0) + targetOct * 12;
+      const noteCount = elements.filter(e => e !== '~').length;
+      let noteIdx = 0;
+      for (let i = 0; i < elements.length; i++) {
+        if (elements[i] === '~') continue;
+        const phrasePos = noteCount > 1 ? noteIdx / (noteCount - 1) : 0;
+        const pull = targetPull(phrasePos, mood);
+        if (pull > 0.05) {
+          const n = elements[i].replace(/\d+$/, '');
+          const oct = parseInt(elements[i].match(/\d+$/)?.[0] ?? '4');
+          const currMidi = (NOTE_PC_MT[n] ?? 0) + oct * 12;
+          const newMidi = biasTowardTarget(currMidi, targetMidi, pull);
+          elements[i] = `${pcNames[newMidi % 12]}${Math.floor(newMidi / 12)}`;
+        }
+        noteIdx++;
       }
     }
 
