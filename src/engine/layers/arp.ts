@@ -20,6 +20,7 @@ import { shouldApplyHemiola, applyHemiolaToGain } from '../../theory/hemiola';
 import { applyGrooveLock } from '../../theory/groove-lock';
 import { addPassingTones, shouldAddPassingTones } from '../../theory/arp-passing-tones';
 import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
+import { shouldApplyPolyrhythm, selectGrouping, polyrhythmAccentMask } from '../../theory/polyrhythm';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -519,6 +520,15 @@ export class ArpLayer extends CachingLayer {
       const contour = contourGainMultipliers(noteSteps, mood);
       for (let i = 0; i < gains.length && i < contour.length; i++) {
         gains[i] *= contour[i];
+      }
+    }
+
+    // Polyrhythm: cross-rhythm accent pattern (3/5/7 over 4)
+    if (section !== undefined && shouldApplyPolyrhythm(mood, section, 'arp')) {
+      const grouping = selectGrouping(mood);
+      const polyMask = polyrhythmAccentMask(grouping, steps, 0.5);
+      for (let i = 0; i < gains.length && i < polyMask.length; i++) {
+        gains[i] *= polyMask[i];
       }
     }
 
