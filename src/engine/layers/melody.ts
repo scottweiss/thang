@@ -23,6 +23,7 @@ import { applyBlueNotes } from '../../theory/blue-notes';
 import { shouldTransformMotif, sectionTransform, applyTransform } from '../../theory/motivic-transform';
 import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
 import { phraseGainAccents } from '../../theory/phrase-articulation';
+import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -552,8 +553,12 @@ export class MelodyLayer extends CachingLayer {
     const noteCount = 16;
     const elements: string[] = new Array(noteCount).fill('~');
 
-    // Section density multiplier shapes activity level
-    const effectiveDensity = density * section.densityMult;
+    // Section density with internal contour — density evolves within sections
+    const progress = state.sectionProgress ?? 0;
+    const sectionDensity = shouldApplyDensityContour(progress)
+      ? densityContour(state.section, progress, section.densityMult)
+      : section.densityMult;
+    const effectiveDensity = density * sectionDensity;
     const noteProbability = {
       ambient: effectiveDensity * 0.3,
       downtempo: effectiveDensity * 0.3,

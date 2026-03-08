@@ -14,6 +14,7 @@ import { shouldUseIsorhythm, moodTalea, isorhythmicPattern, isorhythmToStrudel }
 import { complementWeights, weightLadder, selectComplement, shouldApplyComplement, complementStrength } from '../../theory/pitch-complement';
 import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
 import { applyRegisterSpread, shouldApplyRegisterSpread } from '../../theory/register-spread';
+import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -67,7 +68,10 @@ export class ArpLayer extends CachingLayer {
     const density = complementaryDensity(melodyDensity, rawDensity, crAmount);
     const brightness = state.params.brightness * (0.85 + tension * 0.3);
     const room = (0.4 + state.params.spaciousness * 0.4) * (1.1 - tension * 0.2);
-    const sectionMult = SECTION_DENSITY[state.section];
+    const progress = state.sectionProgress ?? 0;
+    const sectionMult = shouldApplyDensityContour(progress)
+      ? densityContour(state.section, progress, SECTION_DENSITY[state.section])
+      : SECTION_DENSITY[state.section];
     const section = state.section;
     this.lastMood = mood;
 
