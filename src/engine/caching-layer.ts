@@ -32,6 +32,7 @@ import { chordLpfMultiplier, chordFmMultiplier, shouldApplyChordTimbre } from '.
 import { adjustPanRange, shouldApplyStereoPlacement } from '../theory/stereo-placement';
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../theory/sidechain-duck';
+import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../theory/resolution-glow';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -73,6 +74,28 @@ export abstract class CachingLayer implements Layer {
 
     // Tension brightness: LPF tracks real-time tension (stacks on filter envelope)
     result = this.applyTensionBrightness(result, state);
+
+    // Resolution glow: brief brightness surge on harmonic resolutions (V→I, etc.)
+    if (state.chordHistory.length >= 1) {
+      const prevChord = state.chordHistory[state.chordHistory.length - 1];
+      const resType = detectResolution(prevChord.degree, prevChord.quality, state.currentChord.degree);
+      if (resType !== 'none') {
+        const glowMult = resolutionGlowMultiplier(resType, state.mood, state.ticksSinceChordChange);
+        if (glowMult > 1.01) {
+          result = result.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * glowMult)})`
+          );
+        }
+        const gainMult = resolutionGainBoost(resType, state.mood, state.ticksSinceChordChange);
+        if (gainMult > 1.005) {
+          result = result.replace(
+            /\.gain\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * gainMult).toFixed(4)})`
+          );
+        }
+      }
+    }
 
     // Chord-responsive timbre: chord quality colors the LPF and FM
     if (shouldApplyChordTimbre(state.mood)) {

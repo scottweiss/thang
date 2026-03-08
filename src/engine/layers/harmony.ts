@@ -35,6 +35,7 @@ import { compingPattern, shouldComp } from '../../theory/comping-rhythm';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../../theory/stereo-placement';
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
+import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../../theory/resolution-glow';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -104,6 +105,21 @@ export class HarmonyLayer implements Layer {
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.lpf(${Math.round(parseFloat(val) * tbMult)})`
         );
+      }
+    }
+
+    // Resolution glow: brightness surge on harmonic resolutions
+    if (state.chordHistory.length >= 1) {
+      const prevCh = state.chordHistory[state.chordHistory.length - 1];
+      const resType = detectResolution(prevCh.degree, prevCh.quality, state.currentChord.degree);
+      if (resType !== 'none') {
+        const glowMult = resolutionGlowMultiplier(resType, state.mood, state.ticksSinceChordChange);
+        if (glowMult > 1.01) {
+          result = result.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * glowMult)})`
+          );
+        }
       }
     }
 
