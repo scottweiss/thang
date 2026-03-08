@@ -23,6 +23,7 @@ import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominant
 import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theory/tritone-sub';
 import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from '../theory/chromatic-approach';
 import { selectInversion, applyInversion, extractBassNote } from '../theory/chord-inversion';
+import { shouldApplyRelativeSub, relativeSubChord } from '../theory/relative-sub';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -352,6 +353,20 @@ export class GenerativeController {
           degree: pick.degree,
         };
       }
+    }
+
+    // Relative substitution: replace major→relative minor or vice versa
+    // (e.g., C major → A minor for wistful color)
+    if (cadentialTarget === null &&
+        shouldApplyRelativeSub(nextChord.degree, nextChord.quality, this.state.mood, this.state.section)) {
+      const sub = relativeSubChord(nextChord.root, nextChord.quality, 3);
+      nextChord = {
+        symbol: getChordSymbol(sub.root, sub.quality),
+        root: sub.root,
+        quality: sub.quality,
+        notes: sub.notes,
+        degree: nextChord.degree,
+      };
     }
 
     // Secondary dominant: occasionally insert V/X before the next chord
