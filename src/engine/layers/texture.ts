@@ -4,6 +4,7 @@ import { randomChoice } from '../random';
 import { evolveDrumPattern } from '../../theory/drum-evolution';
 import { applyDrumDynamics, TRANCE_VELOCITIES, AVRIL_VELOCITIES } from '../../theory/drum-dynamics';
 import { addIntelligentGhosts, moodGhostDensity } from '../../theory/ghost-notes';
+import { shouldApplyAdditive, selectGrouping, additiveAccentMask } from '../../theory/additive-rhythm';
 
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
@@ -184,6 +185,8 @@ export class TextureLayer extends CachingLayer {
   private _section: Section = 'intro';
   private _tension = 0.5;
   private _sectionProgress = 0;
+  private _tick = 0;
+  private _mood: import('../../types').Mood = 'ambient';
 
   protected buildPattern(state: GenerativeState): string {
     const density = state.params.density;
@@ -192,6 +195,8 @@ export class TextureLayer extends CachingLayer {
     this._section = state.section;
     this._tension = tension;
     this._sectionProgress = state.sectionProgress ?? 0;
+    this._tick = state.tick;
+    this._mood = mood;
     // Tension brightens drums, dries reverb, adds presence
     const gain = 0.3 * density * (0.9 + tension * 0.15);
     const room = (0.3 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.2);
@@ -531,10 +536,23 @@ export class TextureLayer extends CachingLayer {
   }
 
   // Multiply base gain by velocity template values to create per-step gain pattern
-  // Applies section-responsive dynamics for more expressive drumming
+  // Applies section-responsive dynamics and additive rhythm accents
   private applyVelocity(baseGain: number, velocityTemplate: string): string {
     const template = applyDrumDynamics(velocityTemplate, this._section, this._tension);
-    return template.split(' ').map(v => (parseFloat(v) * baseGain).toFixed(3)).join(' ');
+    const gains = template.split(' ').map(v => parseFloat(v) * baseGain);
+
+    // Additive rhythm: apply asymmetric accent mask for lopsided groove
+    if (shouldApplyAdditive(this._tick, this._mood, this._section)) {
+      const steps = gains.length as 8 | 16;
+      const safeSteps = steps === 8 || steps === 16 ? steps : 16;
+      const grouping = selectGrouping(safeSteps, this._mood, this._tick);
+      const accentMask = additiveAccentMask(grouping, 1.0, 0.6);
+      for (let i = 0; i < gains.length && i < accentMask.length; i++) {
+        gains[i] *= accentMask[i];
+      }
+    }
+
+    return gains.map(v => v.toFixed(3)).join(' ');
   }
 
   // Remove some hits from a pattern (for breakdowns)
