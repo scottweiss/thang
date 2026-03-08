@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@strudel/soundfonts": "^1.3.0",
     "@strudel/web": "^1.3.0"
   },
   "devDependencies": {

@@ -302,41 +302,32 @@ export class AtmosphereLayer extends CachingLayer {
     const gain = 0.06 * (0.3 + density * 0.4) * sectionGain;
 
     if (section === 'peak' || section === 'groove') {
-      // Full shimmering wash — bright, open filter
+      // Lush disco string ensemble — classic disco strings
       return `note("C2")
-        .sound("sawtooth")
-        .fm(${(10 + brightness * 6).toFixed(0)})
-        .fmh(0.5)
-        .fmenv("exp")
-        .fmdecay(1)
-        .attack(1)
+        .sound("gm_string_ensemble_1")
+        .attack(0.6)
         .decay(2)
-        .sustain(0.35)
+        .sustain(0.45)
         .release(1)
         .slow(3)
         .gain(${gain.toFixed(4)})
-        .lpf(${(600 + brightness * 1200).toFixed(0)})
-        .resonance(4)
+        .lpf(${(1000 + brightness * 1600).toFixed(0)})
         .pan(sine.range(0.2, 0.8).slow(7))
         .room(${(room * 0.6).toFixed(2)})
         .roomsize(3)
         .orbit(${this.orbit})`;
     }
 
-    // Intro/build/breakdown: quieter shimmer
+    // Intro/build/breakdown: gentler strings
     return `note("C2")
-      .sound("sawtooth")
-      .fm(${(6 + brightness * 4).toFixed(0)})
-      .fmh(0.5)
-      .fmenv("exp")
-      .fmdecay(1.5)
-      .attack(2)
+      .sound("gm_string_ensemble_1")
+      .attack(1.2)
       .decay(3)
-      .sustain(0.2)
+      .sustain(0.3)
       .release(1.5)
       .slow(5)
       .gain(${(gain * 0.5).toFixed(4)})
-      .lpf(${(300 + brightness * 600).toFixed(0)})
+      .lpf(${(500 + brightness * 800).toFixed(0)})
       .pan(sine.range(0.3, 0.7).slow(11))
       .room(${(room * 0.5).toFixed(2)})
       .roomsize(2)

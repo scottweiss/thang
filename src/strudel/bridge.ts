@@ -8,7 +8,9 @@ export async function initStrudel(): Promise<void> {
   initialized = true;
 
   const mod = await import('@strudel/web');
+  const { registerSoundfonts } = await import('@strudel/soundfonts');
   await mod.initStrudel();
+  await registerSoundfonts();
   strudelEvaluate = mod.evaluate;
   strudelHush = mod.hush;
 

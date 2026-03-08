@@ -266,23 +266,17 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'disco':
-        // Disco chord stabs — square wave, short and punchy, wide stereo via detune
+        // Disco Rhodes stabs — GM electric piano, short and funky
         return `${chordStart}
-          .sound("square")
-          .fm(${(1.5 + brightness * 1).toFixed(1)})
-          .fmh(2)
-          .fmenv("exp")
-          .fmdecay(0.06)
+          .sound("gm_epiano1")
           .attack(0.003)
-          .decay(0.3)
+          .decay(0.35)
           .sustain(0.06)
-          .release(0.12)
+          .release(0.15)
           .slow(1)
           .gain(${(gain * 0.9).toFixed(3)})
           .hpf(250)
-          .lpf(${(2500 + brightness * 3500).toFixed(0)})
-          .resonance(${(3 + brightness * 3).toFixed(0)})
-          .detune(sine.range(-6, 6).slow(3))
+          .lpf(${(3000 + brightness * 4000).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(4))
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1.5)

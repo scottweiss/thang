@@ -4,3 +4,8 @@ declare module '@strudel/web' {
   export function hush(): void;
   export function samples(source: string | Record<string, any>, base?: string, options?: Record<string, any>): Promise<void>;
 }
+
+declare module '@strudel/soundfonts' {
+  export function registerSoundfonts(): Promise<void>;
+  export function setSoundfontUrl(url: string): void;
+}
