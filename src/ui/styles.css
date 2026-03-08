@@ -336,6 +336,55 @@ input[type="range"]::-moz-range-track {
   margin-right: 0.15rem;
 }
 
+/* ---- Immersive mode ---- */
+.immersive-hud {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1.5rem;
+  align-items: baseline;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.immersive-hud .hud-chord {
+  font-size: 1.1rem;
+  color: var(--text-bright);
+  font-weight: 300;
+}
+
+.immersive-hud .hud-section {
+  color: var(--accent);
+  font-size: 0.7rem;
+}
+
+body.immersive #app {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+body.immersive .immersive-hud {
+  opacity: 1;
+  transition: opacity 0.8s ease 0.3s;
+}
+
+body.immersive {
+  cursor: none;
+}
+
+body.immersive:hover {
+  cursor: default;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 460px) {
   #app {

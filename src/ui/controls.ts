@@ -17,6 +17,7 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
   updateState: (state: GenerativeState) => void;
 } {
   let playing = false;
+  let immersive = false;
   let chordFlashTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Set initial mood theme
@@ -83,7 +84,14 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
         <span class="shortcut-key">s</span> section
         <span class="shortcut-key">&uarr;&darr;</span> density
         <span class="shortcut-key">&larr;&rarr;</span> bright
+        <span class="shortcut-key">f</span> immersive
       </div>
+    </div>
+
+    <div class="immersive-hud" id="immersiveHud">
+      <span class="hud-chord" id="hudChord">Cm7</span>
+      <span class="hud-section" id="hudSection">intro</span>
+      <span class="hud-mood" id="hudMood">downtempo</span>
     </div>
   `;
 
@@ -186,6 +194,11 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
         brightnessSlider.value = Math.max(0, parseInt(brightnessSlider.value) - 5).toString();
         brightnessSlider.dispatchEvent(new Event('input'));
         break;
+      case 'f':
+      case 'F':
+        immersive = !immersive;
+        document.body.classList.toggle('immersive', immersive);
+        break;
     }
   });
 
@@ -233,6 +246,14 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
         setTimeout(() => sectionEl.classList.remove('chord-flash'), 800);
       }
     }
+
+    // Update immersive HUD
+    const hudChord = app.querySelector('#hudChord') as HTMLElement;
+    const hudSection = app.querySelector('#hudSection') as HTMLElement;
+    const hudMood = app.querySelector('#hudMood') as HTMLElement;
+    if (hudChord) hudChord.textContent = state.currentChord.symbol;
+    if (hudSection) hudSection.textContent = state.section;
+    if (hudMood) hudMood.textContent = state.mood;
 
     if (elapsedEl) {
       const mins = Math.floor(state.elapsed / 60);
