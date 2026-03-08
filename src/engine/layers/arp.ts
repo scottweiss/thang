@@ -3,6 +3,7 @@ import { GenerativeState, Section, Mood } from '../../types';
 import { randomChoice, shuffle } from '../random';
 import { euclideanFillPositions } from '../../theory/euclidean';
 import { velocityCurve, VelocityPattern } from '../../theory/groove';
+import { getAdjustedOctaveRange } from '../../theory/register';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -56,6 +57,10 @@ export class ArpLayer extends CachingLayer {
 
     // Build arp notes from chord tones across octaves
     const baseNotes = chord.notes;
+
+    // Register awareness: get adjusted octave range to avoid melody collision
+    const [adjLow, adjHigh] = getAdjustedOctaveRange('arp', state.layerCenterPitches);
+    state.layerCenterPitches['arp'] = 60; // middle C as default center
 
     switch (mood) {
       case 'ambient': {
@@ -139,7 +144,7 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'trance': {
-        const notes = this.spreadOctaves(baseNotes, 3, 5);
+        const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
         // Section-aware pattern: build uses updown, peak uses up, breakdown sparse
         const trancePattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
           ? randomChoice<ArpPattern>(['up', 'updown'])
@@ -227,7 +232,7 @@ export class ArpLayer extends CachingLayer {
       case 'syro': {
         // Dense 16th note arps — acid-style, resonant filter sweep, multiple octaves
         // Syro style: restless, intricate, technical
-        const notes = this.spreadOctaves(baseNotes, 2, 5);
+        const notes = this.spreadOctaves(baseNotes, Math.max(2, adjLow), Math.min(5, adjHigh));
         const syroPattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
           ? randomChoice<ArpPattern>(['up', 'updown'])
           : state.section === 'build'
@@ -318,7 +323,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'disco': {
         // Bubbly disco arp — sine with high FM, fast 16th notes, funky
-        const notes = this.spreadOctaves(baseNotes, 3, 5);
+        const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
         const discoPattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
           ? randomChoice<ArpPattern>(['up', 'updown'])
           : state.section === 'build'

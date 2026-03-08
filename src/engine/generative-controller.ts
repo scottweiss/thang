@@ -75,6 +75,7 @@ export class GenerativeController {
         texture: 0.0, arp: 0.0, atmosphere: 1.0,
       },
       tension: { structural: 0.15, harmonic: 0, rhythmic: 0.5, overall: 0.2 },
+      layerCenterPitches: {},
     };
 
     this.layers = [

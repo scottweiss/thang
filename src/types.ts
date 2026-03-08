@@ -77,4 +77,5 @@ export interface GenerativeState {
   activeLayers: Set<string>;
   layerGainMultipliers: Record<string, number>;
   tension: TensionState;
+  layerCenterPitches: Record<string, number>;
 }

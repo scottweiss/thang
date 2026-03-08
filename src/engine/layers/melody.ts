@@ -6,6 +6,7 @@ import { noteIndex } from '../../theory/scales';
 import { buildNarmourPhrase, applyChordToneGravity } from '../../theory/narmour';
 import { phraseDensityMask } from '../../theory/phrase';
 import { MotifMemory } from '../../theory/motif-memory';
+import { getAdjustedOctaveRange } from '../../theory/register';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -331,8 +332,12 @@ export class MelodyLayer extends CachingLayer {
     const section = SECTION_MELODY[state.section];
 
     // Build a pitch ladder: pentatonic notes across 2 octaves
-    const baseOct = mood === 'trance' ? 3 : 4;
+    const [adjLow, adjHigh] = getAdjustedOctaveRange('melody', state.layerCenterPitches);
+    const baseOct = Math.max(adjLow, mood === 'trance' ? 3 : 4);
     const ladder = this.buildLadder(penta, baseOct, baseOct + 1);
+
+    // Store center pitch for register coordination
+    state.layerCenterPitches['melody'] = (baseOct + 1) * 12;
 
     // Find chord tones in the ladder for anchoring
     const chordNotes = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
