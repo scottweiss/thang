@@ -4,6 +4,7 @@ import { randomChoice, shuffle } from '../random';
 import { euclideanFillPositions } from '../../theory/euclidean';
 import { velocityCurve, VelocityPattern } from '../../theory/groove';
 import { getAdjustedOctaveRange } from '../../theory/register';
+import { displaceSteps, syncopate, moodDisplacement } from '../../theory/rhythmic-displacement';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -66,7 +67,7 @@ export class ArpLayer extends CachingLayer {
       case 'ambient': {
         const notes = this.spreadOctaves(baseNotes, 3, 5);
         const fill = this.pickFill16(density * sectionMult * 0.3);
-        const steps = this.buildFromFill(notes, 'up', 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, 'up', 16, fill), state);
         return `note("${steps.join(' ')}")
           .sound("sine")
           .fm(0.5)
@@ -92,7 +93,7 @@ export class ArpLayer extends CachingLayer {
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['up', 'updown', 'broken']);
         const fill = this.pickFill8(density * sectionMult);
-        const steps = this.buildFromFill(notes, pattern, 8, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         return `note("${steps.join(' ')}")
           .sound("square")
           .fm(0.3)
@@ -120,7 +121,7 @@ export class ArpLayer extends CachingLayer {
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'down']);
         const fill = this.pickFill8(density * sectionMult);
-        const steps = this.buildFromFill(notes, pattern, 8, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         return `note("${steps.join(' ')}")
           .sound("triangle")
           .fm(0.4)
@@ -152,7 +153,7 @@ export class ArpLayer extends CachingLayer {
             ? 'updown'
             : 'broken';
         const fill = this.pickFill16(density * sectionMult);
-        const steps = this.buildFromFill(notes, trancePattern, 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
         const tranceGain = 0.16 * (0.5 + density * 0.5);
         const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood);
         return `note("${steps.join(' ')}")
@@ -178,7 +179,7 @@ export class ArpLayer extends CachingLayer {
         // Square pip — tiny gentle clicks, distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 4, 5);
         const fill = this.pickFill16(density * sectionMult * 0.2);
-        const steps = this.buildFromFill(notes, 'broken', 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
           .sound("square")
           .fm(0.3)
@@ -205,7 +206,7 @@ export class ArpLayer extends CachingLayer {
         // Square chime pips — tiny clicks distinct from triangle melody and sine harmony
         const notes = this.spreadOctaves(baseNotes, 4, 6);
         const fill = this.pickFill16(density * sectionMult * 0.15);
-        const steps = this.buildFromFill(notes, 'broken', 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
           .sound("square")
           .fm(0.3)
@@ -239,7 +240,7 @@ export class ArpLayer extends CachingLayer {
             ? 'updown'
             : randomChoice<ArpPattern>(['broken', 'down']);
         const fill = this.pickFill16(density * sectionMult * 1.2);
-        const steps = this.buildFromFill(notes, syroPattern, 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
         const syroGain = 0.12 * (0.5 + density * 0.5);
         const syroVelGain = this.getVelocityGain(syroGain, 16, mood);
         return `note("${steps.join(' ')}")
@@ -267,7 +268,7 @@ export class ArpLayer extends CachingLayer {
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'up']);
         const fill = this.pickFill8(density * sectionMult);
-        const steps = this.buildFromFill(notes, pattern, 8, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         const bhGain = 0.15 * (0.5 + density * 0.5);
         const bhVelGain = this.getVelocityGain(bhGain, 8, mood);
         return `note("${steps.join(' ')}")
@@ -297,7 +298,7 @@ export class ArpLayer extends CachingLayer {
         // Square click — tiny percussive pips, distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 4, 6);
         const fill = this.pickFill16(density * sectionMult * 0.2);
-        const steps = this.buildFromFill(notes, 'broken', 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
           .sound("square")
           .fm(0.3)
@@ -330,7 +331,7 @@ export class ArpLayer extends CachingLayer {
             ? 'updown'
             : 'broken';
         const fill = this.pickFill16(density * sectionMult);
-        const steps = this.buildFromFill(notes, discoPattern, 16, fill);
+        const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
         const discoGain = 0.18 * (0.5 + density * 0.5);
         const velGain = this.getVelocityGain(discoGain, 16, mood);
         return `note("${steps.join(' ')}")
@@ -410,6 +411,21 @@ export class ArpLayer extends CachingLayer {
     const pattern = MOOD_VELOCITY[mood];
     const curve = velocityCurve(steps, pattern);
     return curve.map(v => (baseGain * v).toFixed(4)).join(' ');
+  }
+
+  /** Apply rhythmic displacement and syncopation for groove */
+  private applyDisplacement(steps: string[], state: GenerativeState): string[] {
+    const displacement = moodDisplacement(state.mood);
+    let result = steps;
+    if (displacement > 0) {
+      result = displaceSteps(result, '~', displacement);
+    }
+    // Apply syncopation based on rhythmic tension
+    const syncopationAmount = (state.tension?.rhythmic ?? 0.5) * 0.4;
+    if (syncopationAmount > 0.1) {
+      result = syncopate(result, '~', syncopationAmount, 4);
+    }
+    return result;
   }
 
   // Create the note ordering for different arp patterns

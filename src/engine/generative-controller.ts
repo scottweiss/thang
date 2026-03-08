@@ -1,12 +1,16 @@
 import { GenerativeState, Mood } from '../types';
 import { evaluate, hush } from '../strudel/bridge';
-import { buildScaleState, getRelatedScales } from '../theory/scales';
+import { buildScaleState, getRelatedScales, getScaleNotes } from '../theory/scales';
+import { pickContextualScale } from '../theory/scale-color';
 import { ProgressionGenerator } from '../theory/progressions';
 import { smoothVoicing } from '../theory/voice-leading';
 import { computeTension } from './tension';
 import { getCadentialTarget, cadenceUrgency } from '../theory/cadence';
+import { getBorrowedChords } from '../theory/modal-interchange';
+import { getChordNotesWithOctave, getChordSymbol } from '../theory/chords';
 import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
+import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -76,6 +80,7 @@ export class GenerativeController {
       },
       tension: { structural: 0.15, harmonic: 0, rhythmic: 0.5, overall: 0.2 },
       layerCenterPitches: {},
+      ticksSinceChordChange: 0,
     };
 
     this.layers = [
@@ -169,6 +174,7 @@ export class GenerativeController {
     if (chordChange) {
       this.advanceChord();
       this.state.chordChanged = true;
+      this.state.ticksSinceChordChange = 0;
     }
 
     // Evolve sections (steers density/brightness, manages transitions)
@@ -184,6 +190,7 @@ export class GenerativeController {
       harmonicDistance,
     );
 
+    this.state.ticksSinceChordChange++;
     this.state.tick++;
 
     await this.rebuildAll();
@@ -191,12 +198,28 @@ export class GenerativeController {
   }
 
   private modulateScale(): void {
-    const related = getRelatedScales(this.state.scale);
-    if (related.length > 0) {
-      const candidates = related.slice(0, 3);
-      const chosen = randomChoice(candidates);
-      this.state.scale = buildScaleState(chosen.root, chosen.type);
+    const tension = this.state.tension?.overall ?? 0.5;
+    const sectionProgress = this.sections.getSectionProgress();
+    const newScaleType = pickContextualScale(
+      this.state.mood,
+      tension,
+      sectionProgress,
+      this.state.scale.type
+    );
+
+    // Only modulate if we're actually changing scale type
+    if (newScaleType !== this.state.scale.type) {
+      this.state.scale = buildScaleState(this.state.scale.root, newScaleType);
       this.progression.setScale(this.state.scale);
+    } else {
+      // Same scale type - try changing root instead (relative modulation)
+      const related = getRelatedScales(this.state.scale);
+      if (related.length > 0) {
+        const candidates = related.slice(0, 3);
+        const chosen = randomChoice(candidates);
+        this.state.scale = buildScaleState(chosen.root, chosen.type);
+        this.progression.setScale(this.state.scale);
+      }
     }
   }
 
@@ -211,9 +234,36 @@ export class GenerativeController {
     );
 
     // Either force a cadential target or let Markov decide
-    const nextChord = cadentialTarget !== null
+    let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
       : this.progression.next();
+
+    // Modal interchange: occasionally borrow a chord from a parallel mode.
+    // Higher tension increases borrow probability (up to 25% at max tension).
+    // Skip when cadential steering is active — don't disrupt cadences.
+    const tension = this.state.tension?.overall ?? 0.5;
+    const borrowProbability = tension * 0.25;
+    if (Math.random() < borrowProbability && cadentialTarget === null) {
+      const borrowed = getBorrowedChords(this.state.scale.type);
+      if (borrowed.length > 0) {
+        // Prefer a borrowed chord matching the current degree; fall back to random
+        const matching = borrowed.filter(b => b.degree === nextChord.degree);
+        const pick = matching.length > 0
+          ? matching[0]
+          : borrowed[Math.floor(Math.random() * borrowed.length)];
+
+        // Rebuild notes from scratch for the borrowed quality
+        const scaleNotes = getScaleNotes(this.state.scale.root, this.state.scale.type);
+        const chordRoot = scaleNotes[pick.degree % scaleNotes.length];
+        nextChord = {
+          symbol: getChordSymbol(chordRoot, pick.quality),
+          root: chordRoot,
+          quality: pick.quality,
+          notes: getChordNotesWithOctave(chordRoot, pick.quality, 3),
+          degree: pick.degree,
+        };
+      }
+    }
 
     nextChord.notes = smoothVoicing(prevNotes, nextChord.notes);
 
@@ -238,7 +288,14 @@ export class GenerativeController {
 
     for (const layer of activeLayers) {
       try {
-        const code = layer.generate(this.state);
+        // Stagger chord changes: some layers see the previous chord
+        let stateForLayer = this.state;
+        if (this.state.chordHistory.length > 0 &&
+            !shouldLayerAcceptChordChange(layer.name, this.state.mood, this.state.ticksSinceChordChange)) {
+          // Temporarily use previous chord for this layer
+          stateForLayer = { ...this.state, currentChord: this.state.chordHistory[this.state.chordHistory.length - 1] };
+        }
+        const code = layer.generate(stateForLayer);
         if (this.validateLayerCode(code, layer.name)) {
           layerResults.push({ name: layer.name, code });
         }

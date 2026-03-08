@@ -1,6 +1,7 @@
 import { Mood, ChordState, ScaleState } from '../types';
 import { MarkovChain } from '../engine/markov';
-import { chordsInScale } from './chords';
+import { chordsInScale, getChordNotesWithOctave, getChordSymbol } from './chords';
+import { getScaleNotes } from './scales';
 import { getBorrowedChords } from './modal-interchange';
 
 // Probability of substituting a borrowed chord, per mood
@@ -190,9 +191,16 @@ export class ProgressionGenerator {
       const borrows = getBorrowedChords(this.scale.type);
       if (borrows.length > 0) {
         const borrowed = borrows[Math.floor(Math.random() * borrows.length)];
-        // Use the borrowed chord's degree but override its quality
-        const baseChord = this.chords[borrowed.degree % this.chords.length];
-        return { ...baseChord, quality: borrowed.quality, degree: borrowed.degree };
+        // Build proper notes for the borrowed chord quality
+        const scaleNotes = getScaleNotes(this.scale.root, this.scale.type);
+        const chordRoot = scaleNotes[borrowed.degree % scaleNotes.length];
+        return {
+          symbol: getChordSymbol(chordRoot, borrowed.quality),
+          root: chordRoot,
+          quality: borrowed.quality,
+          notes: getChordNotesWithOctave(chordRoot, borrowed.quality, 3),
+          degree: borrowed.degree,
+        };
       }
     }
 

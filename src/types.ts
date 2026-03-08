@@ -78,4 +78,5 @@ export interface GenerativeState {
   layerGainMultipliers: Record<string, number>;
   tension: TensionState;
   layerCenterPitches: Record<string, number>;
+  ticksSinceChordChange: number;
 }

@@ -1,5 +1,6 @@
 import { Layer } from '../layer';
 import { GenerativeState, Section } from '../../types';
+import { findSuspensions, pickBestSuspension } from '../../theory/suspension';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -44,9 +45,30 @@ export class HarmonyLayer implements Layer {
     const room = (0.4 + state.params.spaciousness * 0.4) * sectionRoom * (1.1 - tension * 0.2);
     const brightness = state.params.brightness * sectionFilter * (0.85 + tension * 0.3);
 
-    // Use raw notes for sus2/sus4 — Strudel's voicing() doesn't recognize them
-    const chordStart = (chord.quality === 'sus2' || chord.quality === 'sus4')
-      ? `note("${chord.notes.join(' ')}")`
+    // Check for suspension opportunity at chord changes
+    let chordNotes = chord.notes;
+    let hasSuspension = false;
+    if (state.chordChanged && state.chordHistory.length > 0) {
+      const prevNotes = state.chordHistory[state.chordHistory.length - 1].notes;
+      const suspensions = findSuspensions(prevNotes, chordNotes);
+      const best = pickBestSuspension(suspensions);
+      if (best && Math.random() < 0.4) { // 40% chance to use suspension
+        // Replace the resolution target note with the suspended note in the first half
+        // This means the chord starts with the suspended note, then resolves
+        const resolveIdx = chordNotes.indexOf(best.resolution);
+        if (resolveIdx >= 0) {
+          // Create a modified chord with the suspension
+          chordNotes = [...chordNotes];
+          chordNotes[resolveIdx] = best.suspended;
+          hasSuspension = true;
+        }
+      }
+    }
+
+    // Use raw notes for sus2/sus4, or when a suspension modifies chord tones
+    // Strudel's voicing() doesn't recognize sus chords or custom note sets
+    const chordStart = (chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension)
+      ? `note("${chordNotes.join(' ')}")`
       : `chord("${chord.symbol}").voicing()`;
 
     switch (mood) {
