@@ -35,6 +35,7 @@ import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from 
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../theory/resolution-glow';
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../theory/tension-articulation';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../theory/ensemble-breath';
+import { tensionDisplacementPattern, shouldApplyTensionRhythm } from '../theory/tension-rhythm';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -914,10 +915,22 @@ export abstract class CachingLayer implements Layer {
     if (pattern.includes('.nudge(')) return pattern;
 
     const nudge = generateNudgePattern(state.mood, state.section, 8, state.tick);
+    const nudgeValues = nudge.split(' ').map(parseFloat);
+
+    // Blend tension-driven displacement into micro-timing
+    if (shouldApplyTensionRhythm(state.mood)) {
+      const tension = state.tension?.overall ?? 0.5;
+      const displacement = tensionDisplacementPattern(nudgeValues.length, tension, state.mood);
+      for (let i = 0; i < nudgeValues.length; i++) {
+        nudgeValues[i] += displacement[i];
+      }
+    }
+
+    const blended = nudgeValues.map(v => v.toFixed(4)).join(' ');
     // Insert .nudge() before .orbit() (which every layer has at the end)
     return pattern.replace(
       /\.orbit\((\d+)\)/,
-      `.nudge("${nudge}").orbit($1)`
+      `.nudge("${blended}").orbit($1)`
     );
   }
 
