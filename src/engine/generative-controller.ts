@@ -122,6 +122,9 @@ import { timbralContrastMultiplier, shouldApplyTimbralContrast } from '../theory
 import { leapRecoveryWeight } from '../theory/intervallic-leap-recovery';
 import { chordDurationElasticity } from '../theory/harmonic-rhythm-elasticity';
 import { perceptualGainCorrection } from '../theory/perceptual-loudness';
+import { complementaryLpf } from '../theory/spectral-complementarity';
+import { momentumGain, momentumBrightness } from '../theory/phrase-momentum';
+import { shouldDouble, doublingOctave } from '../theory/cross-register-doubling';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2802,6 +2805,64 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
             (_, val) => `.gain(${(parseFloat(val) * correction).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Spectral complementarity: LPF correction for frequency-space overlap
+    {
+      const otherNames = layerResults.map(r => r.name);
+      for (const result of layerResults) {
+        const others = otherNames.filter(n => n !== result.name);
+        const lpfMult = complementaryLpf(result.name, others, this.state.mood);
+        if (Math.abs(lpfMult - 1.0) > 0.01) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+          );
+        }
+      }
+    }
+
+    // Phrase momentum: energy builds within phrases then releases
+    {
+      const progress = this.state.sectionProgress ?? 0;
+      const mGain = momentumGain(progress, this.state.mood, this.state.section);
+      const mBright = momentumBrightness(progress, this.state.mood, this.state.section);
+      if (Math.abs(mGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * mGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+      if (Math.abs(mBright - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * mBright)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Cross-register doubling: reinforce important melody notes in arp
+    {
+      const isImportant = (this.state.sectionProgress ?? 0) > 0.6;
+      if (shouldDouble(this.state.tick, this.state.mood, this.state.section, isImportant)) {
+        const octOffset = doublingOctave(this.state.tick);
+        const arpResult = layerResults.find(r => r.name === 'arp');
+        if (arpResult && this.state.activeMotif && this.state.activeMotif.length > 0) {
+          // Boost arp gain slightly for doubling effect
+          arpResult.code = arpResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * 1.08).toFixed(4)})`
           );
         }
       }
