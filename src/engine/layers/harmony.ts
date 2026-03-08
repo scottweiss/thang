@@ -41,6 +41,7 @@ import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theor
 import { planGuideTonePath, guideToneSmoothnessScore, guideToneWeight } from '../../theory/guide-tone-plan';
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../../theory/tension-register';
 import { extensionImprovesSonority } from '../../theory/vertical-sonority';
+import { applySpacingOptimization } from '../../theory/voice-spacing';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -641,6 +642,9 @@ export class HarmonyLayer implements Layer {
     } else if (dropType === 'drop3') {
       chordNotes = applyDrop3(chordNotes);
     }
+
+    // Voice spacing: ensure good intervallic spacing (wide in bass, close OK in treble)
+    chordNotes = applySpacingOptimization(chordNotes, mood);
 
     // Tension register: shift voicing octave based on real-time tension
     if (shouldApplyTensionRegister(mood)) {
