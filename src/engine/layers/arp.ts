@@ -65,7 +65,17 @@ export class ArpLayer extends CachingLayer {
     const section = state.section;
 
     // Build arp notes from chord tones across octaves
-    const baseNotes = chord.notes;
+    let baseNotes = chord.notes;
+
+    // Thematic unity: occasionally blend melody motif notes into arp's note pool
+    // Creates callbacks to the melody's material — feels composed rather than random
+    if (state.activeMotif && state.activeMotif.length >= 2 &&
+        (section === 'build' || section === 'peak' || section === 'groove') &&
+        Math.random() < 0.2) {
+      // Take 1-2 notes from the motif to enrich the arp palette
+      const motifSample = state.activeMotif.slice(0, Math.min(2, state.activeMotif.length));
+      baseNotes = [...chord.notes, ...motifSample];
+    }
 
     // Register awareness: get adjusted octave range to avoid melody collision
     const [adjLow, adjHigh] = getAdjustedOctaveRange('arp', state.layerCenterPitches);

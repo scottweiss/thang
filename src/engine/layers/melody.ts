@@ -88,9 +88,11 @@ export class MelodyLayer extends CachingLayer {
     // Safety: ensure no runaway phrases
     elements = ensurePhraseBoundary(elements, 10);
 
-    // Report phrase density and step pattern for call-and-response and counterpoint
+    // Report phrase density, step pattern, and active motif for cross-layer coordination
     state.layerPhraseDensity[this.name] = elements.filter(e => e !== '~').length / Math.max(1, elements.length);
     state.layerStepPattern[this.name] = elements;
+    // Share the active melodic notes (non-rests) for arp thematic unity
+    state.activeMotif = elements.filter(e => e !== '~');
 
     // Per-note velocity dynamics — metric accent, contour accent, phrase taper
     const dynamicGain = applyMelodicDynamics(gain, elements);
