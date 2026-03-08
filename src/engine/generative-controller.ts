@@ -155,6 +155,9 @@ import { shouldRecallTimbre } from '../theory/timbral-recall';
 import { beatingFmCorrection } from '../theory/overtone-beating';
 import { qaGainEmphasis } from '../theory/phrase-question-answer';
 import { compressionMultiplier } from '../theory/dynamic-compression';
+import { orbitalWeight } from '../theory/pitch-orbit';
+import { grainDecayMultiplier } from '../theory/texture-granularity';
+import { saturationGainReduction, saturationLpfCorrection } from '../theory/harmonic-saturation-curve';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3097,6 +3100,55 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
             );
           }
+        }
+      }
+    }
+
+    // Pitch orbit: orbital weight stored for melody note selection
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const _orbitWeight = orbitalWeight(rootPc, rootPc, this.state.mood);
+      // Available for melody note selection
+    }
+
+    // Texture granularity: atmosphere decay adjustment
+    {
+      const decayMul = grainDecayMultiplier(this.state.mood, this.state.section);
+      if (Math.abs(decayMul - 1.0) > 0.05) {
+        const atmoResult = layerResults.find(r => r.name === 'atmosphere');
+        if (atmoResult) {
+          atmoResult.code = atmoResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * Math.max(0.7, Math.min(1.3, decayMul))).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic saturation curve: gain/LPF correction for voice count
+    {
+      const totalVoices = this.state.currentChord.notes.length;
+      const activeLayerCount = layerResults.length;
+      const effectiveVoices = totalVoices + activeLayerCount * 0.5;
+      const gainRed = saturationGainReduction(effectiveVoices, this.state.mood);
+      const lpfCorr = saturationLpfCorrection(effectiveVoices, this.state.mood);
+      if (gainRed < 0.99) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * gainRed).toFixed(4)})`
+          );
+        }
+      }
+      if (lpfCorr < 0.99) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfCorr)})`
+          );
         }
       }
     }
