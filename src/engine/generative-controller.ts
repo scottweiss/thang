@@ -44,6 +44,7 @@ import { fmIndexMultiplier, cadentialLpf, isResolutionChord } from '../theory/ti
 import { isStructuralDownbeat, downbeatGainBoost } from '../theory/structural-downbeat';
 import { totalSurprise, surpriseBrightness, surpriseGain } from '../theory/harmonic-surprise';
 import { outerIntervalTension, intervalReverb, intervalFmDepth } from '../theory/intervallic-tension-map';
+import { shouldApplyGradient, gradientDensityMultiplier } from '../theory/texture-gradient';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -665,6 +666,27 @@ export class GenerativeController {
     }
 
     if (layerResults.length === 0) return;
+
+    // Texture gradient: smooth density interpolation during section transitions
+    if (shouldApplyGradient(this.state.sectionProgress ?? 0, this.state.sectionChanged, this.state.mood)) {
+      const densityMult = gradientDensityMultiplier(
+        this.prevSection, this.state.section,
+        this.state.sectionProgress ?? 0, this.state.mood
+      );
+      if (Math.abs(densityMult - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          // Scale gain proportionally to density change (thinner = quieter)
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * densityMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${densityMult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
 
     // Motivic saturation: inject motif fragments into non-melody layers as tension builds
     if (this.state.activeMotif && this.state.activeMotif.length >= 3 &&
