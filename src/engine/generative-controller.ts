@@ -237,6 +237,9 @@ import { phraseSymmetryGain } from '../theory/phrase-symmetry-scoring';
 import { resolutionMomentumGain } from '../theory/harmonic-resolution-momentum';
 import { densityCouplingGain } from '../theory/layer-density-coupling';
 import { driftCorrectionGain } from '../theory/pitch-center-drift-correction';
+import { registerHandoffGain } from '../theory/register-handoff';
+import { tensionDecayFm } from '../theory/harmonic-tension-decay';
+import { onsetBalanceGain } from '../theory/onset-density-balance';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4572,6 +4575,56 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Register handoff: complementary register occupancy
+    {
+      const noteToMidi4: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const melodyMidi = noteToMidi4[this.state.currentChord?.root ?? 'C'] ?? 60;
+      for (const result of layerResults) {
+        if (result.name === 'arp' || result.name === 'harmony') {
+          const layerMidi = result.name === 'arp' ? melodyMidi + 12 : melodyMidi - 5;
+          const rhGain = registerHandoffGain(layerMidi, melodyMidi, this.state.mood);
+          if (Math.abs(rhGain - 1.0) > 0.01) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rhGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic tension decay: FM decays after dissonant chords
+    {
+      const quality = this.state.currentChord?.quality ?? 'maj';
+      const ticks = this.state.ticksSinceChordChange ?? 0;
+      const tdFm = tensionDecayFm(quality, ticks, this.state.mood);
+      if (Math.abs(tdFm - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * tdFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Onset density balance: stagger note onsets across layers
+    {
+      const obGain = onsetBalanceGain(layerResults.length, layerResults.length, this.state.mood);
+      if (obGain < 0.98) {
+        for (const result of layerResults) {
+          if (result.name !== 'drone' && result.name !== 'atmosphere') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * obGain).toFixed(4)})`
             );
           }
         }
