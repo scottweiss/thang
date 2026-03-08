@@ -1,6 +1,7 @@
 import { Section, Mood, GenerativeState } from '../types';
 import { layerFadeInRate, layerFadeOutRate } from '../theory/layer-stagger';
 import { shouldAdvanceEarly } from '../theory/section-timing';
+import { selectNextSection } from '../theory/form-structure';
 
 interface SectionConfig {
   activeLayers: string[];
@@ -95,6 +96,7 @@ export class SectionManager {
   private sectionDuration: number;
   private currentIndex = 0;
   private pastIntro = false;
+  private cycleCount = 0;   // how many full cycles we've completed
 
   constructor() {
     this.sectionDuration = 20; // will be recalculated on first evolve
@@ -156,27 +158,25 @@ export class SectionManager {
   private advanceSection(state: GenerativeState): void {
     this.sectionElapsed = 0;
 
+    let nextSection: Section;
+
     if (!this.pastIntro) {
       this.pastIntro = true;
-      this.currentIndex = 0;
+      nextSection = 'build';
     } else {
-      // Usually follow the cycle, but occasionally skip breakdown → groove
-      // to keep things unpredictable
-      const currentSection = CYCLE_ORDER[this.currentIndex];
-      if (currentSection === 'peak' && Math.random() < 0.25) {
-        // 25% chance to skip breakdown and go straight to groove
-        this.currentIndex = (this.currentIndex + 2) % CYCLE_ORDER.length;
-      } else if (currentSection === 'groove' && Math.random() < 0.2) {
-        // 20% chance to skip build and go straight to peak
-        this.currentIndex = (this.currentIndex + 2) % CYCLE_ORDER.length;
-      } else {
-        this.currentIndex = (this.currentIndex + 1) % CYCLE_ORDER.length;
+      // Use mood-aware form structure for transition decisions
+      const previousSection = state.section;
+      nextSection = selectNextSection(state.mood, previousSection, this.cycleCount);
+
+      // Track cycle completions (groove→build/peak = new cycle)
+      if (previousSection === 'groove' && (nextSection === 'build' || nextSection === 'peak')) {
+        this.cycleCount++;
       }
     }
 
-    const nextSection = this.pastIntro
-      ? CYCLE_ORDER[this.currentIndex]
-      : SECTION_ORDER[0];
+    // Track current index for compatibility
+    const idx = CYCLE_ORDER.indexOf(nextSection);
+    if (idx >= 0) this.currentIndex = idx;
 
     state.section = nextSection;
     state.sectionChanged = true;
@@ -194,6 +194,7 @@ export class SectionManager {
   reset(mood: Mood): void {
     this.pastIntro = false;
     this.currentIndex = 0;
+    this.cycleCount = 0;
     this.sectionElapsed = 0;
     const config = SECTION_CONFIGS[mood].intro;
     this.sectionDuration = this.randomBetween(config.duration[0], config.duration[1]);
