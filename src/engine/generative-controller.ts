@@ -143,6 +143,9 @@ import { trackingLpf } from '../theory/resonance-frequency-tracking';
 import { spectralEnvelopeLpf, shouldTrackSpectralEnvelope } from '../theory/spectral-envelope-tracking';
 import { canonDisplacement, shouldApplyCanonDisplacement } from '../theory/metric-displacement-canon';
 import { fieldTensionGain, fieldTensionBrightness } from '../theory/harmonic-field-tension';
+import { consonanceArcFm } from '../theory/consonance-arc';
+import { thicknessGainReduction } from '../theory/rhythmic-thinning';
+import { spectralWidthLpf } from '../theory/spectral-width';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3085,6 +3088,54 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
             );
           }
+        }
+      }
+    }
+
+    // Consonance arc: FM depth follows phrase-level tension curve
+    {
+      const phrasePos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const fmMul = consonanceArcFm(phrasePos, this.state.mood, this.state.section);
+      if (Math.abs(fmMul - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * fmMul).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic thinning: reduce melodic gain when harmony is thick
+    {
+      const voiceCount = this.state.currentChord.notes.length;
+      const gainRed = thicknessGainReduction(voiceCount, this.state.mood);
+      if (gainRed < 0.99) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * gainRed).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Spectral width: voicing spread adjusts LPF bandwidth
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const pcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      const lpfMul = spectralWidthLpf(pcs, this.state.mood);
+      if (Math.abs(lpfMul - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMul)})`
+          );
         }
       }
     }
