@@ -294,6 +294,9 @@ import { intervalVarietyGain } from '../theory/melodic-interval-variety-tracking
 import { sustainTrackingDecay } from '../theory/dynamic-sustain-tracking';
 import { progressionFlowRoom } from '../theory/harmonic-progression-flow';
 import { accentVarietyGain } from '../theory/rhythmic-accent-variety';
+import { registerBrightnessLpf } from '../theory/pitch-register-brightness';
+import { tensionReleaseGain, tensionReleaseFm } from '../theory/harmonic-tension-release-timing';
+import { entryAttackMultiplier } from '../theory/layer-entry-smoothing';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5421,6 +5424,61 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Pitch register brightness: higher register → brighter LPF
+    {
+      for (const result of layerResults) {
+        if (result.name === 'melody' || result.name === 'arp') {
+          const center = this.state.layerCenterPitches?.[result.name] ?? 64;
+          const rbLpf = registerBrightnessLpf(center, this.state.mood);
+          if (Math.abs(rbLpf - 1.0) > 0.01) {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * rbLpf).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic tension release: surge on resolution moments
+    {
+      // Estimate tension drop from previous tick
+      const prevTension = Math.max(0, this.state.tension.overall + (this.state.chordChanged ? 0.15 : 0));
+      const tensionDrop = prevTension - this.state.tension.overall;
+      if (tensionDrop > 0.05) {
+        const trGain = tensionReleaseGain(tensionDrop, this.state.mood);
+        const trFm = tensionReleaseFm(tensionDrop, this.state.mood);
+        for (const result of layerResults) {
+          if (Math.abs(trGain - 1.0) > 0.005) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * trGain).toFixed(4)})`
+            );
+          }
+          if (Math.abs(trFm - 1.0) > 0.005) {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * trFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Layer entry smoothing: entering layers get softer attack
+    {
+      for (const result of layerResults) {
+        const gm = this.state.layerGainMultipliers?.[result.name] ?? 1.0;
+        const eaMult = entryAttackMultiplier(gm, this.state.mood);
+        if (Math.abs(eaMult - 1.0) > 0.01) {
+          result.code = result.code.replace(
+            /\.attack\(([0-9.]+)\)/,
+            (_, val) => `.attack(${(parseFloat(val) * eaMult).toFixed(4)})`
+          );
         }
       }
     }
