@@ -363,6 +363,9 @@ import { beatSubdivisionGain } from '../theory/rhythmic-beat-subdivision-density
 import { parallelPeriodGain } from '../theory/harmonic-parallel-period';
 import { tessituraComfortGain } from '../theory/melodic-tessitura-comfort';
 import { microAccelOffset } from '../theory/rhythmic-micro-acceleration';
+import { pedalReleaseGain } from '../theory/harmonic-pedal-tone-release';
+import { intervalVarietyGain as intervalDiversityGain } from '../theory/melodic-interval-variety';
+import { anticipationGain } from '../theory/rhythmic-displacement-anticipation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -7164,6 +7167,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.late\(([0-9.]+)\)/,
               (_, val) => `.late(${(safeP(val, 0) + maOffset).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic pedal tone release: boost on sustained bass resolution
+    {
+      const ticksHeld = this.state.ticksSinceChordChange ?? 0;
+      const prGain = pedalReleaseGain(ticksHeld, this.state.chordChanged, this.state.mood, this.state.section);
+      if (prGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, prGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic interval variety: reward diverse interval usage
+    if (this.state.activeMotif && this.state.activeMotif.length >= 3) {
+      const motifNotes = this.state.activeMotif.map(n => safeP(n, 60));
+      const intervals: number[] = [];
+      for (let i = 1; i < motifNotes.length; i++) {
+        intervals.push(motifNotes[i] - motifNotes[i - 1]);
+      }
+      const ivGain = intervalDiversityGain(intervals, this.state.mood, this.state.section);
+      if (ivGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, ivGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic displacement anticipation: boost notes just before strong beats
+    {
+      const beatPos = this.state.tick % 16;
+      const antGain = anticipationGain(beatPos, this.state.mood, this.state.section);
+      if (antGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, antGain, 4)})`
             );
           }
         }
