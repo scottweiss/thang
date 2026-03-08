@@ -7299,7 +7299,26 @@ export class GenerativeController {
       ? beatWarpMultiplier(this.state.sectionProgress ?? 0, this.state.mood, this.state.section)
       : 1.0;
     const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic * cadAccel * beatWarp;
-    const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
+    // Sanitize any literal NaN values that slipped through regex replacements.
+    // NaN can appear as .param(NaN) or embedded in expressions like .param((NaN) * 1.02)
+    for (const result of layerResults) {
+      if (result.code.includes('NaN')) {
+        result.code = result.code
+          .replace(/\.gain\([^)]*NaN[^)]*\)/g, '.gain(0.5)')
+          .replace(/\.fm\([^)]*NaN[^)]*\)/g, '.fm(1)')
+          .replace(/\.lpf\([^)]*NaN[^)]*\)/g, '.lpf(5000)')
+          .replace(/\.hpf\([^)]*NaN[^)]*\)/g, '.hpf(20)')
+          .replace(/\.room\([^)]*NaN[^)]*\)/g, '.room(0.5)')
+          .replace(/\.late\([^)]*NaN[^)]*\)/g, '.late(0)')
+          .replace(/\.slow\([^)]*NaN[^)]*\)/g, '.slow(1)')
+          .replace(/\.attack\([^)]*NaN[^)]*\)/g, '.attack(0.003)')
+          .replace(/\.decay\([^)]*NaN[^)]*\)/g, '.decay(0.3)')
+          .replace(/\.sustain\([^)]*NaN[^)]*\)/g, '.sustain(0.5)')
+          .replace(/\.release\([^)]*NaN[^)]*\)/g, '.release(0.1)');
+      }
+    }
+    const effectiveTempoSafe = isNaN(effectiveTempo) ? this.state.params.tempo : effectiveTempo;
+    const fullCode = `setCps(${effectiveTempoSafe.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
       await evaluate(fullCode);
