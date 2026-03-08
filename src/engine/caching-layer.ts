@@ -8,6 +8,7 @@ import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution 
 import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-morph';
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
+import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../theory/resonance-sweep';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -34,6 +35,9 @@ export abstract class CachingLayer implements Layer {
 
     // Filter envelope: smooth LPF sweep over section duration
     result = this.applyFilterEnvelope(result, state);
+
+    // Resonance sweep: filter Q rises in builds, drops in breakdowns
+    result = this.applyResonanceSweep(result, state);
 
     // Spatial depth: reverb breathes with section progress
     result = this.applySpatialDepth(result, state);
@@ -132,6 +136,23 @@ export abstract class CachingLayer implements Layer {
     return pattern.replace(
       /\.lpf\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
+    );
+  }
+
+  /**
+   * Scale .resonance() values by section-progress multiplier.
+   * Builds add edge (rising Q), breakdowns soften (falling Q).
+   */
+  private applyResonanceSweep(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyResonanceSweep(state.section)) return pattern;
+    if (!pattern.includes('.resonance(')) return pattern;
+
+    const mult = resonanceSweepMultiplier(state.section, state.sectionProgress ?? 0);
+    if (Math.abs(mult - 1.0) < 0.03) return pattern;
+
+    return pattern.replace(
+      /\.resonance\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.resonance(${Math.round(parseFloat(val) * mult)})`
     );
   }
 

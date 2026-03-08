@@ -11,6 +11,7 @@ import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../
 import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../../theory/delay-evolution';
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
+import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -50,6 +51,17 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
+        );
+      }
+    }
+
+    // Resonance sweep: filter Q rises in builds, drops in breakdowns
+    if (shouldApplyResonanceSweep(state.section) && result.includes('.resonance(')) {
+      const resMult = resonanceSweepMultiplier(state.section, state.sectionProgress ?? 0);
+      if (Math.abs(resMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.resonance\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.resonance(${Math.round(parseFloat(val) * resMult)})`
         );
       }
     }
