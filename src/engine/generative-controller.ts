@@ -19,6 +19,7 @@ import { TensionMemory } from '../theory/tension-memory';
 import { phraseCadenceBias } from '../theory/phrase-harmony';
 import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../theory/form-trajectory';
 import type { TrajectoryState } from '../theory/form-trajectory';
+import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -316,6 +317,21 @@ export class GenerativeController {
           degree: pick.degree,
         };
       }
+    }
+
+    // Secondary dominant: occasionally insert V/X before the next chord
+    // Creates chromatic pull (e.g., D7 → G instead of direct jump to G)
+    const sectionProg = this.sections.getSectionProgress();
+    if (cadentialTarget === null &&
+        shouldInsertSecondaryDominant(nextChord.degree, this.state.mood, this.state.section, sectionProg)) {
+      const secDomRoot = secondaryDominantRoot(nextChord.root);
+      nextChord = {
+        symbol: secondaryDominantSymbol(nextChord.root),
+        root: secDomRoot,
+        quality: 'dom7',
+        notes: secondaryDominantNotes(nextChord.root, 3),
+        degree: nextChord.degree, // keep target degree for resolution tracking
+      };
     }
 
     nextChord.notes = smoothVoicing(prevNotes, nextChord.notes);
