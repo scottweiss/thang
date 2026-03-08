@@ -24,10 +24,12 @@ export class AtmosphereLayer extends CachingLayer {
     const spaciousness = state.params.spaciousness;
     const room = (0.5 + spaciousness * 0.4) * (1.1 - tension * 0.15);
     const section = state.section;
+    // Use scale root for tonal atmosphere layers instead of hardcoded C
+    const root = state.scale?.root ?? 'C';
 
     switch (mood) {
       case 'ambient':
-        return this.buildAmbientAtmosphere(density, brightness, room, section);
+        return this.buildAmbientAtmosphere(density, brightness, room, section, root);
 
       case 'downtempo':
         return this.buildDowntempoAtmosphere(density, brightness, room, section);
@@ -36,16 +38,16 @@ export class AtmosphereLayer extends CachingLayer {
         return this.buildLofiAtmosphere(density, brightness, room, section);
 
       case 'trance':
-        return this.buildTranceAtmosphere(density, brightness, room, section);
+        return this.buildTranceAtmosphere(density, brightness, room, section, root);
 
       case 'avril':
         return this.buildAvrilAtmosphere(density, brightness, room);
 
       case 'xtal':
-        return this.buildXtalAtmosphere(density, brightness, room, section);
+        return this.buildXtalAtmosphere(density, brightness, room, section, root);
 
       case 'syro':
-        return this.buildSyroAtmosphere(density, brightness, room, section);
+        return this.buildSyroAtmosphere(density, brightness, room, section, root);
 
       case 'blockhead':
         return this.buildBlockheadAtmosphere(density, brightness, room, section);
@@ -54,11 +56,11 @@ export class AtmosphereLayer extends CachingLayer {
         return this.buildFlimAtmosphere(density, brightness, room, section);
 
       case 'disco':
-        return this.buildDiscoAtmosphere(density, brightness, room, section);
+        return this.buildDiscoAtmosphere(density, brightness, room, section, root);
     }
   }
 
-  private buildAmbientAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+  private buildAmbientAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
     // Evolving noise wash — FM index creates breathy texture
     // Section controls the warmth and openness
     const sectionGain = { intro: 0.6, build: 0.8, peak: 1.0, breakdown: 0.7, groove: 0.9 }[section];
@@ -67,7 +69,7 @@ export class AtmosphereLayer extends CachingLayer {
     const lpfBoost = section === 'peak' || section === 'groove' ? 200 : 0;
     const lpf = 300 + brightness * 500 + lpfBoost;
 
-    return `note("C1")
+    return `note("${root}1")
       .sound("sine")
       .fm(${(12 + brightness * 8).toFixed(0)})
       .fmh(0.5)
@@ -153,14 +155,14 @@ export class AtmosphereLayer extends CachingLayer {
       .orbit(${this.orbit})`;
   }
 
-  private buildXtalAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+  private buildXtalAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
     // Warm noise wash — vintage tape texture, slow breathing filter
     // SAW 85-92: hazy, enveloping, like old cassette warmth
     const sectionGain = { intro: 0.7, build: 0.85, peak: 1.0, breakdown: 0.75, groove: 0.9 }[section];
     const gain = 0.045 * (0.3 + density * 0.4) * sectionGain;
     const lpf = 250 + brightness * 350;
 
-    return `note("C1")
+    return `note("${root}1")
       .sound("sine")
       .fm(${(10 + brightness * 6).toFixed(0)})
       .fmh(0.5)
@@ -179,14 +181,14 @@ export class AtmosphereLayer extends CachingLayer {
       .orbit(${this.orbit})`;
   }
 
-  private buildSyroAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+  private buildSyroAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
     // Glitchy digital artifacts — random FM bursts, high-frequency detail
     // Syro style: precise digital texture, controlled chaos
     const gain = 0.04 * (0.3 + density * 0.5);
 
     if (section === 'peak' || section === 'groove') {
       // High-frequency FM noise bursts — glitchy texture bed
-      return `note("C3")
+      return `note("${root}3")
         .sound("sine")
         .fm(${(20 + brightness * 12).toFixed(0)})
         .fmh(${(3 + brightness * 2).toFixed(1)})
@@ -209,7 +211,7 @@ export class AtmosphereLayer extends CachingLayer {
 
     if (section === 'build') {
       // Rising digital texture — filter opening
-      return `note("C2")
+      return `note("${root}2")
         .sound("sine")
         .fm(${(15 + brightness * 10).toFixed(0)})
         .fmh(2)
@@ -298,14 +300,14 @@ export class AtmosphereLayer extends CachingLayer {
       .orbit(${this.orbit})`;
   }
 
-  private buildDiscoAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+  private buildDiscoAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
     // Shimmering string wash — bright, warm, disco energy
     const sectionGain = { intro: 0.6, build: 0.8, peak: 1.0, breakdown: 0.65, groove: 0.9 }[section];
     const gain = 0.06 * (0.3 + density * 0.4) * sectionGain;
 
     if (section === 'peak' || section === 'groove') {
       // Lush disco string ensemble — classic disco strings
-      return `note("C2")
+      return `note("${root}2")
         .sound("gm_string_ensemble_1")
         .attack(0.6)
         .decay(2)
@@ -336,7 +338,7 @@ export class AtmosphereLayer extends CachingLayer {
       .orbit(${this.orbit})`;
   }
 
-  private buildTranceAtmosphere(density: number, brightness: number, room: number, section: Section): string {
+  private buildTranceAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
     // Section-aware trance atmosphere:
     // Build: rising noise sweep with opening filter
     // Peak: white noise energy wash
@@ -345,7 +347,7 @@ export class AtmosphereLayer extends CachingLayer {
 
     if (section === 'build') {
       // Rising filter sweep — LPF opens over time (via slow sine)
-      return `note("C1")
+      return `note("${root}1")
         .sound("sawtooth")
         .fm(${(15 + brightness * 10).toFixed(0)})
         .fmh(0.25)
@@ -366,7 +368,7 @@ export class AtmosphereLayer extends CachingLayer {
 
     if (section === 'peak' || section === 'groove') {
       // High energy noise wash — open filter, wider
-      return `note("C1")
+      return `note("${root}1")
         .sound("sawtooth")
         .fm(${(18 + brightness * 8).toFixed(0)})
         .fmh(0.5)
