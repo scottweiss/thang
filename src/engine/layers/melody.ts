@@ -12,7 +12,8 @@ import { addOrnaments } from '../../theory/ornamentation';
 import { generateSequence, flattenSequence, sequenceDirection, shouldUseSequence } from '../../theory/melodic-sequence';
 import { registerShift, shouldShiftRegister } from '../../theory/register-evolution';
 import { insertBreaths, breathingRate, ensurePhraseBoundary } from '../../theory/phrase-breathing';
-import { sectionContour, contourOffset, contourTargetIndex, contourPull } from '../../theory/melodic-contour';
+import { contourOffset, contourTargetIndex, contourPull } from '../../theory/melodic-contour';
+import { selectVariedContour } from '../../theory/contour-variety';
 import { detectDirection } from '../../theory/contrapuntal-motion';
 import { selectMelodicNote, inferDirection as inferMelodicDirection } from '../../theory/melodic-gravity';
 import type { MelodicContext } from '../../theory/melodic-gravity';
@@ -53,6 +54,8 @@ export class MelodyLayer extends CachingLayer {
   orbit = 2;
   private motifMemory = new MotifMemory();
   private rhythmMemory = new RhythmicMemory();
+  /** Recent contour shapes for variety tracking (most recent first) */
+  private recentContours: import('../../theory/melodic-contour').ContourShape[] = [];
   /** Last note played (for phrase continuity across regenerations) */
   private lastNoteName: string | null = null;
 
@@ -61,6 +64,7 @@ export class MelodyLayer extends CachingLayer {
     if (this.moodChanged(state)) {
       this.motifMemory.clear(); // fresh motifs for new mood
       this.rhythmMemory.clear();
+      this.recentContours = [];
       this.lastNoteName = null;
       return true;
     }
@@ -579,7 +583,7 @@ export class MelodyLayer extends CachingLayer {
       }
     } else {
       // Create a new motif via Narmour I-R model
-      rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour, state.sectionProgress ?? 0, state.section);
+      rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour, state.sectionProgress ?? 0, state.section, state.mood);
       // Store it for future development
       this.motifMemory.store(rawMotif, state.tick);
     }
@@ -772,9 +776,11 @@ export class MelodyLayer extends CachingLayer {
   // Build a motif using Narmour implication-realization model
   // Small steps continue naturally, leaps resolve — cognitive melody theory
   // Contour bias shifts the starting point toward the section's melodic shape
-  private buildMotif(ladder: string[], startIdx: number, length: number, _contour: Contour, sectionProgress: number = 0, section: import('../../types').Section = 'groove'): string[] {
-    // Apply melodic contour: shift the starting pitch based on section shape
-    const shape = sectionContour(section);
+  private buildMotif(ladder: string[], startIdx: number, length: number, _contour: Contour, sectionProgress: number = 0, section: import('../../types').Section = 'groove', mood: import('../../types').Mood = 'lofi'): string[] {
+    // Apply melodic contour with variety: avoid repeating the same shape
+    const shape = selectVariedContour(section, mood, this.recentContours);
+    this.recentContours.unshift(shape);
+    if (this.recentContours.length > 6) this.recentContours.pop();
     const offset = contourOffset(shape, sectionProgress);
     const pull = contourPull(shape, sectionProgress);
 
