@@ -312,6 +312,9 @@ import { grooveConsistencyGain } from '../theory/rhythmic-groove-consistency';
 import { functionWeightGain } from '../theory/harmonic-function-weight';
 import { registerFatigueGain } from '../theory/melodic-register-fatigue';
 import { downbeatAnchorGain } from '../theory/rhythmic-downbeat-anchor';
+import { stabilityDecayFm } from '../theory/tonal-stability-decay';
+import { leapPreparationGain } from '../theory/melodic-leap-preparation';
+import { patternRotationGain } from '../theory/rhythmic-pattern-rotation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5437,6 +5440,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Tonal stability decay: stable chords lose FM over time
+    {
+      const sdFm = stabilityDecayFm(this.state.currentChord.degree, this.state.ticksSinceChordChange, this.state.mood);
+      if (Math.abs(sdFm - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * sdFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic leap preparation: emphasis before large leaps
+    {
+      if (this.state.activeMotif && this.state.activeMotif.length >= 2) {
+        const noteToMidi: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+        const motif = this.state.activeMotif;
+        const last = noteToMidi[motif[motif.length - 1]] ?? 60;
+        const prev = noteToMidi[motif[motif.length - 2]] ?? 60;
+        const interval = Math.abs(last - prev);
+        const lpGain = leapPreparationGain(interval, this.state.mood);
+        if (Math.abs(lpGain - 1.0) > 0.005) {
+          const melodyResult = layerResults.find(r => r.name === 'melody');
+          if (melodyResult) {
+            melodyResult.code = melodyResult.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * lpGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic pattern rotation: evolving accent positions
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const prGain = patternRotationGain(this.state.tick, beatPos, this.state.mood);
+      if (Math.abs(prGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * prGain).toFixed(4)})`
             );
           }
         }
