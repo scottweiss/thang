@@ -309,6 +309,9 @@ import { syncopationRewardGain } from '../theory/rhythmic-syncopation-reward';
 import { spreadControlGain } from '../theory/voicing-spread-control';
 import { phraseCompletionGain } from '../theory/melodic-phrase-completion';
 import { grooveConsistencyGain } from '../theory/rhythmic-groove-consistency';
+import { functionWeightGain } from '../theory/harmonic-function-weight';
+import { registerFatigueGain } from '../theory/melodic-register-fatigue';
+import { downbeatAnchorGain } from '../theory/rhythmic-downbeat-anchor';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5436,6 +5439,51 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic function weight: tonic/dominant get emphasis
+    {
+      const fwGain = functionWeightGain(this.state.currentChord.degree, this.state.mood);
+      if (Math.abs(fwGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * fwGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic register fatigue: long stay in same register reduces gain
+    {
+      // Approximate ticks in register from ticksSinceChordChange as proxy
+      const ticksInReg = Math.min(this.state.ticksSinceChordChange, 10);
+      const rfGain = registerFatigueGain(ticksInReg, this.state.mood);
+      if (Math.abs(rfGain - 1.0) > 0.005) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * rfGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic downbeat anchor: coordinated emphasis on bar downbeats
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const daGain = downbeatAnchorGain(beatPos, this.state.mood, this.state.section);
+      if (Math.abs(daGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * daGain).toFixed(4)})`
+          );
         }
       }
     }
