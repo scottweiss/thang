@@ -306,6 +306,9 @@ import { subdivisionVarietyGain } from '../theory/rhythmic-subdivision-variety';
 import { commonToneDecay } from '../theory/harmonic-common-tone-sustain';
 import { contourEnergyGain } from '../theory/melodic-contour-energy';
 import { syncopationRewardGain } from '../theory/rhythmic-syncopation-reward';
+import { spreadControlGain } from '../theory/voicing-spread-control';
+import { phraseCompletionGain } from '../theory/melodic-phrase-completion';
+import { grooveConsistencyGain } from '../theory/rhythmic-groove-consistency';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5431,6 +5434,52 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voicing spread control: tension/section controls voicing width emphasis
+    {
+      const scGain = spreadControlGain(this.state.tension.overall, this.state.mood, this.state.section);
+      if (Math.abs(scGain - 1.0) > 0.005) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * scGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic phrase completion: emphasis at phrase end
+    {
+      const phraseProgress = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const pcGain = phraseCompletionGain(phraseProgress, this.state.mood);
+      if (Math.abs(pcGain - 1.0) > 0.005) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * pcGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic groove consistency: reward established grooves
+    {
+      // Approximate ticks in section from sectionProgress and typical section length
+      const ticksInSection = Math.floor((this.state.sectionProgress ?? 0) * 10);
+      const gcGain = grooveConsistencyGain(ticksInSection, this.state.mood, this.state.section);
+      if (Math.abs(gcGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * gcGain).toFixed(4)})`
             );
           }
         }
