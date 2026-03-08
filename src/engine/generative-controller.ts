@@ -12,6 +12,7 @@ import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
 import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
 import { rubatoMultiplier } from '../theory/rubato';
+import { shouldInsertSilence, silenceGainMultiplier } from '../theory/strategic-silence';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -45,6 +46,9 @@ export class GenerativeController {
   private layers: Layer[];
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private onStateChange?: (state: GenerativeState) => void;
+  private prevSection: 'intro' | 'build' | 'peak' | 'breakdown' | 'groove' = 'intro';
+  private silenceActive = false;
+  private ticksSinceSilence = 0;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -183,6 +187,21 @@ export class GenerativeController {
     // Evolve sections (steers density/brightness, manages transitions)
     this.sections.evolve(this.state, dt);
 
+    // Strategic silence: brief drop before climactic sections
+    if (this.state.sectionChanged) {
+      if (shouldInsertSilence(this.state.section, true, this.prevSection)) {
+        this.silenceActive = true;
+        this.ticksSinceSilence = 0;
+      }
+      this.prevSection = this.state.section;
+    }
+    if (this.silenceActive) {
+      this.ticksSinceSilence++;
+      if (this.ticksSinceSilence > 2) {
+        this.silenceActive = false;
+      }
+    }
+
     // Compute tension arc from current state
     const harmonicDistance = this.state.currentChord.degree === 0 ? 0
       : Math.abs(this.state.currentChord.degree - 3.5) / 3.5;
@@ -311,6 +330,23 @@ export class GenerativeController {
     }
 
     if (layerResults.length === 0) return;
+
+    // Strategic silence: apply near-zero gain during drop moments
+    if (this.silenceActive) {
+      const silenceMult = silenceGainMultiplier(this.ticksSinceSilence, 1);
+      if (silenceMult < 1.0) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (match, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * silenceMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${silenceMult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
 
     const layerCodes = layerResults.map(r => r.code);
     // Apply rubato: subtle tempo variation based on section and tension
