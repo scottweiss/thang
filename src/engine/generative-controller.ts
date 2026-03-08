@@ -219,6 +219,9 @@ import { rotatedAccentGain } from '../theory/accent-rotation';
 import { pedalTensionFm } from '../theory/pedal-resolution-tension';
 import { rangeCompression } from '../theory/melodic-range-compression';
 import { microPauseGain } from '../theory/micro-pause-anticipation';
+import { tendencyResolutionGain } from '../theory/melodic-tendency-resolution';
+import { orchestralWeightGain } from '../theory/dynamic-orchestral-weight';
+import { cadenceTimingGain } from '../theory/phrase-cadence-timing';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4554,6 +4557,52 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic tendency resolution: scale degree resolution pull
+    {
+      const fromDeg = (this.state.currentChord?.degree ?? 0) % 7;
+      const toDeg = 0; // tonic as target
+      const trGain = tendencyResolutionGain(fromDeg, toDeg, this.state.mood);
+      if (Math.abs(trGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * trGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Dynamic orchestral weight: perceived mass from combined layers
+    {
+      const activeNames = layerResults.map(r => r.name);
+      for (const result of layerResults) {
+        const owGain = orchestralWeightGain(result.name, activeNames, this.state.mood);
+        if (Math.abs(owGain - 1.0) > 0.01) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * owGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Phrase cadence timing: phrase endings align with strong beats
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const ctGain = cadenceTimingGain(beatPos, this.state.mood);
+      if (Math.abs(ctGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
           }
         }
