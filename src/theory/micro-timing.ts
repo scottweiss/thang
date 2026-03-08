@@ -17,19 +17,20 @@ interface TimingCharacter {
   bias: number;      // -1 to 1: negative = push (ahead), positive = lazy (behind)
   amount: number;    // 0-1: overall humanization strength
   variation: number; // 0-1: random variation per step (0 = uniform, 1 = very random)
+  swing: number;     // 0-1: systematic off-beat delay (0 = straight, 0.5 = triplet swing)
 }
 
 const MOOD_TIMING: Record<Mood, TimingCharacter> = {
-  ambient:   { bias: 0,     amount: 0.15, variation: 0.8 },
-  downtempo: { bias: 0.3,   amount: 0.25, variation: 0.5 },
-  lofi:      { bias: 0.5,   amount: 0.35, variation: 0.4 },
-  trance:    { bias: -0.2,  amount: 0.10, variation: 0.3 },
-  avril:     { bias: 0.1,   amount: 0.20, variation: 0.6 },
-  xtal:      { bias: 0,     amount: 0.20, variation: 0.7 },
-  syro:      { bias: 0,     amount: 0.08, variation: 0.9 },
-  blockhead: { bias: 0.4,   amount: 0.30, variation: 0.5 },
-  flim:      { bias: 0,     amount: 0.18, variation: 0.7 },
-  disco:     { bias: -0.15, amount: 0.12, variation: 0.3 },
+  ambient:   { bias: 0,     amount: 0.15, variation: 0.8, swing: 0 },
+  downtempo: { bias: 0.3,   amount: 0.25, variation: 0.5, swing: 0.15 },
+  lofi:      { bias: 0.5,   amount: 0.35, variation: 0.4, swing: 0.35 },
+  trance:    { bias: -0.2,  amount: 0.10, variation: 0.3, swing: 0 },
+  avril:     { bias: 0.1,   amount: 0.20, variation: 0.6, swing: 0.05 },
+  xtal:      { bias: 0,     amount: 0.20, variation: 0.7, swing: 0.08 },
+  syro:      { bias: 0,     amount: 0.08, variation: 0.9, swing: 0.12 },
+  blockhead: { bias: 0.4,   amount: 0.30, variation: 0.5, swing: 0.30 },
+  flim:      { bias: 0,     amount: 0.18, variation: 0.7, swing: 0.05 },
+  disco:     { bias: -0.15, amount: 0.12, variation: 0.3, swing: 0.20 },
 };
 
 const SECTION_TIGHTNESS: Record<Section, number> = {
@@ -75,10 +76,18 @@ export function generateNudgePattern(
     return s / 0x7fffffff;
   }
 
+  // Swing offset: systematic delay on off-beats (odd indices)
+  // Applied as additional positive offset on top of humanization
+  const swingOffset = character.swing * 0.025; // max ~12ms of swing
+
   const nudges: string[] = [];
   for (let i = 0; i < steps; i++) {
     const random = (nextRandom() * 2 - 1) * character.variation;
-    const offset = (character.bias + random) * maxOffset;
+    let offset = (character.bias + random) * maxOffset;
+    // Apply swing to off-beat positions (odd indices)
+    if (i % 2 === 1 && swingOffset > 0) {
+      offset += swingOffset;
+    }
     nudges.push(offset.toFixed(4));
   }
 

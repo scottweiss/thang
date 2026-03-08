@@ -47,17 +47,32 @@ describe('generateNudgePattern', () => {
     expect(a).not.toBe(b);
   });
 
-  it('offsets stay within ±25ms range', () => {
+  it('offsets stay within reasonable range', () => {
     const moods = ['ambient', 'downtempo', 'lofi', 'trance', 'avril', 'xtal', 'syro', 'blockhead', 'flim', 'disco'] as const;
     const sections = ['intro', 'build', 'peak', 'breakdown', 'groove'] as const;
     for (const mood of moods) {
       for (const section of sections) {
         const values = generateNudgePattern(mood, section, 16, 42).split(' ').map(parseFloat);
         values.forEach(v => {
-          expect(Math.abs(v)).toBeLessThanOrEqual(0.03); // 30ms hard cap
+          expect(Math.abs(v)).toBeLessThanOrEqual(0.04); // 40ms cap (includes swing)
         });
       }
     }
+  });
+
+  it('lofi swing: off-beat steps are later than on-beat steps', () => {
+    const pattern = generateNudgePattern('lofi', 'groove', 8, 42);
+    const values = pattern.split(' ').map(parseFloat);
+    const onBeat = values.filter((_, i) => i % 2 === 0);
+    const offBeat = values.filter((_, i) => i % 2 === 1);
+    const onAvg = onBeat.reduce((a, b) => a + b, 0) / onBeat.length;
+    const offAvg = offBeat.reduce((a, b) => a + b, 0) / offBeat.length;
+    expect(offAvg).toBeGreaterThan(onAvg); // off-beats systematically later
+  });
+
+  it('trance has no swing', () => {
+    const char = getTimingCharacter('trance');
+    expect(char.swing).toBe(0);
   });
 });
 
