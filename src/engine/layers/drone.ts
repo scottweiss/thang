@@ -1,6 +1,7 @@
 import { Layer } from '../layer';
 import { GenerativeState, NoteName, Section } from '../../types';
 import { generateBassPattern, bassFollowsChord, shouldBassApproach, bassApproachNotes } from '../../theory/bass-pattern';
+import { suggestBassDirection, shouldApplyContraryMotion } from '../../theory/bass-contrary-motion';
 import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } from '../../theory/pedal-point';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
@@ -162,6 +163,10 @@ export class DroneLayer implements Layer {
       root = pedalNote.replace(/\d+$/, '') as NoteName;
     }
     const mood = state.mood;
+    // Bass contrary motion: bias bass direction opposite to melody
+    const bassDir = shouldApplyContraryMotion(mood)
+      ? suggestBassDirection(state.melodyDirection, mood)
+      : undefined;
     const sectionGain = SECTION_GAIN[state.section];
     const sectionFilter = SECTION_FILTER_MULT[state.section];
     const tension = state.tension?.overall ?? 0.5;
@@ -197,7 +202,7 @@ export class DroneLayer implements Layer {
 
       case 'downtempo': {
         // Warm FM bass — harmonicity 1 creates growl, slow FM sweep adds movement
-        const dtBass = generateBassPattern(root, fifth, 'downtempo', 2);
+        const dtBass = generateBassPattern(root, fifth, 'downtempo', 2, bassDir);
         this.injectApproachNotes(dtBass, state, root, 2);
         return `note("${dtBass.join(' ')}")
           .sound("sine")
@@ -222,7 +227,7 @@ export class DroneLayer implements Layer {
 
       case 'lofi': {
         // Warm sub bass — triangle + light FM for subtle tape saturation feel
-        const lofiBass = generateBassPattern(root, fifth, 'lofi', 4);
+        const lofiBass = generateBassPattern(root, fifth, 'lofi', 4, bassDir);
         this.injectApproachNotes(lofiBass, state, root, 2);
         return `note("${lofiBass.join(' ')}")
           .sound("triangle")
@@ -246,7 +251,7 @@ export class DroneLayer implements Layer {
 
       case 'trance': {
         // Acid-tinged pulsing bass — higher FM and resonance for squelch
-        const tranceBass = generateBassPattern(root, fifth, 'trance', 4);
+        const tranceBass = generateBassPattern(root, fifth, 'trance', 4, bassDir);
         this.injectApproachNotes(tranceBass, state, root, 2);
         return `note("${tranceBass.join(' ')}")
           .sound("sawtooth")
@@ -312,7 +317,7 @@ export class DroneLayer implements Layer {
 
       case 'syro': {
         // Acid 303-style bass — sawtooth, resonant but controlled to avoid masking upper layers
-        const syroBass = generateBassPattern(root, fifth, 'syro', 4);
+        const syroBass = generateBassPattern(root, fifth, 'syro', 4, bassDir);
         this.injectApproachNotes(syroBass, state, root, 2);
         return `note("${syroBass.join(' ')}")
           .sound("sawtooth")
@@ -338,7 +343,7 @@ export class DroneLayer implements Layer {
 
       case 'blockhead': {
         // Warm sub bass — sine with slight saturation via low FM, solid hip-hop foundation
-        const bhBass = generateBassPattern(root, fifth, 'blockhead', 2);
+        const bhBass = generateBassPattern(root, fifth, 'blockhead', 2, bassDir);
         this.injectApproachNotes(bhBass, state, root, 2);
         return `note("${bhBass.join(' ')}")
           .sound("sine")
@@ -381,7 +386,7 @@ export class DroneLayer implements Layer {
 
       case 'disco': {
         // Funky disco slap bass — GM soundfont, octave jumps, rhythmic
-        const discoBass = generateBassPattern(root, fifth, 'disco', 4);
+        const discoBass = generateBassPattern(root, fifth, 'disco', 4, bassDir);
         // Expand to 8 steps with rests for rhythmic pattern
         const discoExpanded = [discoBass[0], discoBass[1], discoBass[2], discoBass[3],
                                '~', discoBass[0], `${fifth}${1}`, discoBass[0]];

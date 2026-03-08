@@ -13,6 +13,8 @@
  */
 
 import type { Mood } from '../types';
+import type { BassDirection } from './bass-contrary-motion';
+import { biasBassPatterns } from './bass-contrary-motion';
 
 export type BassStyle = 'pedal' | 'root-fifth' | 'octave-jump' | 'walking' | 'driving';
 
@@ -55,7 +57,8 @@ export function generateBassPattern(
   chordRoot: string,
   fifth: string,
   mood: Mood,
-  steps: number = 4
+  steps: number = 4,
+  directionBias?: BassDirection
 ): string[] {
   const config = MOOD_BASS[mood];
   const oct = config.octave;
@@ -70,46 +73,54 @@ export function generateBassPattern(
 
     case 'root-fifth': {
       // Root-heavy with fifth approach — classic hip-hop/downtempo
-      const patterns = [
+      let patterns = [
         [root, root, fth, fth],
         [root, '~', root, fth],
         [root, root, root, fth],
         [root, '~', fth, root],
       ];
-      return patterns[Math.floor(Math.random() * patterns.length)].slice(0, steps);
+      if (directionBias) patterns = biasBassPatterns(patterns, directionBias, chordRoot, fifth);
+      const pick0 = directionBias ? 0 : Math.floor(Math.random() * patterns.length);
+      return patterns[pick0].slice(0, steps);
     }
 
     case 'octave-jump': {
       // Root with octave jumps — disco/funk
-      const patterns = [
+      let patterns = [
         [root, root, rootLow, root],
         [root, root, fth, root],
         [root, '~', root, '~'],
         [root, root, rootLow, fth],
       ];
-      return patterns[Math.floor(Math.random() * patterns.length)].slice(0, steps);
+      if (directionBias) patterns = biasBassPatterns(patterns, directionBias, chordRoot, fifth);
+      const pick1 = directionBias ? 0 : Math.floor(Math.random() * patterns.length);
+      return patterns[pick1].slice(0, steps);
     }
 
     case 'driving': {
       // Eighth-note drive — trance/syro
-      const patterns = [
+      let patterns = [
         [root, root, fth, root],
         [root, root, root, root],
         [root, root, fth, fth],
       ];
-      return patterns[Math.floor(Math.random() * patterns.length)].slice(0, steps);
+      if (directionBias) patterns = biasBassPatterns(patterns, directionBias, chordRoot, fifth);
+      const pick2 = directionBias ? 0 : Math.floor(Math.random() * patterns.length);
+      return patterns[pick2].slice(0, steps);
     }
 
     case 'walking': {
       // Walking bass — scale-based motion: root, passing tone, fifth, approach
       // Classic jazz walking bass line structure
-      const patterns = [
+      let patterns = [
         [root, scaleToneAbove(chordRoot, oct), fth, scaleApproach(chordRoot, oct)],
         [root, fth, scaleToneAbove(chordRoot, oct), root],
         [root, scaleToneBelow(chordRoot, oct), fth, root],
         [root, root, scaleToneAbove(chordRoot, oct), fth],
       ];
-      return patterns[Math.floor(Math.random() * patterns.length)].slice(0, steps);
+      if (directionBias) patterns = biasBassPatterns(patterns, directionBias, chordRoot, fifth);
+      const pick3 = directionBias ? 0 : Math.floor(Math.random() * patterns.length);
+      return patterns[pick3].slice(0, steps);
     }
 
     default:
