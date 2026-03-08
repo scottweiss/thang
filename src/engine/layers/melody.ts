@@ -24,6 +24,7 @@ import { shouldTransformMotif, sectionTransform, applyTransform } from '../../th
 import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
 import { phraseGainAccents } from '../../theory/phrase-articulation';
 import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
+import { placePeak, moodPeakPosition, shouldPlacePeak } from '../../theory/phrase-peak';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -100,6 +101,11 @@ export class MelodyLayer extends CachingLayer {
           return `${match[1]}${newOct}`;
         });
       }
+    }
+
+    // Phrase peak placement: highest note toward golden section for natural arc
+    if (shouldPlacePeak(mood)) {
+      elements = placePeak(elements, moodPeakPosition(mood));
     }
 
     // Phrase breathing: insert rests between phrases for natural phrasing
