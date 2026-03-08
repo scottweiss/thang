@@ -35,6 +35,7 @@ import { shouldApplyNegativeHarmony, negativeRoot } from '../theory/negative-har
 import { shouldModulate as shouldMetricModulate, modulationRatio, modulationEnvelope, modulationWindowTicks } from '../theory/metric-modulation';
 import { bestPivotChord, shouldUsePivot } from '../theory/pivot-modulation';
 import { macroDynamicGain, transitionDynamicAccent, shouldApplyMacroDynamics } from '../theory/macro-dynamics';
+import { shouldApplyNR, suggestNRMove } from '../theory/neo-riemannian';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -509,6 +510,21 @@ export class GenerativeController {
           degree: nextChord.degree,
         };
       }
+    }
+
+    // Neo-Riemannian navigation: geometric P/R/L transformations
+    // for smooth, non-functional chord movement (dreamy/ambient sections)
+    if (cadentialTarget === null &&
+        shouldApplyNR(this.state.tick, this.state.mood, this.state.section) &&
+        Math.random() < reharmGate) {
+      const move = suggestNRMove(nextChord.root, nextChord.quality, this.state.mood, this.state.tick);
+      nextChord = {
+        symbol: getChordSymbol(move.result.root, move.result.quality),
+        root: move.result.root,
+        quality: move.result.quality,
+        notes: getChordNotesWithOctave(move.result.root, move.result.quality, 3),
+        degree: nextChord.degree,
+      };
     }
 
     // Tritone substitution: replace dominant chords with ♭II7 for
