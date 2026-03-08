@@ -164,6 +164,9 @@ import { fluxCorrection } from '../theory/spectral-flux';
 import { availableRange } from '../theory/registral-envelope';
 import { shouldAnticipate } from '../theory/harmonic-pedal-anticipation';
 import { entrainedOffset, shouldEntrain } from '../theory/rhythmic-entrainment';
+import { cadentialWeight } from '../theory/cadential-weight-distribution';
+import { microDynamicGain } from '../theory/micro-dynamics';
+import { morphedLpf } from '../theory/spectral-morphing';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3104,6 +3107,55 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Cadential weight distribution: harmonic weight at phrase boundaries
+    {
+      const phrasePos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const cWeight = cadentialWeight(phrasePos, this.state.mood);
+      if (Math.abs(cWeight - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * cWeight).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Micro-dynamics: per-note velocity variation
+    {
+      const noteIdx = this.state.tick % 8;
+      const microGain = microDynamicGain(noteIdx, this.state.tick, this.state.mood);
+      if (Math.abs(microGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * microGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Spectral morphing: smooth LPF transitions between sections
+    {
+      const progress = this.state.sectionProgress ?? 0;
+      for (const result of layerResults) {
+        const lpfMatch = result.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+        if (lpfMatch) {
+          const baseLpf = parseFloat(lpfMatch[1]);
+          const morphed = morphedLpf(baseLpf, this.state.section, this.state.mood, progress);
+          if (Math.abs(morphed - baseLpf) > 10) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              () => `.lpf(${Math.round(morphed)})`
             );
           }
         }
