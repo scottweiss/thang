@@ -246,6 +246,9 @@ import { densityInversionGain } from '../theory/rhythmic-density-inversion';
 import { maskingAvoidanceGain } from '../theory/frequency-masking-avoidance';
 import { anchorPointGain } from '../theory/rhythmic-anchor-point';
 import { peakBrightnessGain } from '../theory/melodic-peak-brightness';
+import { expectationFulfillmentGain } from '../theory/harmonic-expectation-fulfillment';
+import { texturalBreathingGain } from '../theory/textural-breathing-rate';
+import { voiceLeadingGain } from '../theory/voice-leading-smoothness';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4583,6 +4586,57 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic expectation fulfillment: boost when expected chord arrives
+    {
+      const noteToPC5: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const curPc5 = noteToPC5[this.state.currentChord?.root ?? 'C'] ?? 0;
+      const prevPc5 = noteToPC5[this.state.scale?.root ?? 'C'] ?? 0;
+      const efGain = expectationFulfillmentGain(prevPc5, curPc5, this.state.mood);
+      if (efGain > 1.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * efGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Textural breathing rate: atmosphere/texture pulse
+    {
+      const tbGain = texturalBreathingGain(
+        this.state.sectionProgress ?? 0,
+        this.state.mood,
+        this.state.section
+      );
+      if (Math.abs(tbGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'atmosphere' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * tbGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voice leading smoothness: reward small voice motion
+    {
+      const chordNotes5 = this.state.currentChord?.notes?.length ?? 3;
+      const avgMotion = 2; // approximate average voice motion
+      const vlGain = voiceLeadingGain(avgMotion * chordNotes5, chordNotes5, this.state.mood);
+      if (Math.abs(vlGain - 1.0) > 0.01) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * vlGain).toFixed(4)})`
+          );
         }
       }
     }
