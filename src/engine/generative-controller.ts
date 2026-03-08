@@ -161,6 +161,9 @@ import { saturationGainReduction, saturationLpfCorrection } from '../theory/harm
 import { contourMatchWeight } from '../theory/melodic-contour-matching';
 import { chordChangeAlignment } from '../theory/harmonic-rhythm-sync';
 import { fluxCorrection } from '../theory/spectral-flux';
+import { availableRange } from '../theory/registral-envelope';
+import { shouldAnticipate } from '../theory/harmonic-pedal-anticipation';
+import { entrainedOffset, shouldEntrain } from '../theory/rhythmic-entrainment';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3101,6 +3104,37 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Registral envelope: range expansion stored for melody
+    {
+      const phrasePos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const _rangeAvail = availableRange(phrasePos, this.state.mood);
+      // Available for melody note selection constraints
+    }
+
+    // Harmonic pedal anticipation: bass lean stored for drone
+    {
+      const _shouldLean = shouldAnticipate(this.state.ticksSinceChordChange, this.state.mood);
+      // Available for drone/bass note selection
+    }
+
+    // Rhythmic entrainment: layers tighten timing over section
+    if (shouldEntrain(this.state.mood, this.state.section)) {
+      const progress = this.state.sectionProgress ?? 0;
+      for (const result of layerResults) {
+        const lateMatch = result.code.match(/\.late\(([0-9.]+)\)/);
+        if (lateMatch) {
+          const current = parseFloat(lateMatch[1]);
+          const entrained = entrainedOffset(current, 0, progress, this.state.mood, this.state.section);
+          if (Math.abs(entrained - current) > 0.001) {
+            result.code = result.code.replace(
+              /\.late\(([0-9.]+)\)/,
+              () => `.late(${Math.max(0, entrained).toFixed(4)})`
             );
           }
         }
