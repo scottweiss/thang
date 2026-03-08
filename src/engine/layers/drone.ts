@@ -144,24 +144,24 @@ export class DroneLayer implements Layer {
 
     // Pedal point: hold a sustained note during builds/intros for tension/stability
     const pedalTension = state.tension?.overall ?? 0.5;
+    let pedalGainMult = 1.0;
     if (shouldUsePedal(state.section, pedalTension, state.ticksSinceChordChange)) {
       // Get the 5th degree of the scale for dominant pedals
       const scaleNotes = state.scale.notes;
       const fifthDegree = scaleNotes[4] || scaleNotes[0]; // 5th degree, fallback to root
       const pedalNote = getPedalNote(state.section, state.scale.root, fifthDegree);
       const conflict = pedalConflictTension(pedalNote, state.currentChord.notes);
-      const pedalGain = pedalGainCurve(conflict, state.section);
+      pedalGainMult = pedalGainCurve(conflict, state.section);
       // Override the root with the pedal note (strip octave since drone adds its own)
       root = pedalNote.replace(/\d+$/, '') as NoteName;
-      // Adjust gain based on pedal conflict
-      // (the pedalGain variable can be used to scale the overall gain)
     }
     const mood = state.mood;
     const sectionGain = SECTION_GAIN[state.section];
     const sectionFilter = SECTION_FILTER_MULT[state.section];
     const tension = state.tension?.overall ?? 0.5;
     // Tension adds warmth to bass: opens filter slightly, less reverb at peaks
-    const gain = 0.15 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1);
+    // pedalGainMult softens when pedal tone clashes with current chord
+    const gain = 0.15 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1) * pedalGainMult;
     const room = (0.5 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.15);
     const brightness = state.params.brightness * sectionFilter * (0.9 + tension * 0.2);
 
