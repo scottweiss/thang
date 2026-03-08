@@ -231,6 +231,9 @@ import { voiceCountGain } from '../theory/harmonic-voice-count';
 import { directionBiasGain } from '../theory/interval-direction-bias';
 import { chordThinningGain } from '../theory/chord-density-thinning';
 import { accentShiftGain } from '../theory/temporal-accent-shift';
+import { brightnessArcLpf } from '../theory/timbral-brightness-arc';
+import { bassGravityGain, bassGravityDecay } from '../theory/bass-register-gravity';
+import { phraseSymmetryGain } from '../theory/phrase-symmetry-scoring';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4568,6 +4571,65 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Timbral brightness arc: LPF evolves in arc within sections
+    {
+      const baLpf = brightnessArcLpf(
+        this.state.sectionProgress ?? 0,
+        this.state.mood,
+        this.state.section
+      );
+      if (Math.abs(baLpf - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * baLpf).toFixed(0)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Bass register gravity: low notes get more weight and sustain
+    {
+      const noteToMidi2: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const rootMidi = noteToMidi2[this.state.currentChord?.root ?? 'C'] ?? 60;
+      const bassMidi = rootMidi - 12;
+      const bgGain = bassGravityGain(bassMidi, this.state.mood);
+      const bgDecay = bassGravityDecay(bassMidi, this.state.mood);
+      if (Math.abs(bgGain - 1.0) > 0.01) {
+        const droneResult = layerResults.find(r => r.name === 'drone');
+        if (droneResult) {
+          droneResult.code = droneResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * bgGain).toFixed(4)})`
+          );
+          if (Math.abs(bgDecay - 1.0) > 0.02) {
+            droneResult.code = droneResult.code.replace(
+              /\.decay\(([0-9.]+)\)/,
+              (_, val) => `.decay(${(parseFloat(val) * bgDecay).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Phrase symmetry scoring: balanced phrases get emphasis
+    {
+      const currentLen = Math.max(1, Math.round((this.state.sectionProgress ?? 0) * 16));
+      const prevLen = 8; // assume previous phrase was 8 beats
+      const psGain = phraseSymmetryGain(currentLen, prevLen, this.state.mood);
+      if (Math.abs(psGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * psGain).toFixed(4)})`
+          );
         }
       }
     }
