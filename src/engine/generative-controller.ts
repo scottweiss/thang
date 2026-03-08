@@ -7,6 +7,7 @@ import { smoothVoicing } from '../theory/voice-leading';
 import { computeTension } from './tension';
 import { getCadentialTarget, cadenceUrgency } from '../theory/cadence';
 import { getBorrowedChords } from '../theory/modal-interchange';
+import { chordTension } from '../theory/chord-tension';
 import { getChordNotesWithOctave, getChordSymbol } from '../theory/chords';
 import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
@@ -208,8 +209,11 @@ export class GenerativeController {
     }
 
     // Compute tension arc from current state
-    const harmonicDistance = this.state.currentChord.degree === 0 ? 0
-      : Math.abs(this.state.currentChord.degree - 3.5) / 3.5;
+    // Use chord-tension module for musically accurate harmonic tension
+    const harmonicDistance = chordTension(
+      this.state.currentChord.degree,
+      this.state.currentChord.quality
+    );
     this.state.tension = computeTension(
       this.state.section,
       this.state.params.density,
