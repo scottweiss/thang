@@ -52,6 +52,9 @@ import { alignedFmh, shouldAlignOvertones } from '../theory/overtone-alignment';
 import { speakingLayer, conversationGainMultiplier, shouldApplyConversation } from '../theory/rhythmic-conversation';
 import { releasedEnergy, transferBoost, shouldTransferMomentum } from '../theory/momentum-transfer';
 import { combinedGain, dynamicRangeMultiplier, shouldApplyDynamicRange } from '../theory/dynamic-range';
+import { coupledDecay, shouldCoupleArticulation } from '../theory/articulation-coupling';
+import { antiMaskingHpf, antiMaskingLpf, shouldApplyAntiMasking } from '../theory/spectral-masking';
+import { energyLevel, energyGainMultiplier, shouldApplyEnergyEnvelope } from '../theory/energy-envelope';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -116,6 +119,8 @@ export class GenerativeController {
   private structuralDownbeatActive = false;
   /** Consonance fatigue tracking */
   private consonanceFatigue = 0;
+  /** Energy envelope tracking */
+  private prevEnergy = 0.2;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -1155,6 +1160,73 @@ export class GenerativeController {
           );
         }
       }
+    }
+
+    // Articulation coupling: coordinate decay character between layers
+    if (shouldCoupleArticulation(this.state.mood, layerResults.length)) {
+      const melodyR = layerResults.find(r => r.name === 'melody');
+      if (melodyR) {
+        const decayMatch = melodyR.code.match(/\.decay\(([0-9.]+)\)/);
+        if (decayMatch) {
+          const leadDecay = parseFloat(decayMatch[1]);
+          for (const result of layerResults) {
+            if (result.name === 'melody') continue;
+            const followerMatch = result.code.match(/\.decay\(([0-9.]+)\)/);
+            if (followerMatch) {
+              const baseDecay = parseFloat(followerMatch[1]);
+              const coupled = coupledDecay(leadDecay, baseDecay, this.state.mood, this.state.section);
+              if (Math.abs(coupled - baseDecay) > 0.01) {
+                result.code = result.code.replace(
+                  /\.decay\([0-9.]+\)/,
+                  `.decay(${coupled.toFixed(3)})`
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Spectral masking: carve frequency space to prevent layer collisions
+    if (shouldApplyAntiMasking(layerResults.length, this.state.mood)) {
+      const activeNames = layerResults.map(r => r.name);
+      for (const result of layerResults) {
+        const hpfOffset = antiMaskingHpf(result.name, activeNames, this.state.mood);
+        if (hpfOffset > 5) {
+          result.code = result.code.replace(
+            /\.hpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.hpf(${Math.round(parseFloat(val) + hpfOffset)})`
+          );
+        }
+        const lpfOffset = antiMaskingLpf(result.name, activeNames, this.state.mood);
+        if (lpfOffset < -5) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) + lpfOffset)})`
+          );
+        }
+      }
+    }
+
+    // Energy envelope: piece-level energy trajectory
+    if (shouldApplyEnergyEnvelope(this.state.mood)) {
+      const energy = energyLevel(
+        this.state.section, this.state.sectionProgress ?? 0, this.state.mood
+      );
+      const eGainMult = energyGainMultiplier(energy, this.state.mood);
+      if (Math.abs(eGainMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * eGainMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${eGainMult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+      this.prevEnergy = energy;
     }
 
     // Spectral centroid: auto-correct overall brightness balance
