@@ -327,6 +327,9 @@ import { crossAccentGain } from '../theory/rhythmic-cross-accent';
 import { plagalEnrichmentFm } from '../theory/harmonic-plagal-enrichment';
 import { contourArcShapingGain } from '../theory/melodic-contour-arc-shaping';
 import { polymetricAccentGain } from '../theory/rhythmic-polymetric-accent';
+import { modalMixtureColorLpf } from '../theory/harmonic-modal-mixture-color';
+import { neighborToneEmphasisGain } from '../theory/melodic-neighbor-tone-emphasis';
+import { hemiolaPatternGain } from '../theory/rhythmic-hemiola-pattern';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6473,6 +6476,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * paGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic modal mixture color: darken borrowed chords
+    {
+      const curQuality = this.state.currentChord.quality;
+      const curDeg = this.state.currentChord.degree;
+      const mmLpf = modalMixtureColorLpf(curDeg, curQuality, this.state.mood, this.state.section);
+      if (mmLpf < 0.999) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * mmLpf).toFixed(1)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic neighbor tone emphasis: boost ornamental neighbor tones
+    {
+      // Approximate intervals from section progress modulation
+      const p = this.state.sectionProgress;
+      const prevInt = Math.round(Math.sin(p * Math.PI * 4) * 2);
+      const curInt = Math.round(Math.sin((p + 0.05) * Math.PI * 4) * -2);
+      const ntGain = neighborToneEmphasisGain(prevInt, curInt, this.state.mood, this.state.section);
+      if (ntGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * ntGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic hemiola pattern: 3-against-2 accents near cadences
+    {
+      const beatPos = this.state.tick % 16;
+      const hpGain = hemiolaPatternGain(beatPos, this.state.tick, this.state.sectionProgress, this.state.mood, this.state.section);
+      if (hpGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * hpGain).toFixed(4)})`
             );
           }
         }
