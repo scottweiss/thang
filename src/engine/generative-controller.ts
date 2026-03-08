@@ -297,6 +297,9 @@ import { accentVarietyGain } from '../theory/rhythmic-accent-variety';
 import { registerBrightnessLpf } from '../theory/pitch-register-brightness';
 import { tensionReleaseGain, tensionReleaseFm } from '../theory/harmonic-tension-release-timing';
 import { entryAttackMultiplier } from '../theory/layer-entry-smoothing';
+import { densitySaturationGain } from '../theory/note-density-saturation';
+import { bassWeightGain } from '../theory/harmonic-bass-weight';
+import { smoothedFm } from '../theory/timbral-evolution-rate';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5423,6 +5426,56 @@ export class GenerativeController {
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
+          }
+        }
+      }
+    }
+
+    // Note density saturation: too many layers → gain thinning
+    {
+      const dsGain = densitySaturationGain(layerResults.length, this.state.mood);
+      if (Math.abs(dsGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * dsGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic bass weight: root bass gets foundation emphasis
+    {
+      const droneResult = layerResults.find(r => r.name === 'drone');
+      if (droneResult) {
+        const bwGain = bassWeightGain(this.state.scale.root, this.state.currentChord.root, this.state.mood);
+        if (Math.abs(bwGain - 1.0) > 0.005) {
+          droneResult.code = droneResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * bwGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Timbral evolution rate: smooth FM transitions
+    {
+      for (const result of layerResults) {
+        if (result.name === 'harmony' || result.name === 'melody') {
+          const fmMatch = result.code.match(/\.fm\(([0-9.]+)\)/);
+          if (fmMatch) {
+            const currentFm = parseFloat(fmMatch[1]);
+            if (!isNaN(currentFm)) {
+              const targetFm = currentFm;
+              const prevFm = currentFm * (this.state.chordChanged ? 0.95 : 1.0);
+              const smooth = smoothedFm(prevFm, targetFm, this.state.mood, this.state.section);
+              if (Math.abs(smooth - currentFm) > 0.01) {
+                result.code = result.code.replace(
+                  /\.fm\(([0-9.]+)\)/,
+                  `.fm(${smooth.toFixed(4)})`
+                );
+              }
+            }
           }
         }
       }
