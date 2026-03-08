@@ -228,6 +228,9 @@ import { warmthFmCorrection } from '../theory/spectral-warmth-tracking';
 import { energyConservationGain } from '../theory/energy-conservation';
 import { repetitionAvoidanceGain } from '../theory/melodic-repetition-avoidance';
 import { voiceCountGain } from '../theory/harmonic-voice-count';
+import { directionBiasGain } from '../theory/interval-direction-bias';
+import { chordThinningGain } from '../theory/chord-density-thinning';
+import { accentShiftGain } from '../theory/temporal-accent-shift';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4563,6 +4566,52 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Interval direction bias: ascending/descending preference
+    {
+      const dirBias = this.state.section === 'build' ? 1 : this.state.section === 'breakdown' ? -1 : 0;
+      const dbGain = directionBiasGain(dirBias, this.state.mood, this.state.section);
+      if (Math.abs(dbGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * dbGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Chord density thinning: reduce voicing complexity in sparse sections
+    {
+      const chordNotes = this.state.currentChord?.notes?.length ?? 3;
+      const ctGain = chordThinningGain(chordNotes, this.state.mood, this.state.section);
+      if (ctGain < 0.98) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Temporal accent shift: beat emphasis evolves within sections
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const asGain = accentShiftGain(beatPos, this.state.sectionProgress ?? 0, this.state.mood);
+      if (Math.abs(asGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * asGain).toFixed(4)})`
             );
           }
         }
