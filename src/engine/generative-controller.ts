@@ -55,6 +55,9 @@ import { combinedGain, dynamicRangeMultiplier, shouldApplyDynamicRange } from '.
 import { coupledDecay, shouldCoupleArticulation } from '../theory/articulation-coupling';
 import { antiMaskingHpf, antiMaskingLpf, shouldApplyAntiMasking } from '../theory/spectral-masking';
 import { energyLevel, energyGainMultiplier, shouldApplyEnergyEnvelope } from '../theory/energy-envelope';
+import { detectCadence, cadentialGainBoost, cadentialReverbBoost, shouldApplyCadentialWeight } from '../theory/cadential-weight';
+import { TimbralMemoryBank, blendTimbre } from '../theory/timbral-memory';
+import { isPhraseEnding, overlapGainBoost, shouldApplyPhraseOverlap } from '../theory/phrase-overlap';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -121,6 +124,8 @@ export class GenerativeController {
   private consonanceFatigue = 0;
   /** Energy envelope tracking */
   private prevEnergy = 0.2;
+  /** Timbral memory bank */
+  private timbralMemory = new TimbralMemoryBank();
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -929,6 +934,36 @@ export class GenerativeController {
       }
     }
 
+    // Cadential weight: heavier orchestration at cadence points
+    if (this.state.chordChanged && this.state.chordHistory.length > 0) {
+      const prevCW = this.state.chordHistory[this.state.chordHistory.length - 1];
+      const cadStr = detectCadence(
+        prevCW.degree, this.state.currentChord.degree, prevCW.quality
+      );
+      if (shouldApplyCadentialWeight(cadStr, this.state.mood)) {
+        const gBoost = cadentialGainBoost(cadStr, this.state.mood, this.state.section);
+        const rBoost = cadentialReverbBoost(cadStr, this.state.mood);
+        for (const result of layerResults) {
+          if (gBoost > 1.01) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
+                return `.gain((${expr}) * ${gBoost.toFixed(4)})`;
+              }
+            );
+          }
+          if (rBoost > 1.01) {
+            result.code = result.code.replace(
+              /\.room\(([0-9.]+)\)/,
+              (_, val) => `.room(${(parseFloat(val) * rBoost).toFixed(2)})`
+            );
+          }
+        }
+      }
+    }
+
     // Harmonic surprise: unexpected chords get brightness/gain flash
     if (this.state.chordChanged && this.state.chordHistory.length > 0) {
       const prevChord2 = this.state.chordHistory[this.state.chordHistory.length - 1];
@@ -1107,6 +1142,60 @@ export class GenerativeController {
                   if (!isNaN(num)) return `.gain(${(num * followMult).toFixed(4)})`;
                   return `.gain((${expr}) * ${followMult.toFixed(4)})`;
                 }
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Phrase overlap: boost non-ending layers when melody is ending
+    if (shouldApplyPhraseOverlap(this.state.mood, layerResults.length)) {
+      const melodyR2 = layerResults.find(r => r.name === 'melody');
+      if (melodyR2) {
+        const noteMatch2 = melodyR2.code.match(/note\("([^"]+)"\)/);
+        const melodyEnding = noteMatch2 ? isPhraseEnding(noteMatch2[1]) : false;
+        if (melodyEnding) {
+          for (const result of layerResults) {
+            if (result.name === 'melody') continue;
+            const boost = overlapGainBoost(this.state.mood, this.state.section, true);
+            if (boost > 1.01) {
+              result.code = result.code.replace(
+                /\.gain\(([^)]+)\)/,
+                (_, expr) => {
+                  const num = parseFloat(expr);
+                  if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
+                  return `.gain((${expr}) * ${boost.toFixed(4)})`;
+                }
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Timbral memory: store current FM settings and occasionally recall familiar timbres
+    for (const result of layerResults) {
+      const fmhMatch = result.code.match(/\.fmh\(([0-9.]+)\)/);
+      const fmMatch = result.code.match(/\.fm\(([0-9.]+)\)/);
+      const lpfMatch = result.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+      if (fmhMatch && fmMatch && lpfMatch) {
+        this.timbralMemory.store(this.state.mood, result.name, {
+          fmh: parseFloat(fmhMatch[1]),
+          fm: parseFloat(fmMatch[1]),
+          lpf: parseFloat(lpfMatch[1]),
+          section: this.state.section,
+          tick: this.state.tick,
+        });
+        if (this.timbralMemory.shouldRecall(this.state.mood, this.state.tick)) {
+          const recalled = this.timbralMemory.recall(this.state.mood, result.name, this.state.section);
+          if (recalled) {
+            const currentFmh = parseFloat(fmhMatch[1]);
+            const blended = blendTimbre(currentFmh, recalled.fmh, this.state.mood);
+            if (Math.abs(blended - currentFmh) > 0.05) {
+              result.code = result.code.replace(
+                /\.fmh\([0-9.]+\)/,
+                `.fmh(${blended.toFixed(2)})`
               );
             }
           }
