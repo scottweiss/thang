@@ -4,6 +4,7 @@ import { findSuspensions, pickBestSuspension } from '../../theory/suspension';
 import { getVoicingRange, applyVoicingSpread } from '../../theory/voicing-spread';
 import { findGuideTones } from '../../theory/guide-tones';
 import { adjustChordDensity } from '../../theory/harmonic-density';
+import { stereoWidth } from '../../theory/stereo-field';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -21,10 +22,14 @@ export class HarmonyLayer implements Layer {
   orbit = 1;
 
   generate(state: GenerativeState): string {
-    const pattern = this.buildPattern(state);
+    let result = this.buildPattern(state);
+
+    // Dynamic stereo field: modulate pan range for section/tension
+    result = this.modulateStereo(result, state);
+
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
     if (multiplier < 1.0) {
-      return pattern.replace(
+      return result.replace(
         /\.gain\(([^)]+)\)/,
         (_, gainExpr) => {
           const num = parseFloat(gainExpr);
@@ -33,7 +38,24 @@ export class HarmonyLayer implements Layer {
         }
       );
     }
-    return pattern;
+    return result;
+  }
+
+  private modulateStereo(pattern: string, state: GenerativeState): string {
+    const width = stereoWidth(state.section, state.tension?.overall ?? 0.5);
+    return pattern.replace(
+      /\.pan\(sine\.range\(([0-9.]+),\s*([0-9.]+)\)\.slow\(([^)]+)\)\)/,
+      (_match, minStr, maxStr, speed) => {
+        const moodMin = parseFloat(minStr);
+        const moodMax = parseFloat(maxStr);
+        const center = (moodMin + moodMax) / 2;
+        const halfRange = (moodMax - moodMin) / 2;
+        const scaledHalf = halfRange * width;
+        const min = Math.max(0, center - scaledHalf).toFixed(2);
+        const max = Math.min(1, center + scaledHalf).toFixed(2);
+        return `.pan(sine.range(${min}, ${max}).slow(${speed}))`;
+      }
+    );
   }
 
   private buildPattern(state: GenerativeState): string {
