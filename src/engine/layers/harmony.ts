@@ -29,6 +29,7 @@ import { syncedDelayTime } from '../../theory/delay-sync';
 import { shouldAnimateHarmony, animateChordVoicing, voicingsToPattern } from '../../theory/harmonic-animation';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
 import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../../theory/harmonic-color';
+import { pickColorTone, shouldConsiderColorTones } from '../../theory/chord-color';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -468,6 +469,15 @@ export class HarmonyLayer implements Layer {
 
     // Harmonic density: richer chords at peaks, simpler at breakdowns
     chordNotes = adjustChordDensity(chordNotes, state.scale.notes, state.section, tension);
+
+    // Chord color tones: add characteristic color notes (lydian #11, dorian 6, etc.)
+    if (shouldConsiderColorTones(mood) && !hasSuspension) {
+      const topOctave = parseInt((chordNotes[chordNotes.length - 1] || '').replace(/[^\d]/g, '') || '4');
+      const colorTone = pickColorTone(chord.root, chord.quality, state.scale.notes, mood, topOctave);
+      if (colorTone && !chordNotes.includes(colorTone)) {
+        chordNotes = [...chordNotes, colorTone];
+      }
+    }
 
     // Smooth voice leading: minimize total voice movement from previous voicing
     if (this.lastVoicing && this.lastVoicing.length > 0 && state.chordChanged) {
