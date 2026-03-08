@@ -300,6 +300,9 @@ import { entryAttackMultiplier } from '../theory/layer-entry-smoothing';
 import { densitySaturationGain } from '../theory/note-density-saturation';
 import { bassWeightGain } from '../theory/harmonic-bass-weight';
 import { smoothedFm } from '../theory/timbral-evolution-rate';
+import { chordToneGravityGain } from '../theory/chord-tone-gravity';
+import { transitionMomentumGain } from '../theory/section-transition-momentum';
+import { subdivisionVarietyGain } from '../theory/rhythmic-subdivision-variety';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5425,6 +5428,52 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Chord tone gravity: melody notes near chord tones get emphasis
+    {
+      if (this.state.activeMotif && this.state.activeMotif.length > 0) {
+        const lastNote = this.state.activeMotif[this.state.activeMotif.length - 1];
+        const ctgGain = chordToneGravityGain(lastNote, this.state.currentChord.notes, this.state.mood);
+        if (Math.abs(ctgGain - 1.0) > 0.005) {
+          const melodyResult = layerResults.find(r => r.name === 'melody');
+          if (melodyResult) {
+            melodyResult.code = melodyResult.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * ctgGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Section transition momentum: energy ramps near section boundaries
+    {
+      const tmGain = transitionMomentumGain(this.state.sectionProgress ?? 0, this.state.mood, this.state.section);
+      if (Math.abs(tmGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * tmGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic subdivision variety: density curve within phrases
+    {
+      const phraseProgress = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const svGain = subdivisionVarietyGain(phraseProgress, this.state.mood);
+      if (Math.abs(svGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * svGain).toFixed(4)})`
             );
           }
         }
