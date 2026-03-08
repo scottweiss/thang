@@ -12,6 +12,7 @@ import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../theory/r
 import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier, shouldApplyEnvelopeEvolution } from '../theory/envelope-evolution';
 import { crushOffset, shouldApplyCrushEvolution } from '../theory/crush-evolution';
 import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../theory/frequency-band';
+import { evolvedVelocity, applyVelocityEvolution } from '../theory/velocity-evolution';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -62,6 +63,9 @@ export abstract class CachingLayer implements Layer {
 
     // Envelope evolution: attacks tighten in builds, soften in breakdowns
     result = this.applyEnvelopeEvolution(result, state);
+
+    // Velocity evolution: per-note dynamics morph with section progress
+    result = this.applyVelocityEvolution(result, state);
 
     // Gain arc: crescendo/decrescendo within sections
     result = this.applyGainArc(result, state);
@@ -354,6 +358,26 @@ export abstract class CachingLayer implements Layer {
     }
 
     return result;
+  }
+
+  /**
+   * Morph per-note velocity patterns with section progress.
+   * Builds intensify accents, breakdowns soften them.
+   */
+  private applyVelocityEvolution(pattern: string, state: GenerativeState): string {
+    // Only apply to patterns that have quoted gain patterns (velocity curves)
+    const match = pattern.match(/\.gain\("([^"]+)"\)/);
+    if (!match) return pattern;
+
+    const progress = state.sectionProgress ?? 0;
+    const velocities = evolvedVelocity(
+      match[1].split(' ').length,
+      state.section,
+      progress
+    );
+
+    const evolved = applyVelocityEvolution(match[1], velocities);
+    return pattern.replace(`.gain("${match[1]}")`, `.gain("${evolved}")`);
   }
 
   /**
