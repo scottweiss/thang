@@ -40,6 +40,7 @@ import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultipli
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 import { planGuideTonePath, guideToneSmoothnessScore, guideToneWeight } from '../../theory/guide-tone-plan';
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../../theory/tension-register';
+import { extensionImprovesSonority } from '../../theory/vertical-sonority';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -618,10 +619,12 @@ export class HarmonyLayer implements Layer {
     chordNotes = adjustChordDensity(chordNotes, state.scale.notes, state.section, tension);
 
     // Chord color tones: add characteristic color notes (lydian #11, dorian 6, etc.)
+    // Gated by vertical sonority analysis — only add if it moves toward target roughness
     if (shouldConsiderColorTones(mood) && !hasSuspension) {
       const topOctave = parseInt((chordNotes[chordNotes.length - 1] || '').replace(/[^\d]/g, '') || '4');
       const colorTone = pickColorTone(chord.root, chord.quality, state.scale.notes, mood, topOctave);
-      if (colorTone && !chordNotes.includes(colorTone)) {
+      if (colorTone && !chordNotes.includes(colorTone) &&
+          extensionImprovesSonority(chordNotes, colorTone, mood, state.section)) {
         chordNotes = [...chordNotes, colorTone];
       }
     }
