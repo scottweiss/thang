@@ -16,6 +16,8 @@ import { rubatoMultiplier, cadentialRubato } from '../theory/rubato';
 import { shouldInsertSilence, silenceGainMultiplier } from '../theory/strategic-silence';
 import { TensionMemory } from '../theory/tension-memory';
 import { phraseCadenceBias } from '../theory/phrase-harmony';
+import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../theory/form-trajectory';
+import type { TrajectoryState } from '../theory/form-trajectory';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -53,6 +55,7 @@ export class GenerativeController {
   private silenceActive = false;
   private ticksSinceSilence = 0;
   private tensionMemory = new TensionMemory();
+  private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -129,6 +132,7 @@ export class GenerativeController {
     this.evolution.resetTimings(mood);
     this.sections.reset(mood);
     this.tensionMemory.clear();
+    this.formTrajectory = { ticksElapsed: 0, formLength: moodFormLength(mood) };
     this.state.section = 'intro';
     this.state.sectionChanged = true;
     // Reset gain multipliers to intro state
@@ -227,6 +231,13 @@ export class GenerativeController {
     const tensionMod = this.tensionMemory.suggestModification();
     if (tensionMod !== 0) {
       this.state.tension.overall = Math.max(0, Math.min(1, this.state.tension.overall + tensionMod));
+    }
+
+    // Form trajectory: cap tension based on position in the overall arc
+    this.formTrajectory.ticksElapsed = this.state.tick;
+    const ceiling = tensionCeiling(this.formTrajectory);
+    if (this.state.tension.overall > ceiling) {
+      this.state.tension.overall = ceiling;
     }
 
     this.state.ticksSinceChordChange++;
@@ -364,6 +375,21 @@ export class GenerativeController {
             }
           );
         }
+      }
+    }
+
+    // Form trajectory gain: gentle overall dynamic arc across the piece
+    const trajGain = trajectoryGainMultiplier(this.formTrajectory);
+    if (Math.abs(trajGain - 1.0) > 0.02) {
+      for (const result of layerResults) {
+        result.code = result.code.replace(
+          /\.gain\(([^)]+)\)/,
+          (_, expr) => {
+            const num = parseFloat(expr);
+            if (!isNaN(num)) return `.gain(${(num * trajGain).toFixed(4)})`;
+            return `.gain((${expr}) * ${trajGain.toFixed(4)})`;
+          }
+        );
       }
     }
 
