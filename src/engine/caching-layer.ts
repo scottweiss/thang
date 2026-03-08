@@ -29,6 +29,7 @@ import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../th
 import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../theory/harmonic-color';
 import { pitchPanPattern, shouldApplyPitchPan } from '../theory/pitch-pan';
 import { chordLpfMultiplier, chordFmMultiplier, shouldApplyChordTimbre } from '../theory/chord-timbre';
+import { adjustPanRange, shouldApplyStereoPlacement } from '../theory/stereo-placement';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -233,6 +234,7 @@ export abstract class CachingLayer implements Layer {
    */
   private modulateStereo(pattern: string, state: GenerativeState): string {
     const width = stereoWidth(state.section, state.tension?.overall ?? 0.5);
+    const applyPlacement = shouldApplyStereoPlacement(state.mood);
     return pattern.replace(
       /\.pan\(sine\.range\(([0-9.]+),\s*([0-9.]+)\)\.slow\(([^)]+)\)\)/,
       (_match, minStr, maxStr, speed) => {
@@ -241,9 +243,13 @@ export abstract class CachingLayer implements Layer {
         const center = (moodMin + moodMax) / 2;
         const halfRange = (moodMax - moodMin) / 2;
         const scaledHalf = halfRange * width;
-        const min = Math.max(0, center - scaledHalf).toFixed(2);
-        const max = Math.min(1, center + scaledHalf).toFixed(2);
-        return `.pan(sine.range(${min}, ${max}).slow(${speed}))`;
+        let min = Math.max(0, center - scaledHalf);
+        let max = Math.min(1, center + scaledHalf);
+        // Shift pan range to layer's stereo position
+        if (applyPlacement) {
+          [min, max] = adjustPanRange(min, max, this.name, state.mood);
+        }
+        return `.pan(sine.range(${min.toFixed(2)}, ${max.toFixed(2)}).slow(${speed}))`;
       }
     );
   }

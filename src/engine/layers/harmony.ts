@@ -32,6 +32,7 @@ import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../../theo
 import { pickColorTone, shouldConsiderColorTones } from '../../theory/chord-color';
 import { applyDrop2, applyDrop3, pickDropVoicing } from '../../theory/drop-voicing';
 import { compingPattern, shouldComp } from '../../theory/comping-rhythm';
+import { adjustPanRange, shouldApplyStereoPlacement } from '../../theory/stereo-placement';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -400,6 +401,7 @@ export class HarmonyLayer implements Layer {
 
   private modulateStereo(pattern: string, state: GenerativeState): string {
     const width = stereoWidth(state.section, state.tension?.overall ?? 0.5);
+    const applyPlacement = shouldApplyStereoPlacement(state.mood);
     return pattern.replace(
       /\.pan\(sine\.range\(([0-9.]+),\s*([0-9.]+)\)\.slow\(([^)]+)\)\)/,
       (_match, minStr, maxStr, speed) => {
@@ -408,9 +410,12 @@ export class HarmonyLayer implements Layer {
         const center = (moodMin + moodMax) / 2;
         const halfRange = (moodMax - moodMin) / 2;
         const scaledHalf = halfRange * width;
-        const min = Math.max(0, center - scaledHalf).toFixed(2);
-        const max = Math.min(1, center + scaledHalf).toFixed(2);
-        return `.pan(sine.range(${min}, ${max}).slow(${speed}))`;
+        let min = Math.max(0, center - scaledHalf);
+        let max = Math.min(1, center + scaledHalf);
+        if (applyPlacement) {
+          [min, max] = adjustPanRange(min, max, this.name, state.mood);
+        }
+        return `.pan(sine.range(${min.toFixed(2)}, ${max.toFixed(2)}).slow(${speed}))`;
       }
     );
   }
