@@ -12,7 +12,7 @@ export type ScaleType =
   | 'pentatonic'
   | 'minor_pentatonic';
 
-export type ChordQuality = 'maj' | 'min' | 'maj7' | 'min7' | 'dom7' | 'sus2' | 'sus4' | 'dim' | 'aug';
+export type ChordQuality = 'maj' | 'min' | 'maj7' | 'min7' | 'dom7' | 'sus2' | 'sus4' | 'dim' | 'aug' | 'add9' | 'min9';
 
 export type Mood = 'ambient' | 'downtempo' | 'lofi' | 'trance' | 'avril' | 'xtal' | 'syro' | 'blockhead' | 'flim' | 'disco';
 

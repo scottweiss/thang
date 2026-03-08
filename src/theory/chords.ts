@@ -33,14 +33,21 @@ function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQua
         return q;
       });
     case 'downtempo':
-      // Warm, sophisticated — keep most 7ths, add some sus
+      // Warm, sophisticated — 9th chords for depth, occasional sus
       return baseQualities.map((q, i) => {
+        if (i === 0 && q === 'maj7') return 'add9';        // Imaj9 — warm opening
         if (i === 3 && Math.random() < 0.4) return 'sus4'; // occasional IV → sus4
+        if (i === 1 && q === 'min7') return 'min9';        // ii-9 — sophisticated pre-dominant
         return q;
       });
     case 'lofi':
-      // Jazzy — all 7ths, this is the sweet spot
-      return baseQualities;
+      // Jazzy — 9th chords for neo-soul shimmer on I and IV
+      return baseQualities.map((q, i) => {
+        if (i === 0 && q === 'maj7') return 'add9';    // Imaj9 — lush opening
+        if (i === 1 && q === 'min7') return 'min9';    // ii-9 — classic jazz color
+        if (i === 3 && q === 'maj7') return 'add9';    // IVmaj9 — rich subdominant
+        return q;
+      });
     case 'trance':
       // Simple, powerful — mostly triads
       return baseQualities.map(q => {
@@ -105,6 +112,8 @@ const CHORD_INTERVALS: Record<ChordQuality, number[]> = {
   sus4: [0, 5, 7],
   dim:  [0, 3, 7],    // replaced dim triad with minor to avoid dissonance
   aug:  [0, 4, 7],    // replaced aug triad with major to avoid dissonance
+  add9: [0, 4, 7, 14], // major triad + 9th (neo-soul shimmer)
+  min9: [0, 3, 7, 10, 14], // minor 7th + 9th (jazz warmth)
 };
 
 export function getChordNotes(root: NoteName, quality: ChordQuality): NoteName[] {
@@ -127,6 +136,7 @@ export function getChordSymbol(root: NoteName, quality: ChordQuality): string {
   const qualityStr: Record<ChordQuality, string> = {
     maj: '', min: 'm', maj7: '^7', min7: 'm7', dom7: '7',
     sus2: 'sus2', sus4: 'sus4', dim: 'm', aug: '',
+    add9: 'add9', min9: 'm9',
   };
   return `${root}${qualityStr[quality]}`;
 }

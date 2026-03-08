@@ -30,6 +30,8 @@ const QUALITY_TENSION: Record<ChordQuality, number> = {
   dom7: 0.6,
   maj7: 0.15,
   min7: 0.25,
+  add9: 0.2,   // warm but slightly more color than maj7
+  min9: 0.3,   // richer than min7, jazzy complexity
 };
 
 /**
