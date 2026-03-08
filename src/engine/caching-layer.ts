@@ -34,6 +34,7 @@ import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, 
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../theory/sidechain-duck';
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../theory/resolution-glow';
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../theory/tension-articulation';
+import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../theory/ensemble-breath';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -222,6 +223,11 @@ export abstract class CachingLayer implements Layer {
       combinedMultiplier *= tensionOrchestrationGain(
         this.name, state.tension?.overall ?? 0.5, state.mood
       );
+    }
+
+    // Ensemble breathing: shared phrase-level gain swell across all layers
+    if (shouldApplyEnsembleBreath(state.mood)) {
+      combinedMultiplier *= ensembleBreathMultiplier(state.tick, state.mood, state.section);
     }
 
     if (Math.abs(combinedMultiplier - 1.0) > 0.02) {

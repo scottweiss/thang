@@ -12,6 +12,7 @@ import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
+import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -151,12 +152,15 @@ export class DroneLayer implements Layer {
       }
     }
 
-    // Section transition fade + tension orchestration
+    // Section transition fade + tension orchestration + ensemble breath
     let combinedMultiplier = state.layerGainMultipliers[this.name] ?? 1.0;
     if (shouldApplyTensionOrchestration(state.mood)) {
       combinedMultiplier *= tensionOrchestrationGain(
         this.name, state.tension?.overall ?? 0.5, state.mood
       );
+    }
+    if (shouldApplyEnsembleBreath(state.mood)) {
+      combinedMultiplier *= ensembleBreathMultiplier(state.tick, state.mood, state.section);
     }
     if (Math.abs(combinedMultiplier - 1.0) > 0.02) {
       return result.replace(

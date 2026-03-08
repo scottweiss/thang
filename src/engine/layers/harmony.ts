@@ -37,6 +37,7 @@ import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, 
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../../theory/resolution-glow';
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../../theory/tension-articulation';
+import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -480,6 +481,9 @@ export class HarmonyLayer implements Layer {
       combinedMultiplier *= tensionOrchestrationGain(
         this.name, state.tension?.overall ?? 0.5, state.mood
       );
+    }
+    if (shouldApplyEnsembleBreath(state.mood)) {
+      combinedMultiplier *= ensembleBreathMultiplier(state.tick, state.mood, state.section);
     }
 
     if (Math.abs(combinedMultiplier - 1.0) > 0.02) {
