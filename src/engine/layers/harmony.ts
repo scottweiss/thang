@@ -30,6 +30,7 @@ import { shouldAnimateHarmony, animateChordVoicing, voicingsToPattern } from '..
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
 import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../../theory/harmonic-color';
 import { pickColorTone, shouldConsiderColorTones } from '../../theory/chord-color';
+import { applyDrop2, applyDrop3, pickDropVoicing } from '../../theory/drop-voicing';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -482,6 +483,14 @@ export class HarmonyLayer implements Layer {
     // Smooth voice leading: minimize total voice movement from previous voicing
     if (this.lastVoicing && this.lastVoicing.length > 0 && state.chordChanged) {
       chordNotes = smoothVoicing(this.lastVoicing, chordNotes);
+    }
+
+    // Drop voicings: widen chords by dropping inner voices down an octave
+    const dropType = pickDropVoicing(mood, state.section, chordNotes.length);
+    if (dropType === 'drop2') {
+      chordNotes = applyDrop2(chordNotes);
+    } else if (dropType === 'drop3') {
+      chordNotes = applyDrop3(chordNotes);
     }
 
     // Store voicing for future planing

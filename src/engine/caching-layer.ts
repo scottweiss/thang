@@ -28,6 +28,7 @@ import { layerPhaseOffset, shouldApplyPhaseOffset } from '../theory/rhythmic-pha
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../theory/tension-orchestration';
 import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../theory/harmonic-color';
 import { pitchPanPattern, shouldApplyPitchPan } from '../theory/pitch-pan';
+import { chordLpfMultiplier, chordFmMultiplier, shouldApplyChordTimbre } from '../theory/chord-timbre';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -69,6 +70,25 @@ export abstract class CachingLayer implements Layer {
 
     // Tension brightness: LPF tracks real-time tension (stacks on filter envelope)
     result = this.applyTensionBrightness(result, state);
+
+    // Chord-responsive timbre: chord quality colors the LPF and FM
+    if (shouldApplyChordTimbre(state.mood)) {
+      const quality = state.currentChord.quality;
+      const lpfMult = chordLpfMultiplier(quality, state.mood);
+      if (Math.abs(lpfMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.lpf\((\d+(?:\.\d+)?)\)/,
+          (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+        );
+      }
+      const fmMult = chordFmMultiplier(quality, state.mood);
+      if (Math.abs(fmMult - 1.0) > 0.02 && result.includes('.fm(') && !result.includes('.fm(sine')) {
+        result = result.replace(
+          /\.fm\((\d+(?:\.\d+)?)\)/,
+          (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
+        );
+      }
+    }
 
     // Frequency band separation: adjust HPF/LPF to avoid layer masking
     result = this.applyBandSeparation(result, state);
