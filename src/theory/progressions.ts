@@ -1,6 +1,21 @@
 import { Mood, ChordState, ScaleState } from '../types';
 import { MarkovChain } from '../engine/markov';
 import { chordsInScale } from './chords';
+import { getBorrowedChords } from './modal-interchange';
+
+// Probability of substituting a borrowed chord, per mood
+const BORROW_PROBABILITY: Record<Mood, number> = {
+  ambient: 0.05,
+  downtempo: 0.1,
+  lofi: 0.12,
+  trance: 0.03,
+  avril: 0.08,
+  xtal: 0.06,
+  syro: 0.15,
+  blockhead: 0.1,
+  flim: 0.05,
+  disco: 0.08,
+};
 
 // Transition matrices: rows = current degree (0-6), columns = next degree
 const MOOD_MATRICES: Record<Mood, number[][]> = {
@@ -126,6 +141,18 @@ export class ProgressionGenerator {
   next(): ChordState {
     const result = this.chain.nextByIndex(this.currentDegree);
     this.currentDegree = result.index;
+
+    // Occasionally substitute a borrowed chord for harmonic color
+    if (Math.random() < (BORROW_PROBABILITY[this.mood] ?? 0.05)) {
+      const borrows = getBorrowedChords(this.scale.type);
+      if (borrows.length > 0) {
+        const borrowed = borrows[Math.floor(Math.random() * borrows.length)];
+        // Use the borrowed chord's degree but override its quality
+        const baseChord = this.chords[borrowed.degree % this.chords.length];
+        return { ...baseChord, quality: borrowed.quality, degree: borrowed.degree };
+      }
+    }
+
     const chordIdx = this.currentDegree % this.chords.length;
     return this.chords[chordIdx];
   }
