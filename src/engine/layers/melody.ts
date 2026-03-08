@@ -19,6 +19,7 @@ import type { MelodicContext } from '../../theory/melodic-gravity';
 import { noteToPitch } from '../../theory/intervallic-consonance';
 import { RhythmicMemory } from '../../theory/rhythmic-memory';
 import { ladderToScaleDegrees } from '../../theory/tendency-tones';
+import { applyBlueNotes } from '../../theory/blue-notes';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -639,7 +640,10 @@ export class MelodyLayer extends CachingLayer {
     this.rhythmMemory.store(elements, state.tick);
 
     // Add ornamental approach notes (mood and tension dependent)
-    return addOrnaments(elements, ladder, mood, state.tension?.overall ?? 0.5);
+    const ornamented = addOrnaments(elements, ladder, mood, state.tension?.overall ?? 0.5);
+
+    // Blue note inflections: chromatic color from parallel modes
+    return applyBlueNotes(ornamented, state.scale.notes, mood, state.tension?.overall ?? 0.5);
   }
 
   // Build a pitch ladder from pentatonic notes across octaves
