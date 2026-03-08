@@ -22,6 +22,7 @@ import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../..
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
+import { shouldUsePlaning, planedVoicing } from '../../theory/harmonic-planing';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -37,6 +38,8 @@ const SECTION_ROOM_MULT: Record<Section, number> = {
 export class HarmonyLayer implements Layer {
   name = 'harmony';
   orbit = 1;
+  private lastVoicing: string[] | null = null;
+  private lastRoot: string | null = null;
 
   generate(state: GenerativeState): string {
     let result = this.buildPattern(state);
@@ -353,6 +356,23 @@ export class HarmonyLayer implements Layer {
     const room = (0.4 + state.params.spaciousness * 0.4) * sectionRoom * (1.1 - tension * 0.2);
     const brightness = state.params.brightness * sectionFilter * (0.85 + tension * 0.3);
 
+    // Harmonic planing: sometimes shift the previous voicing in parallel
+    // instead of computing a new voicing (impressionist color)
+    let usedPlaning = false;
+    if (state.chordChanged && this.lastVoicing && this.lastRoot &&
+        this.lastRoot !== chord.root && shouldUsePlaning(mood, state.section)) {
+      const planed = planedVoicing(this.lastVoicing, chord.root, this.lastRoot);
+      if (planed && planed.length > 0) {
+        // Store for next time and use planed voicing
+        this.lastVoicing = planed;
+        this.lastRoot = chord.root;
+        const chordStart = `note("${planed.join(' ')}")`;
+        // Skip all the voicing logic below and go straight to sound
+        usedPlaning = true;
+        return this.buildSoundChain(chordStart, mood, gain, brightness, room);
+      }
+    }
+
     // Check for suspension opportunity at chord changes
     let chordNotes = chord.notes;
     let hasSuspension = false;
@@ -398,6 +418,10 @@ export class HarmonyLayer implements Layer {
     // Harmonic density: richer chords at peaks, simpler at breakdowns
     chordNotes = adjustChordDensity(chordNotes, state.scale.notes, state.section, tension);
 
+    // Store voicing for future planing
+    this.lastVoicing = [...chordNotes];
+    this.lastRoot = chord.root;
+
     // Use raw notes for sus2/sus4, suspensions, spread voicings, or extended chords
     // Strudel's voicing() handles its own inversions
     const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension || chordNotes.length > chord.notes.length;
@@ -405,6 +429,10 @@ export class HarmonyLayer implements Layer {
       ? `note("${chordNotes.join(' ')}")`
       : `chord("${chord.symbol}").voicing()`;
 
+    return this.buildSoundChain(chordStart, mood, gain, brightness, room);
+  }
+
+  private buildSoundChain(chordStart: string, mood: import('../../types').Mood, gain: number, brightness: number, room: number): string {
     switch (mood) {
       case 'ambient':
         // Ethereal glass pad — high harmonicity FM creates bell/shimmer overtones
