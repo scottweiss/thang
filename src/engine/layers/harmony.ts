@@ -46,6 +46,7 @@ import { shouldStartChain, createChainPlan, chainSuspensionOffset, advanceChain,
 import type { SuspensionChainPlan } from '../../theory/suspension-chain';
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../../theory/textural-contrast';
 import { shouldApplyAmbiguity, suggestAmbiguousExtensions, ambiguityDarkenFactor } from '../../theory/tonal-ambiguity';
+import { accompGravityPull, nextChordBlend, blendVoicings, shouldApplyAccompGravity } from '../../theory/accompaniment-gravity';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -731,6 +732,17 @@ export class HarmonyLayer implements Layer {
     if (shouldApplyTensionRegister(mood)) {
       const regShift = tensionRegisterShift(tension, mood, this.name);
       chordNotes = applyRegisterShift(chordNotes, regShift);
+    }
+
+    // Accompaniment gravity: lean toward next chord before it arrives
+    if (state.nextChordHint && shouldApplyAccompGravity(mood)) {
+      const pull = accompGravityPull(
+        state.ticksSinceChordChange, 8, mood, state.section
+      );
+      if (pull > 0.05) {
+        const blend = nextChordBlend(pull);
+        chordNotes = blendVoicings(chordNotes, state.nextChordHint.notes, blend);
+      }
     }
 
     // Store voicing for future planing

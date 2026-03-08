@@ -39,6 +39,7 @@ import { tensionDisplacementPattern, shouldApplyTensionRhythm } from '../theory/
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../theory/tension-register';
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../theory/textural-contrast';
 import { spectralLpfMultiplier, spectralHpfOffset, shouldApplySpectralBalance } from '../theory/spectral-balance';
+import { breathSyncGainPattern, shouldApplyBreathSync } from '../theory/rhythmic-breath-sync';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -203,6 +204,9 @@ export abstract class CachingLayer implements Layer {
 
     // Sidechain ducking: rhythmic gain pump on strong beats (EDM breathing effect)
     result = this.applySidechainDuck(result, state);
+
+    // Rhythmic breath sync: micro-dips before strong beats for collective lift
+    result = this.applyBreathSync(result, state);
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
@@ -801,6 +805,29 @@ export abstract class CachingLayer implements Layer {
     return pattern.replace(
       /\.orbit\((\d+)\)/,
       `.degradeBy(${amount.toFixed(2)}).orbit($1)`
+    );
+  }
+
+  /**
+   * Apply rhythmic breath sync: micro-dips before strong beats for collective lift.
+   */
+  private applyBreathSync(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyBreathSync(state.mood)) return pattern;
+
+    const breathPattern = breathSyncGainPattern(8, state.mood, state.section);
+    // Only apply if there are actual dips
+    if (breathPattern.every(v => v === 1.0)) return pattern;
+
+    // Apply to per-step gain patterns
+    return pattern.replace(
+      /\.gain\("([^"]+)"\)/g,
+      (_match, gainStr) => {
+        const gains = gainStr.split(' ').map(Number);
+        const modified = gains.map((g: number, i: number) =>
+          (g * (breathPattern[i % breathPattern.length] ?? 1.0)).toFixed(4)
+        ).join(' ');
+        return `.gain("${modified}")`;
+      }
     );
   }
 
