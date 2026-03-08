@@ -1119,7 +1119,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                return `.gain((${expr}) * ${boost.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1164,7 +1164,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * densityMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${densityMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1191,7 +1191,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * densityCorr).toFixed(4)})`;
-                return `.gain((${expr}) * ${densityCorr.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1219,7 +1219,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * hMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${hMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1239,7 +1239,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * dimMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${dimMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1253,7 +1253,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                return `.gain((${expr}) * ${boost.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1304,7 +1304,7 @@ export class GenerativeController {
             (match, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * silenceMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${silenceMult.toFixed(4)})`;
+              return match;
             }
           );
         }
@@ -1320,7 +1320,7 @@ export class GenerativeController {
           (_, expr) => {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * gpMult).toFixed(4)})`;
-            return `.gain((${expr}) * ${gpMult.toFixed(4)})`;
+            return _;
           }
         );
       }
@@ -1358,7 +1358,7 @@ export class GenerativeController {
           (_, expr) => {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * trajGain).toFixed(4)})`;
-            return `.gain((${expr}) * ${trajGain.toFixed(4)})`;
+            return _;
           }
         );
       }
@@ -1373,7 +1373,7 @@ export class GenerativeController {
           (_, expr) => {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * hrScalar).toFixed(4)})`;
-            return `.gain((${expr}) * ${hrScalar.toFixed(4)})`;
+            return _;
           }
         );
       }
@@ -1395,7 +1395,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * macroMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${macroMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1495,7 +1495,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1539,7 +1539,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
-                return `.gain((${expr}) * ${mult.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1557,7 +1557,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-              return `.gain((${expr}) * ${boost.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1580,7 +1580,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
-                return `.gain((${expr}) * ${gBoost.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1608,7 +1608,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                return `.gain((${expr}) * ${boost.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1639,7 +1639,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1706,7 +1706,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
-              return `.gain((${expr}) * ${gainBoost.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1751,7 +1751,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-              return `.gain((${expr}) * ${boost.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1799,7 +1799,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * pocketMult).toFixed(4)})`;
-                return `.gain((${expr}) * ${pocketMult.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -1823,7 +1823,7 @@ export class GenerativeController {
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * followMult).toFixed(4)})`;
-                  return `.gain((${expr}) * ${followMult.toFixed(4)})`;
+                  return _;
                 }
               );
             }
@@ -1848,7 +1848,7 @@ export class GenerativeController {
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                  return `.gain((${expr}) * ${boost.toFixed(4)})`;
+                  return _;
                 }
               );
             }
@@ -1927,7 +1927,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * convMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${convMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -1965,7 +1965,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * drumBoost).toFixed(4)})`;
-              return `.gain((${expr}) * ${drumBoost.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2013,7 +2013,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
-              return `.gain((${expr}) * ${gBoost.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2061,7 +2061,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * eGainMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${eGainMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2079,7 +2079,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * dwMult).toFixed(4)})`;
-              return `.gain((${expr}) * ${dwMult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2202,7 +2202,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * swell).toFixed(4)})`;
-              return `.gain((${expr}) * ${swell.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2248,7 +2248,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gCorr).toFixed(4)})`;
-                return `.gain((${expr}) * ${gCorr.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -2268,7 +2268,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
-              return `.gain((${expr}) * ${mult.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2288,7 +2288,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainCorr).toFixed(4)})`;
-                return `.gain((${expr}) * ${gainCorr.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -2539,7 +2539,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -2585,7 +2585,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
-                return `.gain((${expr}) * ${gainBoost.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -2639,7 +2639,7 @@ export class GenerativeController {
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                  return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+                  return _;
                 }
               );
             }
@@ -2667,7 +2667,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * fusionBoost).toFixed(4)})`;
-              return `.gain((${expr}) * ${fusionBoost.toFixed(4)})`;
+              return _;
             }
           );
         }
@@ -2692,7 +2692,7 @@ export class GenerativeController {
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * drMult).toFixed(4)})`;
-                  return `.gain((${expr}) * ${drMult.toFixed(4)})`;
+                  return _;
                 }
               );
             }
@@ -2786,7 +2786,7 @@ export class GenerativeController {
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
-                return `.gain((${expr}) * ${mult.toFixed(4)})`;
+                return _;
               }
             );
           }
@@ -2805,7 +2805,7 @@ export class GenerativeController {
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * gJit).toFixed(4)})`;
-              return `.gain((${expr}) * ${gJit.toFixed(4)})`;
+              return _;
             }
           );
         }
