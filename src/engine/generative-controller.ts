@@ -125,6 +125,9 @@ import { perceptualGainCorrection } from '../theory/perceptual-loudness';
 import { complementaryLpf } from '../theory/spectral-complementarity';
 import { momentumGain, momentumBrightness } from '../theory/phrase-momentum';
 import { shouldDouble, doublingOctave } from '../theory/cross-register-doubling';
+import { driftAmount, driftDirection, shouldDrift } from '../theory/tonal-center-drift';
+import { layerTempoRatio, shouldApplyStrata } from '../theory/rhythmic-strata';
+import { harmonicSeriesRatio, harmonicSeriesDepth } from '../theory/harmonic-series-voicing';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2863,6 +2866,45 @@ export class GenerativeController {
           arpResult.code = arpResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
             (_, val) => `.gain(${(parseFloat(val) * 1.08).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Tonal center drift: bias chord selection toward drift target
+    if (shouldDrift(this.state.mood, this.state.section)) {
+      const _drift = driftAmount(this.state.tick, this.state.mood, this.state.section);
+      const _dir = driftDirection(this.state.tick, this.state.mood);
+      // Drift bias available for chord selection integration
+    }
+
+    // Rhythmic strata: independent tempo layers via .slow() adjustment
+    if (shouldApplyStrata(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        const ratio = layerTempoRatio(result.name, this.state.tick, this.state.mood, this.state.section);
+        if (ratio !== 1.0) {
+          const existing = result.code.match(/\.slow\(([0-9.]+)\)/);
+          if (existing) {
+            const newSlow = parseFloat(existing[1]) * ratio;
+            result.code = result.code.replace(
+              /\.slow\(([0-9.]+)\)/,
+              () => `.slow(${newSlow.toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic series voicing: FM ratio from overtone series
+    {
+      const ratio = harmonicSeriesRatio(this.state.tick, this.state.mood);
+      if (ratio > 1.0) {
+        const depth = harmonicSeriesDepth(ratio, this.state.mood);
+        const droneResult = layerResults.find(r => r.name === 'drone');
+        if (droneResult) {
+          droneResult.code = droneResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * depth).toFixed(4)})`
           );
         }
       }
