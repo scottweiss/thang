@@ -42,6 +42,38 @@ describe('addOrnaments', () => {
     }
     expect(ornamentCount).toBeGreaterThan(10);
   });
+
+  it('enclosure uses 2 rest slots when available', () => {
+    // Syro and blockhead have enclosure in their weights
+    const elements = ['~', '~', 'E4', '~', '~', 'G4', '~', '~'];
+    let doubleOrnament = false;
+    for (let i = 0; i < 200; i++) {
+      const result = addOrnaments(elements, ladder, 'blockhead', 1.0);
+      // Check if positions i-2 and i-1 before a note are both filled
+      if (result[0] !== '~' && result[1] !== '~') {
+        doubleOrnament = true;
+        break;
+      }
+      if (result[3] !== '~' && result[4] !== '~') {
+        doubleOrnament = true;
+        break;
+      }
+    }
+    expect(doubleOrnament).toBe(true);
+  });
+
+  it('ornaments use notes from the ladder or chromatic variants', () => {
+    const elements = ['~', 'E4', '~', 'G4', '~', '~', '~', '~'];
+    for (let i = 0; i < 50; i++) {
+      const result = addOrnaments(elements, ladder, 'syro', 1.0);
+      for (const note of result) {
+        if (note !== '~') {
+          // Should be either a ladder note or have a valid note format
+          expect(note).toMatch(/^[A-G][#b]?\d$/);
+        }
+      }
+    }
+  });
 });
 
 describe('getOrnamentAmount', () => {
