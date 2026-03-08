@@ -2,6 +2,7 @@ import { CachingLayer } from '../caching-layer';
 import { GenerativeState, Section } from '../../types';
 import { randomChoice } from '../random';
 import { evolveDrumPattern } from '../../theory/drum-evolution';
+import { applyDrumDynamics, TRANCE_VELOCITIES, AVRIL_VELOCITIES } from '../../theory/drum-dynamics';
 
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
@@ -178,10 +179,16 @@ export class TextureLayer extends CachingLayer {
     return false;
   }
 
+  // Stored per buildPattern call for applyVelocity to use
+  private _section: Section = 'intro';
+  private _tension = 0.5;
+
   protected buildPattern(state: GenerativeState): string {
     const density = state.params.density;
     const mood = state.mood;
     const tension = state.tension?.overall ?? 0.5;
+    this._section = state.section;
+    this._tension = tension;
     // Tension brightens drums, dries reverb, adds presence
     const gain = 0.3 * density * (0.9 + tension * 0.15);
     const room = (0.3 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.2);
@@ -332,10 +339,11 @@ export class TextureLayer extends CachingLayer {
 
     const pattern = randomChoice(patterns);
 
-    // Trance: punchy, tight, bright — minimal reverb, high LPF, slight compression via gain
+    // Trance: punchy, tight, bright — minimal reverb, high LPF, velocity accents
+    const tranceGainPattern = this.applyVelocity(gain, randomChoice(TRANCE_VELOCITIES));
     return `sound("${pattern}")
       .slow(1)
-      .gain(${gain.toFixed(3)})
+      .gain("${tranceGainPattern}")
       .hpf(40)
       .lpf(${(3500 + brightness * 5000).toFixed(0)})
       .room(${(room * 0.3).toFixed(2)})
@@ -356,9 +364,10 @@ export class TextureLayer extends CachingLayer {
       }
     }
 
+    const avrilGainPattern = this.applyVelocity(gain * 0.15, randomChoice(AVRIL_VELOCITIES));
     return `sound("${steps.join(' ')}")
       .slow(4)
-      .gain(${(gain * 0.15).toFixed(3)})
+      .gain("${avrilGainPattern}")
       .hpf(${(4000 + brightness * 2000).toFixed(0)})
       .lpf(${(8000 + brightness * 3000).toFixed(0)})
       .room(${(room * 0.8).toFixed(2)})
@@ -519,8 +528,10 @@ export class TextureLayer extends CachingLayer {
   }
 
   // Multiply base gain by velocity template values to create per-step gain pattern
+  // Applies section-responsive dynamics for more expressive drumming
   private applyVelocity(baseGain: number, velocityTemplate: string): string {
-    return velocityTemplate.split(' ').map(v => (parseFloat(v) * baseGain).toFixed(3)).join(' ');
+    const template = applyDrumDynamics(velocityTemplate, this._section, this._tension);
+    return template.split(' ').map(v => (parseFloat(v) * baseGain).toFixed(3)).join(' ');
   }
 
   // Remove some hits from a pattern (for breakdowns)
