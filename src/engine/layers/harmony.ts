@@ -42,6 +42,8 @@ import { planGuideTonePath, guideToneSmoothnessScore, guideToneWeight } from '..
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../../theory/tension-register';
 import { extensionImprovesSonority } from '../../theory/vertical-sonority';
 import { applySpacingOptimization } from '../../theory/voice-spacing';
+import { shouldStartChain, createChainPlan, chainSuspensionOffset, advanceChain, isChainActive } from '../../theory/suspension-chain';
+import type { SuspensionChainPlan } from '../../theory/suspension-chain';
 import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../../theory/textural-contrast';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
@@ -60,6 +62,7 @@ export class HarmonyLayer implements Layer {
   orbit = 1;
   private lastVoicing: string[] | null = null;
   private lastRoot: string | null = null;
+  private suspensionChain: SuspensionChainPlan | null = null;
 
   generate(state: GenerativeState): string {
     let result = this.buildPattern(state);
@@ -646,6 +649,29 @@ export class HarmonyLayer implements Layer {
       }
     }
 
+    // Suspension chains: cascading suspensions for continuous voice-leading tension
+    if (state.chordChanged && !hasSuspension) {
+      if (isChainActive(this.suspensionChain)) {
+        const offset = chainSuspensionOffset(this.suspensionChain!);
+        if (offset && chordNotes.length >= 3) {
+          // Apply suspension to the 2nd voice (inner voice, not root or top)
+          const susIdx = 1;
+          const rootMatch = chordNotes[0].match(/^([A-G](?:b|#)?)(\d+)$/);
+          if (rootMatch) {
+            const rootMidi = noteNameToMidi(rootMatch[1]);
+            const octave = parseInt(rootMatch[2]);
+            const susMidi = rootMidi + offset.suspended;
+            const susNote = midiToNoteName(susMidi % 12) + (octave + Math.floor(susMidi / 12));
+            chordNotes = [...chordNotes];
+            chordNotes[susIdx] = susNote;
+          }
+          advanceChain(this.suspensionChain!);
+        }
+      } else if (shouldStartChain(mood, state.section, this.suspensionChain)) {
+        this.suspensionChain = createChainPlan(mood);
+      }
+    }
+
     // Harmonic density: richer chords at peaks, simpler at breakdowns
     chordNotes = adjustChordDensity(chordNotes, state.scale.notes, state.section, tension);
 
@@ -930,4 +956,19 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
     }
   }
+}
+
+/** Convert note name (no octave) to MIDI pitch class */
+function noteNameToMidi(name: string): number {
+  const base: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  let midi = base[name[0]] ?? 0;
+  if (name.includes('#')) midi++;
+  if (name.includes('b')) midi--;
+  return ((midi % 12) + 12) % 12;
+}
+
+/** Convert MIDI pitch class to note name */
+function midiToNoteName(midi: number): string {
+  const names = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  return names[((midi % 12) + 12) % 12];
 }
