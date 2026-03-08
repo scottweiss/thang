@@ -85,6 +85,9 @@ import { punchGainMultiplier, shouldApplyPunch, detectAttacks } from '../theory/
 import { drumToHarmonyResonance, drumToHarmonyDecay, harmonyToDrumGain, shouldApplyCoupling } from '../theory/layer-feedback-coupling';
 import { modDepthMultiplier, shouldSyncModulation } from '../theory/modulation-phase-sync';
 import { clarityGainBoost, clarityLpfBoost, findDominantLayer, shouldApplyClarity } from '../theory/clarity-boost';
+import { fusionGainBalance, shouldApplyFusion } from '../theory/auditory-stream-fusion';
+import { totalRoughness, roughnessGainReduction, shouldSmoothRoughness } from '../theory/roughness-smoothing';
+import { precedenceReverbReduction, shouldApplyPrecedence } from '../theory/spatial-precedence';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
@@ -1893,6 +1896,88 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.fm\((\d+(?:\.\d+)?)\)/,
             (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+          );
+        }
+      }
+    }
+
+    // Roughness smoothing: reduce gain when critical-band roughness is excessive
+    if (shouldSmoothRoughness(this.state.mood)) {
+      const NOTE_MIDI_RS: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      // Collect all sounding pitches across layers
+      const allMidis: number[] = [];
+      for (const result of layerResults) {
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        for (const n of noteMatch[1].split(/\s+/)) {
+          if (n === '~') continue;
+          const name = n.replace(/\d+$/, '');
+          const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+          allMidis.push((NOTE_MIDI_RS[name] ?? 0) + oct * 12);
+        }
+      }
+      if (allMidis.length >= 3) {
+        const roughness = totalRoughness(allMidis);
+        const gainMult = roughnessGainReduction(roughness, this.state.mood);
+        if (gainMult < 0.97) {
+          for (const result of layerResults) {
+            if (result.name === 'drone') continue; // drone is foundational
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
+                return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
+    // Spatial precedence: suppress reverb on delayed layer copies
+    if (shouldApplyPrecedence(this.state.mood, layerResults.length)) {
+      // Estimate relative onset delay from .late() values
+      for (const result of layerResults) {
+        const lateMatch = result.code.match(/\.late\(([0-9.]+)\)/);
+        const delayMs = lateMatch ? parseFloat(lateMatch[1]) * 1000 : 0;
+        if (delayMs > 0 && delayMs <= 40) {
+          const revMult = precedenceReverbReduction(delayMs, this.state.mood);
+          if (revMult < 0.97) {
+            result.code = result.code.replace(
+              /\.room\(([0-9.]+)\)/,
+              (_, val) => `.room(${(parseFloat(val) * revMult).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Auditory stream fusion: boost secondary layer gain when fused with primary
+    if (shouldApplyFusion(this.state.mood, this.state.section)) {
+      const melodyResult = layerResults.find(r => r.name === 'melody');
+      const arpResult = layerResults.find(r => r.name === 'arp');
+      if (melodyResult && arpResult) {
+        // Estimate gap from .late() values
+        const melLate = melodyResult.code.match(/\.late\(([0-9.]+)\)/);
+        const arpLate = arpResult.code.match(/\.late\(([0-9.]+)\)/);
+        const gapMs = Math.abs(
+          (melLate ? parseFloat(melLate[1]) : 0) -
+          (arpLate ? parseFloat(arpLate[1]) : 0)
+        ) * 1000;
+        const fusionBoost = fusionGainBalance(gapMs, this.state.mood);
+        if (fusionBoost > 1.01) {
+          arpResult.code = arpResult.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * fusionBoost).toFixed(4)})`;
+              return `.gain((${expr}) * ${fusionBoost.toFixed(4)})`;
+            }
           );
         }
       }
