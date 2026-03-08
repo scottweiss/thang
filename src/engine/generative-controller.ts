@@ -255,6 +255,9 @@ import { headroomGain } from '../theory/dynamic-headroom-management';
 import { stepPreferenceGain } from '../theory/melodic-step-preference';
 import { bassClarityHpf } from '../theory/harmonic-bass-clarity';
 import { arrivalEmphasisGain } from '../theory/section-arrival-emphasis';
+import { functionFmMultiplier } from '../theory/chord-function-color';
+import { rangeCenteringGain } from '../theory/melodic-range-centering';
+import { grooveStabilityGain } from '../theory/groove-stability-index';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4590,6 +4593,54 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Chord function color: harmonic function shapes FM
+    {
+      const degree6 = this.state.currentChord?.degree ?? 1;
+      const ffm = functionFmMultiplier(degree6, this.state.mood);
+      if (Math.abs(ffm - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * ffm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic range centering: keep melody in sweet spot
+    {
+      const noteToMidi6: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const curMidi6 = noteToMidi6[this.state.currentChord?.root ?? 'C'] ?? 60;
+      const rcGain = rangeCenteringGain(curMidi6, 'melody', this.state.mood);
+      if (Math.abs(rcGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * rcGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Groove stability index: reward rhythmic consistency
+    {
+      const consistency = this.state.section === 'peak' || this.state.section === 'groove' ? 0.8 : 0.5;
+      const gsGain = grooveStabilityGain(consistency, this.state.mood);
+      if (Math.abs(gsGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * gsGain).toFixed(4)})`
             );
           }
         }
