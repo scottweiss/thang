@@ -233,7 +233,7 @@ export class AtmosphereLayer extends CachingLayer {
     }
 
     // Intro/breakdown: quiet digital whispers
-    return `note("C3")
+    return `note("${root}3")
       .sound("sine")
       .fm(${(8 + brightness * 5).toFixed(0)})
       .fmh(1.5)
@@ -323,7 +323,7 @@ export class AtmosphereLayer extends CachingLayer {
     }
 
     // Intro/build/breakdown: gentler strings
-    return `note("C2")
+    return `note("${root}2")
       .sound("gm_string_ensemble_1")
       .attack(1.2)
       .decay(3)
@@ -389,7 +389,7 @@ export class AtmosphereLayer extends CachingLayer {
     }
 
     // Intro/breakdown: very quiet, sparse — just a hint of texture
-    return `note("C2")
+    return `note("${root}2")
       .sound("sine")
       .fm(${(8 + brightness * 5).toFixed(0)})
       .fmh(0.5)

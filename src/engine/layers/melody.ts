@@ -26,6 +26,7 @@ import { phraseGainAccents } from '../../theory/phrase-articulation';
 import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
 import { placePeak, moodPeakPosition, shouldPlacePeak } from '../../theory/phrase-peak';
 import { inverseDensityMultiplier, shouldApplyInverseDensity } from '../../theory/inverse-density';
+import { applyCadenceGesture } from '../../theory/cadence-gesture';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -689,6 +690,12 @@ export class MelodyLayer extends CachingLayer {
           }
         }
       }
+    }
+
+    // Cadential gestures: phrase endings resolve to chord tones
+    if (chordIndices.length > 0) {
+      const cadenced = applyCadenceGesture(elements, ladder, chordIndices, mood);
+      for (let ci = 0; ci < elements.length; ci++) elements[ci] = cadenced[ci];
     }
 
     // Store the rhythm for future recall (before ornaments change the pattern)
