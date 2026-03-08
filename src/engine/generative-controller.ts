@@ -58,6 +58,7 @@ import { energyLevel, energyGainMultiplier, shouldApplyEnergyEnvelope } from '..
 import { detectCadence, cadentialGainBoost, cadentialReverbBoost, shouldApplyCadentialWeight } from '../theory/cadential-weight';
 import { TimbralMemoryBank, blendTimbre } from '../theory/timbral-memory';
 import { isPhraseEnding, overlapGainBoost, shouldApplyPhraseOverlap } from '../theory/phrase-overlap';
+import { elasticTempoMultiplier, shouldApplyElasticity } from '../theory/rhythmic-elasticity';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1399,7 +1400,11 @@ export class GenerativeController {
       this.modulationTicksRemaining--;
       if (this.modulationTicksRemaining <= 0) this.modulationActive = false;
     }
-    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod;
+    // Rhythmic elasticity: tension-responsive micro-timing
+    const elastic = shouldApplyElasticity(this.state.mood, this.state.section)
+      ? elasticTempoMultiplier(this.state.tension?.overall ?? 0.5, this.state.mood, this.state.section)
+      : 1.0;
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {

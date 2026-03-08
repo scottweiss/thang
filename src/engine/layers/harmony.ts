@@ -53,6 +53,7 @@ import { shouldApplyField, overtoneVoicing, fieldPartials, blendVoicings as blen
 import { shouldApplyVoicingDensity, targetVoiceCount, thinVoicing } from '../../theory/voicing-density';
 import { shouldRespace, eliminateCrossings, crossingTolerance } from '../../theory/voice-crossing';
 import { shouldBassHold, superpositionStrength } from '../../theory/harmonic-rhythm-layer';
+import { shouldAnticipateVoice, anticipationAmount, anticipatedPitch, nearestTarget } from '../../theory/anticipatory-voice';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -835,6 +836,40 @@ export class HarmonyLayer implements Layer {
       } else if (state.chordChanged) {
         this.lastBassNote = bassNote;
         this.ticksSinceBassChange = 0;
+      }
+    }
+
+    // Anticipatory voice leading: inner voices lean toward next chord
+    if (useRawNotes && chordNotes.length >= 3 &&
+        shouldAnticipateVoice(mood, state.ticksSinceChordChange ?? 99)) {
+      const NOTE_PC_AV: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const amount = anticipationAmount(
+        state.ticksSinceChordChange ?? 99, mood, state.section
+      );
+      if (amount > 0.05 && state.chordHistory.length > 0) {
+        const prevChordNotes = state.chordHistory[state.chordHistory.length - 1].notes;
+        const targetPcs = prevChordNotes
+          .map(n => NOTE_PC_AV[n.replace(/\d+$/, '')])
+          .filter((pc): pc is number => pc !== undefined);
+        const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        // Move inner voices (not first or last) toward targets
+        for (let vi = 1; vi < chordNotes.length - 1; vi++) {
+          const name = chordNotes[vi].replace(/\d+$/, '');
+          const oct = parseInt(chordNotes[vi].match(/\d+$/)?.[0] ?? '4');
+          const pc = NOTE_PC_AV[name];
+          if (pc === undefined) continue;
+          const midi = pc + oct * 12;
+          const tpc = nearestTarget(pc, targetPcs);
+          const targetMidi = tpc + oct * 12;
+          const anticipated = anticipatedPitch(midi, targetMidi, amount);
+          if (anticipated !== midi) {
+            chordNotes[vi] = `${pcNames[anticipated % 12]}${Math.floor(anticipated / 12)}`;
+          }
+        }
       }
     }
 

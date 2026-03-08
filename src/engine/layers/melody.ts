@@ -51,6 +51,7 @@ import { shouldApplyEconomy, pitchVocabularySize, selectCorePitches, constrainTo
 import { buildGravityMap, gravityScore, pitchGravityStrength } from '../../theory/pitch-gravity-well';
 import { classifyGesture, shouldInjectSurprise, shouldInjectStability, suggestGesture, type GestureType } from '../../theory/gestural-entropy';
 import { anticipationDelay, violationTendency } from '../../theory/temporal-expectancy';
+import { intervalVariety, suggestIntervalBias, biasOffset, varietyAppetite } from '../../theory/intervallic-variety';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -79,6 +80,8 @@ export class MelodyLayer extends CachingLayer {
   private lastNoteName: string | null = null;
   /** Gestural entropy tracking */
   private gestureHistory: GestureType[] = [];
+  /** Intervallic variety tracking */
+  private recentIntervals: number[] = [];
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -88,6 +91,7 @@ export class MelodyLayer extends CachingLayer {
       this.recentContours = [];
       this.lastNoteName = null;
       this.gestureHistory = [];
+      this.recentIntervals = [];
       return true;
     }
     if (state.chordChanged) return true;
@@ -246,6 +250,47 @@ export class MelodyLayer extends CachingLayer {
             const prevNoteIdx = lastNoteIdx - 1 - [...elements.slice(0, lastNoteIdx)].reverse().findIndex(e => e !== '~');
             if (prevNoteIdx >= 0 && prevNoteIdx < lastNoteIdx && elements[prevNoteIdx] !== '~') {
               elements[lastNoteIdx] = elements[prevNoteIdx];
+            }
+          }
+        }
+      }
+    }
+
+    // Intervallic variety: track intervals and bias toward diversity
+    {
+      const NOTE_PC_IV: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const midiNotes: number[] = [];
+      for (const e of elements) {
+        if (e === '~') continue;
+        const n = e.replace(/\d+$/, '');
+        const oct = parseInt(e.match(/\d+$/)?.[0] ?? '4');
+        const pc = NOTE_PC_IV[n];
+        if (pc !== undefined) midiNotes.push(pc + oct * 12);
+      }
+      for (let mi = 1; mi < midiNotes.length; mi++) {
+        this.recentIntervals.push(Math.abs(midiNotes[mi] - midiNotes[mi - 1]));
+      }
+      if (this.recentIntervals.length > 12) {
+        this.recentIntervals = this.recentIntervals.slice(-12);
+      }
+      if (this.recentIntervals.length >= 4 && varietyAppetite(mood) > 0.15) {
+        const bias = suggestIntervalBias(this.recentIntervals, mood);
+        if (bias !== 'any' && midiNotes.length >= 2) {
+          // Apply bias to last note
+          const lastNoteIdx = elements.length - 1 - [...elements].reverse().findIndex(e => e !== '~');
+          if (lastNoteIdx >= 0 && lastNoteIdx < elements.length && elements[lastNoteIdx] !== '~') {
+            const prevMidi = midiNotes.length >= 2 ? midiNotes[midiNotes.length - 2] : 60;
+            const currMidi = midiNotes[midiNotes.length - 1];
+            const interval = currMidi - prevMidi;
+            const offset = biasOffset(bias, interval);
+            if (offset !== 0) {
+              const newMidi = Math.max(36, Math.min(84, currMidi + offset));
+              const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+              elements[lastNoteIdx] = `${pcNames[newMidi % 12]}${Math.floor(newMidi / 12)}`;
             }
           }
         }
