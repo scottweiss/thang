@@ -9,6 +9,7 @@ import { MotifMemory } from '../../theory/motif-memory';
 import { getAdjustedOctaveRange } from '../../theory/register';
 import { applyMelodicDynamics } from '../../theory/melodic-dynamics';
 import { addOrnaments } from '../../theory/ornamentation';
+import { generateSequence, flattenSequence, sequenceDirection, shouldUseSequence } from '../../theory/melodic-sequence';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -372,6 +373,16 @@ export class MelodyLayer extends CachingLayer {
     if (recalled) {
       // Develop an existing motif (transpose, invert, fragment, etc.)
       rawMotif = this.motifMemory.develop(recalled, ladder);
+
+      // After developing a recalled motif, optionally create a melodic sequence
+      // (motif repeated at shifting pitch levels for momentum and direction)
+      if (shouldUseSequence(state.section, rawMotif.length)) {
+        const { stepSize, repetitions } = sequenceDirection(state.section, state.tension?.overall ?? 0.5);
+        const sequences = generateSequence(rawMotif, ladder, repetitions, stepSize);
+        const sequencedPhrase = flattenSequence(sequences, 1);
+        // Truncate to fit the pattern — sequences can be longer than the target
+        rawMotif = sequencedPhrase.slice(0, 16);
+      }
     } else {
       // Create a new motif via Narmour I-R model
       rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour);

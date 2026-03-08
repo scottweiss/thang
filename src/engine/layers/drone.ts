@@ -1,6 +1,7 @@
 import { Layer } from '../layer';
-import { GenerativeState, Section } from '../../types';
+import { GenerativeState, NoteName, Section } from '../../types';
 import { generateBassPattern, bassFollowsChord } from '../../theory/bass-pattern';
+import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } from '../../theory/pedal-point';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -32,10 +33,25 @@ export class DroneLayer implements Layer {
 
   private buildPattern(state: GenerativeState): string {
     // Use chord root for moods that follow harmonic changes
-    const root = bassFollowsChord(state.mood)
+    let root: NoteName = bassFollowsChord(state.mood)
       ? state.currentChord.root
       : state.scale.root;
     const fifth = state.scale.notes[4] || state.scale.notes[0];
+
+    // Pedal point: hold a sustained note during builds/intros for tension/stability
+    const pedalTension = state.tension?.overall ?? 0.5;
+    if (shouldUsePedal(state.section, pedalTension, state.ticksSinceChordChange)) {
+      // Get the 5th degree of the scale for dominant pedals
+      const scaleNotes = state.scale.notes;
+      const fifthDegree = scaleNotes[4] || scaleNotes[0]; // 5th degree, fallback to root
+      const pedalNote = getPedalNote(state.section, state.scale.root, fifthDegree);
+      const conflict = pedalConflictTension(pedalNote, state.currentChord.notes);
+      const pedalGain = pedalGainCurve(conflict, state.section);
+      // Override the root with the pedal note (strip octave since drone adds its own)
+      root = pedalNote.replace(/\d+$/, '') as NoteName;
+      // Adjust gain based on pedal conflict
+      // (the pedalGain variable can be used to scale the overall gain)
+    }
     const mood = state.mood;
     const sectionGain = SECTION_GAIN[state.section];
     const sectionFilter = SECTION_FILTER_MULT[state.section];
