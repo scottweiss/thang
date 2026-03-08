@@ -76,14 +76,10 @@ export class TextureLayer extends CachingLayer {
         return this.buildAmbientPattern(density, gain, room, brightness);
 
       case 'downtempo':
-        return this.buildFromTemplate(
-          DOWNTEMPO_PATTERNS, density, gain * 0.8, room, brightness, state.section
-        );
+        return this.buildDowntempoPattern(density, gain * 0.8, room, brightness, state.section);
 
       case 'lofi':
-        return this.buildFromTemplate(
-          LOFI_PATTERNS, density, gain, room * 0.7, brightness, state.section
-        );
+        return this.buildLofiPattern(density, gain, room * 0.7, brightness, state.section);
 
       case 'trance':
         return this.buildTrancePattern(density, gain * 1.2, room * 0.5, brightness, state.section);
@@ -112,29 +108,55 @@ export class TextureLayer extends CachingLayer {
       .orbit(${this.orbit})`;
   }
 
-  private buildFromTemplate(
-    templates: string[], density: number, gain: number,
-    room: number, brightness: number, section: Section
+  private buildDowntempoPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
   ): string {
-    // Pick a template
-    let pattern = randomChoice(templates);
+    let pattern = randomChoice(DOWNTEMPO_PATTERNS);
 
-    // During breakdown, thin out the pattern
     if (section === 'breakdown') {
       pattern = this.thinPattern(pattern, 0.4);
     }
+    if (density > 0.5) {
+      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.25);
+    }
 
-    // Add ghost hats based on density
+    // Downtempo: spacious, organic — more reverb, delay, wider stereo, gentle LPF
+    return `sound("${pattern}")
+      .slow(1)
+      .gain(${gain.toFixed(3)})
+      .lpf(${(1800 + brightness * 3000).toFixed(0)})
+      .pan(sine.range(0.3, 0.7).slow(5))
+      .room(${(room * 1.2).toFixed(2)})
+      .roomsize(3)
+      .delay(0.2)
+      .delaytime(0.375)
+      .delayfeedback(0.15)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildLofiPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
+  ): string {
+    let pattern = randomChoice(LOFI_PATTERNS);
+
+    if (section === 'breakdown') {
+      pattern = this.thinPattern(pattern, 0.4);
+    }
     if (density > 0.5) {
       pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
     }
 
+    // Lofi: warm, crunchy — bit crush, heavy LPF, tight room, late swing
     return `sound("${pattern}")
       .slow(1)
       .gain(${gain.toFixed(3)})
-      .lpf(${(2000 + brightness * 4000).toFixed(0)})
-      .room(${room.toFixed(2)})
-      .roomsize(2)
+      .crush(${(10 + brightness * 4).toFixed(0)})
+      .lpf(${(1500 + brightness * 2500).toFixed(0)})
+      .hpf(80)
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(1)
       .orbit(${this.orbit})`;
   }
 
@@ -157,12 +179,14 @@ export class TextureLayer extends CachingLayer {
 
     const pattern = randomChoice(patterns);
 
+    // Trance: punchy, tight, bright — minimal reverb, high LPF, slight compression via gain
     return `sound("${pattern}")
       .slow(1)
       .gain(${gain.toFixed(3)})
-      .lpf(${(3000 + brightness * 4000).toFixed(0)})
-      .room(${room.toFixed(2)})
-      .roomsize(1)
+      .hpf(40)
+      .lpf(${(3500 + brightness * 5000).toFixed(0)})
+      .room(${(room * 0.3).toFixed(2)})
+      .roomsize(0.5)
       .orbit(${this.orbit})`;
   }
 
