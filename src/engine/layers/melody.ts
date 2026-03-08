@@ -1,10 +1,24 @@
 import { CachingLayer } from '../caching-layer';
-import { GenerativeState } from '../../types';
+import { GenerativeState, Section } from '../../types';
 import { getPentatonicSubset } from '../../theory/scales';
 import { randomChoice, weightedChoice } from '../random';
 import { noteIndex } from '../../theory/scales';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
+
+// Section shapes how the melody behaves
+const SECTION_MELODY: Record<Section, {
+  densityMult: number;  // scales note density
+  motifLen: [number, number]; // [options, weights] for motif length
+  contourBias: Contour[]; // favored contour shapes
+  useCallResponse: boolean; // whether to use call-and-response
+}> = {
+  intro:     { densityMult: 0.4, motifLen: [2, 3], contourBias: ['ascending', 'arch'], useCallResponse: false },
+  build:     { densityMult: 0.7, motifLen: [3, 4], contourBias: ['ascending', 'arch', 'valley'], useCallResponse: true },
+  peak:      { densityMult: 1.0, motifLen: [4, 5], contourBias: ['ascending', 'descending', 'arch', 'valley'], useCallResponse: true },
+  breakdown: { densityMult: 0.35, motifLen: [2, 3], contourBias: ['descending', 'valley'], useCallResponse: false },
+  groove:    { densityMult: 0.85, motifLen: [3, 4], contourBias: ['arch', 'ascending', 'valley'], useCallResponse: true },
+};
 
 export class MelodyLayer extends CachingLayer {
   name = 'melody';
@@ -15,6 +29,7 @@ export class MelodyLayer extends CachingLayer {
     if (this.moodChanged(state)) return true;
     if (state.chordChanged) return true;
     if (state.scaleChanged) return true;
+    if (state.sectionChanged) return true;
 
     const maxTicks = { downtempo: 10, lofi: 8, trance: 6 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
@@ -148,6 +163,7 @@ export class MelodyLayer extends CachingLayer {
   private buildStructuredPhrase(state: GenerativeState, density: number): string[] {
     const penta = getPentatonicSubset(state.scale);
     const mood = state.mood;
+    const section = SECTION_MELODY[state.section];
 
     // Build a pitch ladder: pentatonic notes across 2 octaves
     const baseOct = mood === 'trance' ? 3 : 4;
@@ -163,35 +179,41 @@ export class MelodyLayer extends CachingLayer {
       ? randomChoice(chordIndices)
       : Math.floor(ladder.length / 2);
 
-    // Generate a short motif (3-4 notes)
-    const contour = randomChoice<Contour>(['ascending', 'descending', 'arch', 'valley']);
-    const motifLen = weightedChoice([3, 4], [3, 2]);
+    // Section shapes motif: length and contour bias
+    const contour = randomChoice(section.contourBias);
+    const motifLen = weightedChoice(
+      [section.motifLen[0], section.motifLen[1]],
+      [3, 2]
+    );
     const motif = this.buildMotif(ladder, anchorIdx, motifLen, contour);
 
-    // Place the motif into the 16-step sequence with rhythmic spacing
     const noteCount = 16;
     const elements: string[] = new Array(noteCount).fill('~');
 
-    // Density determines how many notes appear
+    // Section density multiplier shapes activity level
+    const effectiveDensity = density * section.densityMult;
     const noteProbability = {
-      ambient: density * 0.3,
-      downtempo: density * 0.3,
-      lofi: density * 0.4,
-      trance: density * 0.5,
+      ambient: effectiveDensity * 0.3,
+      downtempo: effectiveDensity * 0.3,
+      lofi: effectiveDensity * 0.4,
+      trance: effectiveDensity * 0.5,
     }[mood];
 
-    const totalNotes = Math.max(2, Math.floor(noteCount * noteProbability));
+    const totalNotes = Math.max(1, Math.floor(noteCount * noteProbability));
 
-    // Place motif in first half, then a variation in second half (call & response)
+    // Place motif in first half
     const firstHalf = this.placeMotif(motif, 0, 7, totalNotes);
-    const variation = this.varyMotif(motif, ladder);
-    const secondHalf = this.placeMotif(variation, 0, 7, totalNotes);
-
     for (const { pos, note } of firstHalf) {
       if (pos < noteCount) elements[pos] = note;
     }
-    for (const { pos, note } of secondHalf) {
-      if (pos + 8 < noteCount) elements[pos + 8] = note;
+
+    // Call-and-response in second half (only during build/peak/groove)
+    if (section.useCallResponse) {
+      const variation = this.varyMotif(motif, ladder);
+      const secondHalf = this.placeMotif(variation, 0, 7, totalNotes);
+      for (const { pos, note } of secondHalf) {
+        if (pos + 8 < noteCount) elements[pos + 8] = note;
+      }
     }
 
     return elements;
