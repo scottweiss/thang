@@ -8,7 +8,8 @@ import { displaceSteps, syncopate, moodDisplacement } from '../../theory/rhythmi
 import { sectionArticulation, articulationToStrudel } from '../../theory/articulation';
 import { complementaryDensity, callResponseAmount } from '../../theory/call-response';
 import { generateComplementaryRhythm, counterpointDensity } from '../../theory/rhythmic-counterpoint';
-import { generateArpSequence, moodArpStyles, ArpStyle } from '../../theory/arp-pattern';
+import { generateArpSequence, moodArpStyles, biasStyleForMotion, ArpStyle } from '../../theory/arp-pattern';
+import { suggestCounterDirection } from '../../theory/contrapuntal-motion';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -82,6 +83,11 @@ export class ArpLayer extends CachingLayer {
     const [adjLow, adjHigh] = getAdjustedOctaveRange('arp', state.layerCenterPitches);
     state.layerCenterPitches['arp'] = 60; // middle C as default center
 
+    // Contrapuntal motion: bias arp style based on melody's direction
+    const counterDir = state.melodyDirection
+      ? suggestCounterDirection(state.melodyDirection, mood, section)
+      : undefined;
+
     switch (mood) {
       case 'ambient': {
         const notes = this.spreadOctaves(baseNotes, 3, 5);
@@ -111,7 +117,7 @@ export class ArpLayer extends CachingLayer {
       case 'downtempo': {
         // Square tick — rhythmic clicks distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 3, 4);
-        const pattern = randomChoice(moodArpStyles(mood, section));
+        const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         return `note("${steps.join(' ')}")
@@ -137,7 +143,7 @@ export class ArpLayer extends CachingLayer {
       case 'lofi': {
         // Triangle pluck — warm tick, distinct from square melody
         const notes = this.spreadOctaves(baseNotes, 3, 4);
-        const pattern = randomChoice(moodArpStyles(mood, section));
+        const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         return `note("${steps.join(' ')}")
@@ -162,7 +168,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'trance': {
         const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
-        const trancePattern = randomChoice(moodArpStyles(mood, section));
+        const trancePattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
         const tranceGain = 0.16 * (0.5 + density * 0.5);
@@ -242,7 +248,7 @@ export class ArpLayer extends CachingLayer {
         // Dense 16th note arps — acid-style, resonant filter sweep, multiple octaves
         // Syro style: restless, intricate, technical
         const notes = this.spreadOctaves(baseNotes, Math.max(2, adjLow), Math.min(5, adjHigh));
-        const syroPattern = randomChoice(moodArpStyles(mood, section));
+        const syroPattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult * 1.2);
         const steps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
         const syroGain = 0.12 * (0.5 + density * 0.5);
@@ -267,7 +273,7 @@ export class ArpLayer extends CachingLayer {
       case 'blockhead': {
         // Triangle tick — percussive, distinct from sawtooth melody and square harmony
         const notes = this.spreadOctaves(baseNotes, 3, 4);
-        const pattern = randomChoice(moodArpStyles(mood, section));
+        const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         const bhGain = 0.15 * (0.5 + density * 0.5);
@@ -320,7 +326,7 @@ export class ArpLayer extends CachingLayer {
       case 'disco': {
         // Bubbly disco arp — sine with high FM, fast 16th notes, funky
         const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
-        const discoPattern = randomChoice(moodArpStyles(mood, section));
+        const discoPattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
         const discoGain = 0.18 * (0.5 + density * 0.5);
@@ -345,6 +351,15 @@ export class ArpLayer extends CachingLayer {
           .orbit(${this.orbit})`;
       }
     }
+  }
+
+  // Pick arp style with contrapuntal bias
+  private pickStyle(mood: Mood, section: Section, counterDir?: 'ascending' | 'descending' | 'static'): ArpStyle {
+    let styles = moodArpStyles(mood, section);
+    if (counterDir) {
+      styles = biasStyleForMotion(styles, counterDir);
+    }
+    return randomChoice(styles);
   }
 
   // Spread chord notes across multiple octaves

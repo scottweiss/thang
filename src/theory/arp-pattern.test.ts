@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateArpSequence, moodArpStyles } from './arp-pattern';
+import { generateArpSequence, moodArpStyles, biasStyleForMotion, ArpStyle } from './arp-pattern';
 
 const NOTES = ['C3', 'D3', 'E3', 'F3', 'G3', 'A3'];
 const TRIAD = ['C3', 'E3', 'G3'];
@@ -141,5 +141,48 @@ describe('moodArpStyles', () => {
     for (const mood of moods) {
       expect(moodArpStyles(mood, 'groove').length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('biasStyleForMotion', () => {
+  it('ascending bias puts up/zigzag/thirds first', () => {
+    const styles = biasStyleForMotion(['pedal', 'up', 'broken', 'zigzag'], 'ascending');
+    // 'up' and 'zigzag' should be before 'pedal' and 'broken'
+    const upIdx = styles.indexOf('up');
+    const pedalIdx = styles.indexOf('pedal');
+    expect(upIdx).toBeLessThan(pedalIdx);
+  });
+
+  it('descending bias puts down/mirror first', () => {
+    const styles = biasStyleForMotion(['up', 'down', 'mirror', 'pedal'], 'descending');
+    const downIdx = styles.indexOf('down');
+    const upIdx = styles.indexOf('up');
+    expect(downIdx).toBeLessThan(upIdx);
+  });
+
+  it('static bias puts pedal/broken/alberti first', () => {
+    const styles = biasStyleForMotion(['up', 'pedal', 'alberti', 'zigzag'], 'static');
+    const pedalIdx = styles.indexOf('pedal');
+    const upIdx = styles.indexOf('up');
+    expect(pedalIdx).toBeLessThan(upIdx);
+  });
+
+  it('preserves all styles (no removal)', () => {
+    const input: ArpStyle[] = ['up', 'down', 'pedal', 'scatter'];
+    const result = biasStyleForMotion(input, 'ascending');
+    expect(result.length).toBe(input.length);
+    for (const s of input) {
+      expect(result).toContain(s);
+    }
+  });
+
+  it('handles single style', () => {
+    expect(biasStyleForMotion(['up'], 'descending')).toEqual(['up']);
+  });
+
+  it('falls back gracefully when no preferred styles match', () => {
+    const styles = biasStyleForMotion(['scatter', 'updown'], 'descending');
+    // Neither is in the descending preferred list, so order preserved
+    expect(styles).toEqual(['scatter', 'updown']);
   });
 });

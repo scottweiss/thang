@@ -13,6 +13,7 @@ import { generateSequence, flattenSequence, sequenceDirection, shouldUseSequence
 import { registerShift, shouldShiftRegister } from '../../theory/register-evolution';
 import { insertBreaths, breathingRate, ensurePhraseBoundary } from '../../theory/phrase-breathing';
 import { sectionContour, contourOffset, contourTargetIndex, contourPull } from '../../theory/melodic-contour';
+import { detectDirection } from '../../theory/contrapuntal-motion';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -94,6 +95,8 @@ export class MelodyLayer extends CachingLayer {
     state.layerStepPattern[this.name] = elements;
     // Share the active melodic notes (non-rests) for arp thematic unity
     state.activeMotif = elements.filter(e => e !== '~');
+    // Share melody direction for contrapuntal motion in arp
+    state.melodyDirection = detectDirection(elements);
 
     // Per-note velocity dynamics — metric accent, contour accent, phrase taper
     const dynamicGain = applyMelodicDynamics(gain, elements);

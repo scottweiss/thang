@@ -286,3 +286,46 @@ export function moodArpStyles(mood: Mood, section: Section): ArpStyle[] {
 
   return styles;
 }
+
+/**
+ * Bias arp style selection based on contrapuntal motion preference.
+ * If the melody is ascending and we want contrary motion, prefer 'down'.
+ * If parallel, prefer 'up'. If oblique, prefer 'pedal'.
+ *
+ * Returns the filtered/reweighted list — the first style is most preferred.
+ *
+ * @param styles           Available styles from moodArpStyles()
+ * @param counterDirection Preferred direction from contrapuntal-motion module
+ * @returns Reordered styles with directionally-appropriate ones first
+ */
+export function biasStyleForMotion(
+  styles: ArpStyle[],
+  counterDirection: 'ascending' | 'descending' | 'static'
+): ArpStyle[] {
+  if (styles.length <= 1) return styles;
+
+  // Categorize styles by their directional character
+  const ascending: ArpStyle[] = ['up', 'zigzag', 'thirds'];
+  const descending: ArpStyle[] = ['down', 'mirror'];
+  const static_: ArpStyle[] = ['pedal', 'broken', 'alberti'];
+  // Neutral (work in any direction): 'updown', 'scatter'
+
+  let preferred: ArpStyle[];
+  switch (counterDirection) {
+    case 'ascending':
+      preferred = ascending;
+      break;
+    case 'descending':
+      preferred = descending;
+      break;
+    case 'static':
+      preferred = static_;
+      break;
+  }
+
+  // Move preferred styles to front, keep original order for others
+  const front = styles.filter(s => preferred.includes(s));
+  const rest = styles.filter(s => !preferred.includes(s));
+
+  return front.length > 0 ? [...front, ...rest] : styles;
+}

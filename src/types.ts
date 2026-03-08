@@ -84,4 +84,5 @@ export interface GenerativeState {
   layerStepPattern: Record<string, string[]>;  // per-layer step arrays for rhythmic counterpoint
   sectionProgress: number;  // 0-1 how far through current section
   activeMotif?: string[];   // current melody motif for cross-layer thematic unity
+  melodyDirection?: 'ascending' | 'descending' | 'static';  // melody motion for contrapuntal arp
 }
