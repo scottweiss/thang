@@ -42,6 +42,7 @@ import { shouldFragment, fragmentLength, extractFragment, repeatFragment } from 
 import { shouldApplyAugDim, applyRhythmicTransform } from '../../theory/rhythmic-augmentation';
 import { shouldApplyCompound, createCompoundMelody, compoundSeparation, compoundPattern } from '../../theory/compound-melody';
 import { shouldApplyRhythmicCadence, selectCadenceType, applyRhythmicCadence } from '../../theory/rhythmic-cadence';
+import { tessituraGainMap } from '../../theory/tessitura';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -210,10 +211,13 @@ export class MelodyLayer extends CachingLayer {
     const contour = shouldApplyContourDynamics(mood)
       ? contourGainMultipliers(elements, mood)
       : null;
+    // Tessitura energy: high notes get effort/brightness, low notes get warmth
+    const tessMap = tessituraGainMap(elements, 'C3', 'C6', mood);
     const dynamicGain = rawDynamicGain.split(' ')
       .map((g, i) => {
         let v = parseFloat(g) * (accents[i] ?? 1.0);
         if (contour) v *= contour[i] ?? 1.0;
+        v *= tessMap[i] ?? 1.0;
         return v.toFixed(4);
       })
       .join(' ');
