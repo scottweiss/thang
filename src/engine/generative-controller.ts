@@ -204,6 +204,9 @@ import { structuralGravityGain } from '../theory/structural-pitch-gravity';
 import { stasisFmCompensation, stasisLpfModulation } from '../theory/harmonic-stasis-detection';
 import { tessituraGainCorrection } from '../theory/tessitura-tracking';
 import { subdivisionDecay } from '../theory/subdivision-articulation';
+import { envelopeFmMultiplier } from '../theory/timbral-envelope-following';
+import { momentumDriveGain } from '../theory/progression-momentum';
+import { panWidthMultiplier } from '../theory/dynamic-panning-width';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3796,6 +3799,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Timbral envelope following: FM depth tracks amplitude envelope phase
+    {
+      const envPhase = this.state.sectionProgress ?? 0.5;
+      const envFm = envelopeFmMultiplier(envPhase, this.state.mood);
+      if (Math.abs(envFm - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp' || result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * envFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Progression momentum: strong root motions build energy
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const motion = ((rootPc - tonicPc) % 12 + 12) % 12;
+      const mGain = momentumDriveGain([motion], this.state.mood);
+      if (mGain > 1.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * Math.min(mGain, 1.06)).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Dynamic panning width: stereo field responds to energy
+    {
+      const pwMul = panWidthMultiplier(
+        this.state.tension?.overall ?? 0.5,
+        this.state.mood,
+        this.state.section
+      );
+      // Store for layer use — applied as pan range scaling
+      if (Math.abs(pwMul - 1.0) > 0.05) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'arp' || result.name === 'atmosphere') {
+            result.code = result.code.replace(
+              /\.pan\(([0-9.-]+)\)/,
+              (_, val) => `.pan(${(parseFloat(val) * pwMul).toFixed(4)})`
             );
           }
         }
