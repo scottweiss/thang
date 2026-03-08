@@ -345,26 +345,50 @@ export class MelodyLayer extends CachingLayer {
     }
   }
 
-  // Ambient stays sparse and random — this is where randomness works well
+  // Ambient uses gravity-weighted notes for coherent floating phrases
   private buildAmbientPhrase(state: GenerativeState, density: number): string[] {
     const penta = getPentatonicSubset(state.scale);
+    const tension = state.tension?.overall ?? 0.3;
+
+    // Build a sparse ladder across 2 octaves
+    const ladder: string[] = [];
+    for (let oct = 4; oct <= 5; oct++) {
+      for (const note of penta) {
+        ladder.push(`${note}${oct}`);
+      }
+    }
+
+    // Chord tone indices for gravity
+    const chordNames = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+    const chordIndices = ladder
+      .map((n, i) => ({ n: n.replace(/\d+$/, ''), i }))
+      .filter(x => chordNames.includes(x.n))
+      .map(x => x.i);
+
     const elements: string[] = [];
+    let prevIdx = -1;
     for (let i = 0; i < 16; i++) {
       if (Math.random() < density * 0.15) {
-        const note = randomChoice(penta);
-        const octave = weightedChoice([4, 5], [3, 2]);
-        elements.push(`${note}${octave}`);
+        const ctx: MelodicContext = {
+          prevIndex: prevIdx,
+          chordIndices,
+          direction: 0, // ambient has no strong direction
+          tension,
+        };
+        const idx = selectMelodicNote(ladder.length, ctx);
+        elements.push(ladder[idx]);
+        prevIdx = idx;
       } else {
         elements.push('~');
       }
     }
-    // Guarantee at least one note so the pattern isn't all rests
-    const hasNote = elements.some(e => e !== '~');
-    if (!hasNote) {
+    // Guarantee at least one note
+    if (!elements.some(e => e !== '~')) {
       const pos = Math.floor(Math.random() * 16);
-      const note = randomChoice(penta);
-      const octave = weightedChoice([4, 5], [3, 2]);
-      elements[pos] = `${note}${octave}`;
+      const idx = selectMelodicNote(ladder.length, {
+        prevIndex: -1, chordIndices, direction: 0, tension,
+      });
+      elements[pos] = ladder[idx];
     }
     return elements;
   }
