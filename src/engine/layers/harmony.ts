@@ -1,6 +1,6 @@
 import { Layer } from '../layer';
 import { GenerativeState, Section } from '../../types';
-import { findSuspensions, pickBestSuspension } from '../../theory/suspension';
+import { findSuspensions, pickBestSuspension, suspensionResolutionPair } from '../../theory/suspension';
 import { getVoicingRange, applyVoicingSpread } from '../../theory/voicing-spread';
 import { findGuideTones } from '../../theory/guide-tones';
 import { adjustChordDensity } from '../../theory/harmonic-density';
@@ -505,18 +505,17 @@ export class HarmonyLayer implements Layer {
     // Check for suspension opportunity at chord changes
     let chordNotes = chord.notes;
     let hasSuspension = false;
+    let susResolutionVoicings: [string[], string[]] | null = null;
     if (state.chordChanged && state.chordHistory.length > 0) {
       const prevNotes = state.chordHistory[state.chordHistory.length - 1].notes;
       const suspensions = findSuspensions(prevNotes, chordNotes);
       const best = pickBestSuspension(suspensions);
       if (best && Math.random() < 0.4) { // 40% chance to use suspension
-        // Replace the resolution target note with the suspended note in the first half
-        // This means the chord starts with the suspended note, then resolves
-        const resolveIdx = chordNotes.indexOf(best.resolution);
-        if (resolveIdx >= 0) {
-          // Create a modified chord with the suspension
-          chordNotes = [...chordNotes];
-          chordNotes[resolveIdx] = best.suspended;
+        // Create sus → resolve voicing pair for time-split pattern
+        const pair = suspensionResolutionPair(chordNotes, best);
+        if (pair) {
+          susResolutionVoicings = pair;
+          chordNotes = pair[0]; // Use suspended voicing for downstream processing
           hasSuspension = true;
         }
       }
@@ -577,6 +576,12 @@ export class HarmonyLayer implements Layer {
     const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4'
       || hasSuspension || chordNotes.length > chord.notes.length
       || chord.quality === 'add9' || chord.quality === 'min9';
+
+    // Suspension resolution: sus → resolve within one cycle
+    if (hasSuspension && susResolutionVoicings) {
+      const chordStart = `note("${voicingsToPattern(susResolutionVoicings)}")`;
+      return this.buildSoundChain(chordStart, mood, gain, brightness, room);
+    }
 
     // Harmonic animation: inner voices move to neighbor tones within held chords
     // Only applies to raw note voicings with 3+ notes

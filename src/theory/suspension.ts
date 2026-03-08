@@ -116,6 +116,32 @@ export function findAnticipation(
   return best;
 }
 
+/**
+ * Create a two-step voicing pair for suspension resolution.
+ * The first voicing has the suspended note, the second has the resolution.
+ * When used in a pattern, this creates a "sus → resolve" within one cycle.
+ *
+ * @param chordNotes  Current chord notes (with octave)
+ * @param suspension  The suspension to apply
+ * @returns [suspendedVoicing, resolvedVoicing] pair, or null if invalid
+ */
+export function suspensionResolutionPair(
+  chordNotes: string[],
+  suspension: { suspended: string; resolution: string }
+): [string[], string[]] | null {
+  const resolveIdx = chordNotes.indexOf(suspension.resolution);
+  if (resolveIdx < 0) return null;
+
+  // Suspended voicing: replace resolution target with suspended note
+  const susVoicing = [...chordNotes];
+  susVoicing[resolveIdx] = suspension.suspended;
+
+  // Resolved voicing: original chord (already has the resolution)
+  const resVoicing = [...chordNotes];
+
+  return [susVoicing, resVoicing];
+}
+
 /** Quick MIDI approximation from note string (good enough for distance) */
 function approximateMidi(note: string): number {
   const match = note.match(/^([A-G]#?)(\d)$/);
