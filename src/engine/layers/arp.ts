@@ -33,7 +33,7 @@ export class ArpLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 3 }[state.mood] ?? 8;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -181,6 +181,66 @@ export class ArpLayer extends CachingLayer {
           .delay(0.5)
           .delaytime(0.66)
           .delayfeedback(0.5)
+          .orbit(${this.orbit})`;
+      }
+
+      case 'xtal': {
+        // Very sparse broken arps — high octave bells with massive reverb/delay
+        // SAW 85-92: ethereal, floating, distant chimes
+        const notes = this.spreadOctaves(baseNotes, 4, 6);
+        const fill = this.pickFill16(density * sectionMult * 0.15);
+        const steps = this.buildFromFill(notes, 'broken', 16, fill);
+        return `note("${steps.join(' ')}")
+          .sound("sine")
+          .fm(0.8)
+          .fmh(5)
+          .fmenv("exp")
+          .fmdecay(0.8)
+          .attack(0.03)
+          .decay(2)
+          .sustain(0.02)
+          .release(2.5)
+          .slow(6)
+          .gain(${(0.1 * (0.3 + density * 0.3)).toFixed(3)})
+          .hpf(300)
+          .lpf(${(1800 + brightness * 2000).toFixed(0)})
+          .pan(sine.range(0.1, 0.9).slow(11))
+          .room(${(room * 1.5).toFixed(2)})
+          .roomsize(8)
+          .delay(0.55)
+          .delaytime(0.75)
+          .delayfeedback(0.55)
+          .orbit(${this.orbit})`;
+      }
+
+      case 'syro': {
+        // Dense 16th note arps — acid-style, resonant filter sweep, multiple octaves
+        // Syro style: restless, intricate, technical
+        const notes = this.spreadOctaves(baseNotes, 2, 5);
+        const syroPattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
+          ? randomChoice<ArpPattern>(['up', 'updown'])
+          : state.section === 'build'
+            ? 'updown'
+            : randomChoice<ArpPattern>(['broken', 'down']);
+        const fill = this.pickFill16(density * sectionMult * 1.2);
+        const steps = this.buildFromFill(notes, syroPattern, 16, fill);
+        return `note("${steps.join(' ')}")
+          .sound("sawtooth")
+          .attack(0.001)
+          .decay(0.08)
+          .sustain(0.02)
+          .release(0.03)
+          .slow(1)
+          .gain(${(0.14 * (0.5 + density * 0.5)).toFixed(3)})
+          .hpf(200)
+          .lpf(sine.range(${(800 + brightness * 1000).toFixed(0)}, ${(3000 + brightness * 5000).toFixed(0)}).slow(2))
+          .resonance(${(12 + brightness * 8).toFixed(0)})
+          .pan(sine.range(0.15, 0.85).slow(1.5))
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.3)
+          .delaytime(0.125)
+          .delayfeedback(0.35)
           .orbit(${this.orbit})`;
       }
     }

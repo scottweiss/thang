@@ -31,7 +31,7 @@ export class MelodyLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
@@ -45,7 +45,7 @@ export class MelodyLayer extends CachingLayer {
     const gain = 0.25 * (0.4 + density * 0.6);
 
     // Build melodic phrase
-    const elements = mood === 'ambient'
+    const elements = (mood === 'ambient' || mood === 'xtal')
       ? this.buildAmbientPhrase(state, density)
       : this.buildStructuredPhrase(state, density);
 
@@ -164,6 +164,57 @@ export class MelodyLayer extends CachingLayer {
           .delaytime(0.5)
           .delayfeedback(0.4)
           .orbit(${this.orbit})`;
+
+      case 'xtal':
+        // Ethereal floating tones — sparse, high octave, drenched in reverb and delay
+        // SAW 85-92: hazy, distant, nostalgic
+        return `note("${elements.join(' ')}")
+          .sound("sine")
+          .fm(1)
+          .fmh(3)
+          .fmenv("exp")
+          .fmdecay(0.5)
+          .attack(0.05)
+          .decay(1.5)
+          .sustain(0.04)
+          .release(1.2)
+          .slow(5)
+          .gain(${(gain * 0.5).toFixed(3)})
+          .hpf(250)
+          .lpf(${(1500 + brightness * 1500).toFixed(0)})
+          .pan(sine.range(0.1, 0.9).slow(9))
+          .room(${(room * 1.3).toFixed(2)})
+          .roomsize(7)
+          .delay(0.5)
+          .delaytime(0.66)
+          .delayfeedback(0.5)
+          .orbit(${this.orbit})`;
+
+      case 'syro':
+        // Fast intricate FM plucks — busy, precise, digital
+        // Syro style: detailed, playful, technical
+        return `note("${elements.join(' ')}")
+          .sound("sine")
+          .fm(${(3 + brightness * 2).toFixed(1)})
+          .fmh(5)
+          .fmenv("exp")
+          .fmdecay(0.05)
+          .attack(0.001)
+          .decay(0.15)
+          .sustain(0.02)
+          .release(0.08)
+          .slow(1)
+          .gain(${(gain * 1.0).toFixed(3)})
+          .hpf(400)
+          .lpf(${(4000 + brightness * 6000).toFixed(0)})
+          .crush(${(10 + brightness * 3).toFixed(0)})
+          .pan(sine.range(0.15, 0.85).slow(1.5))
+          .room(${(room * 0.25).toFixed(2)})
+          .roomsize(1)
+          .delay(0.35)
+          .delaytime(0.125)
+          .delayfeedback(0.4)
+          .orbit(${this.orbit})`;
     }
   }
 
@@ -222,6 +273,8 @@ export class MelodyLayer extends CachingLayer {
       lofi: effectiveDensity * 0.4,
       trance: effectiveDensity * 0.5,
       avril: effectiveDensity * 0.25,
+      xtal: effectiveDensity * 0.2,
+      syro: effectiveDensity * 0.55,
     }[mood];
 
     const totalNotes = Math.max(1, Math.floor(noteCount * noteProbability));

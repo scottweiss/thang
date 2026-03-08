@@ -56,6 +56,21 @@ function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQua
         if (i === 3 && Math.random() < 0.5) return 'sus2'; // IV sometimes sus2
         return q;                                 // keep maj7/min7 for warmth
       });
+    case 'xtal':
+      // Dreamy open voicings — mostly min7 and sus2, hazy and warm
+      return baseQualities.map((q, i) => {
+        if (i === 0 || i === 3) return 'sus2';    // I and IV become sus2 — open, dreamy
+        if (q === 'maj7' || q === 'dom7') return 'min7'; // soften to minor 7ths
+        return q === 'min' ? 'min7' : q;           // enrich minor triads to 7ths
+      });
+    case 'syro':
+      // Tense, chromatic — keep dom7s and min7s, add some dissonance
+      return baseQualities.map((q, i) => {
+        if (i === 4) return 'dom7';                // V stays dominant — tension
+        if (q === 'maj') return 'dom7';            // major becomes dominant 7
+        if (q === 'min') return 'min7';            // minor becomes minor 7
+        return q;                                   // keep existing 7th chords
+      });
   }
 }
 

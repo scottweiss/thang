@@ -131,6 +131,51 @@ export class DroneLayer implements Layer {
           .room(${(room * 1.2).toFixed(2)})
           .roomsize(5)
           .orbit(${this.orbit})`;
+
+      case 'xtal':
+        // Deep reverberant sub bass — sine with slow FM sweep, massive room
+        // SAW 85-92 style: warm, hazy, submerged
+        return `note("${root}1")
+          .sound("sine")
+          .fm(sine.range(${(0.3 + brightness * 0.2).toFixed(1)}, ${(0.8 + brightness * 0.5).toFixed(1)}).slow(23))
+          .fmh(1)
+          .fmenv("exp")
+          .fmdecay(2)
+          .attack(1.2)
+          .decay(3)
+          .sustain(0.25)
+          .release(2)
+          .slow(5)
+          .gain(${(gain * 0.7).toFixed(3)})
+          .lpf(sine.range(${(80 + brightness * 60).toFixed(0)}, ${(180 + brightness * 120).toFixed(0)}).slow(19))
+          .pan(sine.range(0.4, 0.6).slow(17))
+          .room(${(room * 1.4).toFixed(2)})
+          .roomsize(8)
+          .orbit(${this.orbit})`;
+
+      case 'syro':
+        // Acid 303-style bass — sawtooth with high resonance, fast filter sweep
+        // Short decay, squelchy, aggressive
+        return `note("${root}2 ${root}2 ${fifth}2 ${root}2")
+          .sound("sawtooth")
+          .fm(${(0.8 + brightness * 0.5).toFixed(1)})
+          .fmh(0.5)
+          .fmenv("exp")
+          .fmdecay(0.08)
+          .attack(0.003)
+          .decay(0.12)
+          .sustain(0.15)
+          .release(0.05)
+          .slow(1)
+          .gain(${(gain * 1.2).toFixed(3)})
+          .lpf(sine.range(${(400 + brightness * 600).toFixed(0)}, ${(1200 + brightness * 2000).toFixed(0)}).slow(1.5))
+          .resonance(${(20 + brightness * 8).toFixed(0)})
+          .hpf(30)
+          .detune(sine.range(-5, 5).slow(2))
+          .pan(sine.range(0.35, 0.65).slow(3))
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .orbit(${this.orbit})`;
     }
   }
 }

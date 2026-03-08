@@ -84,6 +84,36 @@ const FILLS_INTO_GROOVE = [
   'bd ~ ~ ~ sd ~ bd ~ sd hh ~ ~ sd ~ hh cp',        // groovy entrance
 ];
 
+// Xtal breakbeat patterns — Amen break style but slower, warmer
+// Ambient breakbeats: loose, swung, tape-saturated
+const XTAL_PATTERNS = [
+  'bd ~ hh ~ sd ~ hh bd ~ hh bd ~ sd ~ hh ~',       // classic amen feel
+  'bd ~ ~ hh sd ~ hh ~ bd ~ hh ~ sd ~ ~ hh',        // broken amen
+  'bd hh ~ ~ sd ~ ~ hh bd ~ hh ~ sd ~ hh ~',        // shuffled break
+  'bd ~ hh ~ sd ~ hh ~ ~ hh bd ~ sd ~ hh ~',        // rolling break
+  'bd ~ ~ hh ~ ~ sd ~ bd hh ~ ~ sd ~ hh ~',          // sparse amen
+];
+
+const XTAL_VELOCITIES = [
+  '1 0.3 0.4 0.5 0.9 0.3 0.4 0.6 0.8 0.3 0.5 0.3 0.9 0.3 0.4 0.3',  // warm swing
+  '0.9 0.3 0.5 0.4 1 0.3 0.3 0.7 0.8 0.4 0.4 0.3 1 0.3 0.5 0.3',    // lazy feel
+];
+
+// Syro polyrhythmic patterns — complex, detailed, ghost notes everywhere
+// IDM percussion: precise, glitchy, odd-time accents
+const SYRO_PATTERNS = [
+  'bd hh hh cp bd hh sd hh bd hh hh cp sd hh hh hh', // dense 16th grid
+  'bd hh sd hh hh bd hh sd hh hh bd sd hh hh sd hh', // polyrhythmic
+  'bd hh hh hh sd hh hh bd hh sd hh hh bd hh sd hh', // rolling complex
+  'bd cp hh hh bd hh sd hh hh bd hh hh sd hh cp hh', // accented poly
+  'hh bd hh sd hh hh bd hh sd hh bd hh hh sd hh bd', // offset grid
+];
+
+const SYRO_VELOCITIES = [
+  '1 0.3 0.4 0.8 0.9 0.3 1 0.3 0.5 0.4 0.8 0.3 1 0.3 0.4 0.6',     // machine groove
+  '0.9 0.4 0.3 0.5 1 0.3 0.9 0.4 0.3 0.5 0.7 0.3 1 0.4 0.3 0.8',   // glitchy feel
+];
+
 export class TextureLayer extends CachingLayer {
   name = 'texture';
   orbit = 3;
@@ -94,7 +124,7 @@ export class TextureLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12 }[state.mood] ?? 8;
+    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12, xtal: 10, syro: 4 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
@@ -107,8 +137,8 @@ export class TextureLayer extends CachingLayer {
     const room = 0.3 + state.params.spaciousness * 0.3;
     const brightness = state.params.brightness;
 
-    // Play a transition fill on section changes (not for ambient/avril)
-    if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril') {
+    // Play a transition fill on section changes (not for ambient/avril/xtal)
+    if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril' && mood !== 'xtal') {
       const fill = this.getTransitionFill(state.section);
       if (fill) {
         const fillGain = gain * (mood === 'trance' ? 1.2 : 0.8);
@@ -137,6 +167,12 @@ export class TextureLayer extends CachingLayer {
 
       case 'avril':
         return this.buildAvrilPattern(density, gain, room, brightness);
+
+      case 'xtal':
+        return this.buildXtalPattern(density, gain, room, brightness, state.section);
+
+      case 'syro':
+        return this.buildSyroPattern(density, gain * 1.1, room * 0.4, brightness, state.section);
     }
   }
 
@@ -266,6 +302,60 @@ export class TextureLayer extends CachingLayer {
       .lpf(${(8000 + brightness * 3000).toFixed(0)})
       .room(${(room * 0.8).toFixed(2)})
       .roomsize(3)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildXtalPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
+  ): string {
+    let pattern = randomChoice(XTAL_PATTERNS);
+
+    if (section === 'breakdown') {
+      pattern = this.thinPattern(pattern, 0.35);
+    }
+    if (density > 0.5) {
+      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.2);
+    }
+
+    // Xtal: warm, saturated breakbeats — heavy reverb, tape-like
+    const xtalGainPattern = this.applyVelocity(gain * 0.7, randomChoice(XTAL_VELOCITIES));
+    return `sound("${pattern}")
+      .slow(2)
+      .gain("${xtalGainPattern}")
+      .lpf(${(1200 + brightness * 1500).toFixed(0)})
+      .hpf(60)
+      .pan(sine.range(0.3, 0.7).slow(7))
+      .room(${(room * 1.4).toFixed(2)})
+      .roomsize(5)
+      .delay(0.2)
+      .delaytime(0.5)
+      .delayfeedback(0.2)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildSyroPattern(
+    density: number, gain: number, room: number,
+    brightness: number, section: Section
+  ): string {
+    let pattern = randomChoice(SYRO_PATTERNS);
+
+    if (section === 'breakdown') {
+      pattern = this.thinPattern(pattern, 0.5);
+    }
+    // Always add ghost hats for density — syro is busy
+    pattern = this.addGhostHats(pattern, 0.15 + density * 0.15);
+
+    // Syro: tight, dry, precise — minimal reverb, bright, crisp
+    const syroGainPattern = this.applyVelocity(gain, randomChoice(SYRO_VELOCITIES));
+    return `sound("${pattern}")
+      .slow(1)
+      .gain("${syroGainPattern}")
+      .hpf(50)
+      .lpf(${(5000 + brightness * 6000).toFixed(0)})
+      .crush(${(12 + brightness * 3).toFixed(0)})
+      .room(${(room * 0.3).toFixed(2)})
+      .roomsize(0.5)
       .orbit(${this.orbit})`;
   }
 

@@ -18,6 +18,8 @@ const MOOD_PALETTES: Record<Mood, { bg: string; hues: number[]; saturation: numb
   lofi: { bg: '#0c0a08', hues: [330, 20, 40, 350], saturation: 25, lightness: 35 },
   trance: { bg: '#040810', hues: [190, 210, 240, 170], saturation: 60, lightness: 40 },
   avril: { bg: '#0a0806', hues: [35, 45, 25, 15], saturation: 25, lightness: 35 },
+  xtal: { bg: '#04060e', hues: [200, 220, 240, 260], saturation: 45, lightness: 30 },
+  syro: { bg: '#0a0410', hues: [280, 300, 320, 340], saturation: 55, lightness: 40 },
 };
 
 export class Visualizer {
@@ -121,7 +123,7 @@ export class Visualizer {
     this.sectionFlash *= 0.94;
 
     // Background fade (creates trails)
-    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'avril' ? 0.04 : 0.06;
+    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'syro' ? 0.14 : this.currentMood === 'avril' ? 0.04 : this.currentMood === 'xtal' ? 0.03 : 0.06;
     ctx.fillStyle = palette.bg;
     ctx.globalAlpha = fadeAlpha + this.pulseIntensity * 0.05;
     ctx.fillRect(0, 0, w, h);
@@ -148,7 +150,7 @@ export class Visualizer {
     }
 
     // Draw connection lines between nearby particles (ambient/downtempo only)
-    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo' || this.currentMood === 'avril') && this.particles.length > 2) {
+    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo' || this.currentMood === 'avril' || this.currentMood === 'xtal') && this.particles.length > 2) {
       const connectDist = 80 + this.sectionEnergy * 60;
       ctx.strokeStyle = `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness + 10}%, 0.06)`;
       ctx.lineWidth = 0.5;
@@ -228,6 +230,8 @@ export class Visualizer {
       lofi: 1.2,
       trance: 2.5,
       avril: 0.2,
+      xtal: 0.4,
+      syro: 3.0,
     }[this.currentMood];
     // Section energy modulates spawn rate — intro is sparse, peak floods particles
     const sectionMult = 0.4 + this.sectionEnergy * 0.8;
@@ -296,6 +300,32 @@ export class Visualizer {
         maxLife = 300 + Math.random() * 400;
         break;
       }
+      case 'xtal': {
+        // Slow wide orbital drift — like ambient but wider, deeper blue
+        const angle = Math.random() * Math.PI * 2;
+        const dist = w * 0.2 + Math.random() * w * 0.4 * spread;
+        x = cx + Math.cos(angle) * dist;
+        y = cy + Math.sin(angle) * dist;
+        vx = (Math.random() - 0.5) * 0.2;
+        vy = (Math.random() - 0.5) * 0.2;
+        size = 2.5 + Math.random() * 7;
+        maxLife = 250 + Math.random() * 400;
+        break;
+      }
+      case 'syro': {
+        // Fast chaotic bursts from random points
+        const spawnX = Math.random() * w;
+        const spawnY = Math.random() * h;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1.5 + Math.random() * 4;
+        x = spawnX;
+        y = spawnY;
+        vx = Math.cos(angle) * speed;
+        vy = Math.sin(angle) * speed;
+        size = 0.8 + Math.random() * 2.5;
+        maxLife = 40 + Math.random() * 80;
+        break;
+      }
     }
 
     // Section energy scales particle size — peak sections get bigger, more visible particles
@@ -349,6 +379,25 @@ export class Visualizer {
         p.vy *= 0.999;
         break;
       }
+      case 'xtal': {
+        // Wide gentle orbital — like ambient but slower and wider radius
+        const dx = p.x - w / 2;
+        const dy = p.y - h / 2;
+        const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+        p.vx += (-dy / dist) * 0.008;
+        p.vy += (dx / dist) * 0.008;
+        p.vx *= 0.997;
+        p.vy *= 0.997;
+        break;
+      }
+      case 'syro': {
+        // Fast, jittery, random direction changes — chaotic
+        p.vx += (Math.random() - 0.5) * 0.3;
+        p.vy += (Math.random() - 0.5) * 0.3;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        break;
+      }
     }
 
     p.x += p.vx;
@@ -362,7 +411,7 @@ export class Visualizer {
 
     ctx.beginPath();
 
-    if (this.currentMood === 'trance' && p.size > 2) {
+    if ((this.currentMood === 'trance' || this.currentMood === 'syro') && p.size > 2) {
       // Diamond shape for trance
       ctx.moveTo(p.x, p.y - p.size);
       ctx.lineTo(p.x + p.size * 0.6, p.y);

@@ -151,6 +151,59 @@ export class HarmonyLayer implements Layer {
           .delaytime(0.5)
           .delayfeedback(0.35)
           .orbit(${this.orbit})`;
+
+      case 'xtal':
+        // Lush warm pad — very slow attack, wide stereo, heavy reverb
+        // SAW 85-92: dreamy, washed-out, nostalgic warmth
+        return `chord("${chord.symbol}")
+          .voicing()
+          .sound("sine")
+          .fm(sine.range(${(1 + brightness * 0.5).toFixed(1)}, ${(2 + brightness * 1).toFixed(1)}).slow(21))
+          .fmh(2)
+          .fmenv("exp")
+          .fmdecay(1.2)
+          .attack(1.2)
+          .decay(3)
+          .sustain(0.5)
+          .release(2)
+          .slow(5)
+          .gain(${(gain * 0.6).toFixed(3)})
+          .lpf(sine.range(${(500 + brightness * 300).toFixed(0)}, ${(900 + brightness * 800).toFixed(0)}).slow(17))
+          .pan(sine.range(0.1, 0.9).slow(13))
+          .detune(sine.range(-2, 2).slow(11))
+          .room(${(room * 1.3).toFixed(2)})
+          .roomsize(7)
+          .delay(0.35)
+          .delaytime(0.66)
+          .delayfeedback(0.4)
+          .orbit(${this.orbit})`;
+
+      case 'syro':
+        // Glitchy FM bell/pluck — high harmonicity, bit crush, stereo ping-pong
+        // Syro style: precise, digital, detailed
+        return `chord("${chord.symbol}")
+          .voicing()
+          .sound("sine")
+          .fm(${(4 + brightness * 3).toFixed(1)})
+          .fmh(7)
+          .fmenv("exp")
+          .fmdecay(0.03)
+          .attack(0.001)
+          .decay(0.25)
+          .sustain(0.03)
+          .release(0.15)
+          .slow(1)
+          .gain(${(gain * 0.9).toFixed(3)})
+          .hpf(300)
+          .lpf(${(3500 + brightness * 5000).toFixed(0)})
+          .crush(${(8 + brightness * 2).toFixed(0)})
+          .pan(sine.range(0.1, 0.9).slow(2))
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.4)
+          .delaytime(0.1875)
+          .delayfeedback(0.45)
+          .orbit(${this.orbit})`;
     }
   }
 }
