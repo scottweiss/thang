@@ -37,6 +37,7 @@ import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultipli
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../theory/ensemble-breath';
 import { tensionDisplacementPattern, shouldApplyTensionRhythm } from '../theory/tension-rhythm';
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../theory/tension-register';
+import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../theory/textural-contrast';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -183,6 +184,9 @@ export abstract class CachingLayer implements Layer {
 
     // Tension articulation: note length tracks real-time tension arc
     result = this.applyTensionArticulation(result, state);
+
+    // Textural contrast: differentiate ADSR between layers for clarity
+    result = this.applyTexturalContrast(result, state);
 
     // Velocity evolution: per-note dynamics morph with section progress
     result = this.applyVelocityEvolution(result, state);
@@ -972,6 +976,47 @@ export abstract class CachingLayer implements Layer {
     // Gain boost: brief volume swell
     if (emphasis.gainBoost > 0.01) {
       result = this.applyGainMultiplier(result, 1.0 + emphasis.gainBoost);
+    }
+
+    return result;
+  }
+
+  /**
+   * Differentiate ADSR envelopes between layers for textural contrast.
+   * Rhythmic layers get shorter envelopes, sustain layers get longer.
+   */
+  private applyTexturalContrast(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTexturalContrast(state.mood, state.activeLayers)) return pattern;
+
+    const mult = texturalEnvelopeMultipliers(
+      this.name, state.section, state.mood, state.activeLayers
+    );
+
+    let result = pattern;
+
+    if (Math.abs(mult.attack - 1.0) > 0.02) {
+      result = result.replace(
+        /\.attack\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.attack(${(parseFloat(val) * mult.attack).toFixed(3)})`
+      );
+    }
+    if (Math.abs(mult.decay - 1.0) > 0.02) {
+      result = result.replace(
+        /\.decay\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.decay(${(parseFloat(val) * mult.decay).toFixed(3)})`
+      );
+    }
+    if (Math.abs(mult.sustain - 1.0) > 0.02) {
+      result = result.replace(
+        /\.sustain\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.sustain(${(parseFloat(val) * mult.sustain).toFixed(4)})`
+      );
+    }
+    if (Math.abs(mult.release - 1.0) > 0.02) {
+      result = result.replace(
+        /\.release\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.release(${(parseFloat(val) * mult.release).toFixed(3)})`
+      );
     }
 
     return result;

@@ -42,6 +42,7 @@ import { planGuideTonePath, guideToneSmoothnessScore, guideToneWeight } from '..
 import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../../theory/tension-register';
 import { extensionImprovesSonority } from '../../theory/vertical-sonority';
 import { applySpacingOptimization } from '../../theory/voice-spacing';
+import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../../theory/textural-contrast';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -376,6 +377,35 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.sustain\((\d+(?:\.\d+)?)\)/g,
           (_, val) => `.sustain(${(parseFloat(val) * tsMult).toFixed(4)})`
+        );
+      }
+    }
+
+    // Textural contrast: differentiate ADSR between layers
+    if (shouldApplyTexturalContrast(state.mood, state.activeLayers)) {
+      const tcMult = texturalEnvelopeMultipliers(this.name, state.section, state.mood, state.activeLayers);
+      if (Math.abs(tcMult.attack - 1.0) > 0.02) {
+        result = result.replace(
+          /\.attack\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.attack(${(parseFloat(val) * tcMult.attack).toFixed(3)})`
+        );
+      }
+      if (Math.abs(tcMult.decay - 1.0) > 0.02) {
+        result = result.replace(
+          /\.decay\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.decay(${(parseFloat(val) * tcMult.decay).toFixed(3)})`
+        );
+      }
+      if (Math.abs(tcMult.sustain - 1.0) > 0.02) {
+        result = result.replace(
+          /\.sustain\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.sustain(${(parseFloat(val) * tcMult.sustain).toFixed(4)})`
+        );
+      }
+      if (Math.abs(tcMult.release - 1.0) > 0.02) {
+        result = result.replace(
+          /\.release\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.release(${(parseFloat(val) * tcMult.release).toFixed(3)})`
         );
       }
     }
