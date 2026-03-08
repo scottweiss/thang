@@ -15,6 +15,7 @@ import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../theo
 import { evolvedVelocity, applyVelocityEvolution } from '../theory/velocity-evolution';
 import { slowMultiplier, shouldApplyRhythmicAcceleration } from '../theory/rhythmic-acceleration';
 import { chorusDepth, shouldApplyChorus } from '../theory/chorus-depth';
+import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -74,6 +75,9 @@ export abstract class CachingLayer implements Layer {
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
+
+    // Pattern degradation: thin out notes in sparse sections, fill in at peaks
+    result = this.applyPatternDegrade(result, state);
 
     // Gain arc: crescendo/decrescendo within sections
     result = this.applyGainArc(result, state);
@@ -440,6 +444,25 @@ export abstract class CachingLayer implements Layer {
         const newSlow = Math.max(0.25, parseFloat(val) * mult);
         return `${indent}.slow(${newSlow.toFixed(2)})`;
       }
+    );
+  }
+
+  /**
+   * Apply degradeBy() to thin out note patterns in sparse sections.
+   * Intros/breakdowns lose notes, peaks play at full density.
+   * Inserted before .orbit() in the chain.
+   */
+  private applyPatternDegrade(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyDegrade(this.name, state.section)) return pattern;
+    if (pattern.includes('.degradeBy(')) return pattern;
+
+    const amount = patternDegrade(this.name, state.section, state.sectionProgress ?? 0);
+    if (amount < 0.03) return pattern;
+
+    // Insert .degradeBy() before .orbit()
+    return pattern.replace(
+      /\.orbit\((\d+)\)/,
+      `.degradeBy(${amount.toFixed(2)}).orbit($1)`
     );
   }
 

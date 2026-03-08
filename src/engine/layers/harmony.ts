@@ -16,6 +16,7 @@ import { attackMultiplier, decayMultiplier, sustainMultiplier, releaseMultiplier
 import { crushOffset, shouldApplyCrushEvolution } from '../../theory/crush-evolution';
 import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../../theory/frequency-band';
 import { chorusDepth, shouldApplyChorus } from '../../theory/chorus-depth';
+import { patternDegrade, shouldApplyDegrade } from '../../theory/pattern-density';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -202,6 +203,17 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.release\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
+        );
+      }
+    }
+
+    // Pattern degradation: thin out notes in sparse sections
+    if (shouldApplyDegrade(this.name, state.section) && !result.includes('.degradeBy(')) {
+      const amount = patternDegrade(this.name, state.section, state.sectionProgress ?? 0);
+      if (amount >= 0.03) {
+        result = result.replace(
+          /\.orbit\((\d+)\)/,
+          `.degradeBy(${amount.toFixed(2)}).orbit($1)`
         );
       }
     }
