@@ -24,6 +24,7 @@ import { shouldApplyPolyrhythm, selectGrouping, polyrhythmAccentMask } from '../
 import { shouldArpAnticipate, blendNextChordTones } from '../../theory/arp-anticipation';
 import { shouldEchoMotif, transposeMotif, selectEchoInterval } from '../../theory/imitative-echo';
 import { arpRegisterOffset, shouldApplyRegisterComplement } from '../../theory/register-complement';
+import { shouldExchangeVoices, selectExchangeNotes } from '../../theory/voice-exchange';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -108,6 +109,17 @@ export class ArpLayer extends CachingLayer {
       // Take 1-2 notes from the motif to enrich the arp palette
       const motifSample = state.activeMotif.slice(0, Math.min(2, state.activeMotif.length));
       baseNotes = [...chord.notes, ...motifSample];
+    }
+
+    // Voice exchange: borrow specific melody pitches for counterpoint richness
+    if (state.activeMotif && state.activeMotif.length >= 2 &&
+        shouldExchangeVoices(state.tick, mood, section)) {
+      const exchanged = selectExchangeNotes(
+        state.activeMotif, baseNotes, chord.notes, 1
+      );
+      if (exchanged.length > 0) {
+        baseNotes = [...baseNotes, ...exchanged];
+      }
     }
 
     // Pitch complementarity: enrich arp with scale notes the melody ISN'T playing
