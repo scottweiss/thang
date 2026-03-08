@@ -7,6 +7,7 @@ import { adjustChordDensity } from '../../theory/harmonic-density';
 import { stereoWidth } from '../../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../../theory/micro-timing';
 import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../../theory/filter-envelope';
+import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -46,6 +47,26 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
+        );
+      }
+    }
+
+    // Spatial depth: reverb breathes with section progress
+    if (shouldApplySpatialDepth(state.section)) {
+      const progress = state.sectionProgress ?? 0;
+      const tension = state.tension?.overall ?? 0.5;
+      const rMult = roomMultiplier(state.section, progress, tension);
+      const sMult = roomsizeMultiplier(state.section, progress);
+      if (Math.abs(rMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.room\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.room(${(parseFloat(val) * rMult).toFixed(2)})`
+        );
+      }
+      if (Math.abs(sMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
         );
       }
     }

@@ -3,6 +3,7 @@ import { GenerativeState, Mood } from '../types';
 import { stereoWidth } from '../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../theory/micro-timing';
 import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../theory/filter-envelope';
+import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../theory/spatial-depth';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -29,6 +30,9 @@ export abstract class CachingLayer implements Layer {
 
     // Filter envelope: smooth LPF sweep over section duration
     result = this.applyFilterEnvelope(result, state);
+
+    // Spatial depth: reverb breathes with section progress
+    result = this.applySpatialDepth(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -113,6 +117,39 @@ export abstract class CachingLayer implements Layer {
       /\.lpf\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
     );
+  }
+
+  /**
+   * Scale .room() and .roomsize() values by section-progress multipliers.
+   * Builds contract space (pressure), breakdowns expand (ethereal).
+   */
+  private applySpatialDepth(pattern: string, state: GenerativeState): string {
+    if (!shouldApplySpatialDepth(state.section)) return pattern;
+
+    const progress = state.sectionProgress ?? 0;
+    const tension = state.tension?.overall ?? 0.5;
+    const rMult = roomMultiplier(state.section, progress, tension);
+    const sMult = roomsizeMultiplier(state.section, progress);
+
+    let result = pattern;
+
+    // Scale static .room(NUMBER) values
+    if (Math.abs(rMult - 1.0) > 0.02) {
+      result = result.replace(
+        /\.room\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.room(${(parseFloat(val) * rMult).toFixed(2)})`
+      );
+    }
+
+    // Scale static .roomsize(NUMBER) values
+    if (Math.abs(sMult - 1.0) > 0.02) {
+      result = result.replace(
+        /\.roomsize\((\d+(?:\.\d+)?)\)/g,
+        (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+      );
+    }
+
+    return result;
   }
 
   /**
