@@ -8,6 +8,7 @@ import { phraseDensityMask } from '../../theory/phrase';
 import { MotifMemory } from '../../theory/motif-memory';
 import { getAdjustedOctaveRange } from '../../theory/register';
 import { applyMelodicDynamics } from '../../theory/melodic-dynamics';
+import { addOrnaments } from '../../theory/ornamentation';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -472,7 +473,8 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
-    return elements;
+    // Add ornamental approach notes (mood and tension dependent)
+    return addOrnaments(elements, ladder, mood, state.tension?.overall ?? 0.5);
   }
 
   // Build a pitch ladder from pentatonic notes across octaves
