@@ -98,6 +98,9 @@ import { harmonicInertia, changeReluctance, cadentialEscape, shouldApplyInertia 
 import { noteSalience, salienceGainBoost, backgroundGainReduction, shouldApplySalience } from '../theory/auditory-salience';
 import { chordDistance, distanceBias, shouldApplyTopology } from '../theory/harmonic-topology';
 import { trajectoryMomentum, continuationBias, shouldApplyContinuation } from '../theory/gestalt-continuation';
+import { shouldBreakPattern, reengagementGain } from '../theory/loop-engagement-cycle';
+import { harmonicComplexity, shouldSimplifyChord, simplificationImpactBonus } from '../theory/harmonic-saturation-index';
+import { estimateMetabolism, metabolismDensityCorrection, shouldAdjustMetabolism } from '../theory/event-metabolism';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -870,6 +873,34 @@ export class GenerativeController {
       }
     }
 
+    // Event metabolism: adjust density when event rate deviates from mood target
+    {
+      const layerDensities: number[] = [];
+      for (const result of layerResults) {
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const parts = noteMatch[1].split(/\s+/);
+        layerDensities.push(parts.filter((n: string) => n !== '~').length / parts.length);
+      }
+      const metabolism = estimateMetabolism(layerDensities, 4);
+      if (shouldAdjustMetabolism(metabolism, this.state.mood, this.state.section)) {
+        const densityCorr = metabolismDensityCorrection(metabolism, this.state.mood, this.state.section);
+        if (Math.abs(densityCorr - 1.0) > 0.05) {
+          for (const result of layerResults) {
+            if (result.name === 'drone' || result.name === 'atmosphere') continue;
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * densityCorr).toFixed(4)})`;
+                return `.gain((${expr}) * ${densityCorr.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
     // Rhythmic hocket: cross-layer density anticorrelation for clarity
     if (shouldApplyHocket(this.state.mood, this.state.section)) {
       const densities: Record<string, number> = {};
@@ -893,6 +924,41 @@ export class GenerativeController {
               return `.gain((${expr}) * ${hMult.toFixed(4)})`;
             }
           );
+        }
+      }
+    }
+
+    // Loop engagement: thin density when listener entrainment plateaus
+    {
+      const loopReps = this.state.ticksSinceChordChange ?? 0;
+      if (shouldBreakPattern(Math.min(1, loopReps * 0.12), this.state.mood)) {
+        // Reduce gain slightly to create micro-variation when loop is stale
+        const dimMult = 0.95;
+        for (const result of layerResults) {
+          if (result.name === 'drone') continue;
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * dimMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${dimMult.toFixed(4)})`;
+            }
+          );
+        }
+      } else if (loopReps === 1 && this.state.chordChanged) {
+        // Re-engagement boost when chord just changed after long hold
+        const boost = reengagementGain(1, this.state.mood);
+        if (boost > 1.01) {
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
+                return `.gain((${expr}) * ${boost.toFixed(4)})`;
+              }
+            );
+          }
         }
       }
     }
@@ -1255,6 +1321,37 @@ export class GenerativeController {
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
                 return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
               }
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic saturation: brightness bonus when simplifying from oversaturated chords
+    {
+      const NOTE_PC_HS: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const currentPcs = this.state.currentChord.notes
+        .map(n => NOTE_PC_HS[n.replace(/\d+$/, '')])
+        .filter((pc): pc is number => pc !== undefined);
+      const complexity = harmonicComplexity(currentPcs);
+      const prevPcs = this.state.chordHistory.length > 0
+        ? this.state.chordHistory[this.state.chordHistory.length - 1].notes
+            .map(n => NOTE_PC_HS[n.replace(/\d+$/, '')])
+            .filter((pc): pc is number => pc !== undefined)
+        : [];
+      const prevComplexity = harmonicComplexity(prevPcs);
+      if (prevComplexity > complexity) {
+        const impact = simplificationImpactBonus(prevComplexity, complexity, this.state.mood);
+        if (impact > 0.05) {
+          const brightMult = 1.0 + impact * 0.2;
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
             );
           }
         }
