@@ -95,6 +95,9 @@ import { registerCollision, suggestOctaveShift, collisionGainReduction, shouldAv
 import { coherenceFmMultiplier, shouldApplyCoherence } from '../theory/spectral-temporal-coherence';
 import { shouldApplyFugato, fugatoEntryDelay, fugatoOctaveOffset, transposeMotif } from '../theory/cross-layer-fugato';
 import { harmonicInertia, changeReluctance, cadentialEscape, shouldApplyInertia } from '../theory/harmonic-inertia';
+import { noteSalience, salienceGainBoost, backgroundGainReduction, shouldApplySalience } from '../theory/auditory-salience';
+import { chordDistance, distanceBias, shouldApplyTopology } from '../theory/harmonic-topology';
+import { trajectoryMomentum, continuationBias, shouldApplyContinuation } from '../theory/gestalt-continuation';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -165,6 +168,8 @@ export class GenerativeController {
   private prevEnergy = 0.2;
   /** Timbral memory bank */
   private timbralMemory = new TimbralMemoryBank();
+  /** Gestalt continuation trajectory history */
+  private trajectoryHistory: Record<string, number[]> = {};
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -587,6 +592,11 @@ export class GenerativeController {
       // Gravity escalation: boost tonic resolution at high momentum
       if (gravEsc > 1.05 && degree === 0) {
         bias *= gravEsc;
+      }
+      // Harmonic topology: bias toward preferred perceptual distance
+      if (shouldApplyTopology(this.state.mood)) {
+        const dist = chordDistance(currentDegree, degree, currentQuality, 'maj');
+        bias *= distanceBias(dist, this.state.mood, this.state.section);
       }
       return bias;
     });
@@ -1122,6 +1132,50 @@ export class GenerativeController {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
                 return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
+    // Auditory salience: boost focal-point events, reduce background
+    if (shouldApplySalience(this.state.mood, this.state.section)) {
+      let maxSalience = 0;
+      let maxSalienceLayer = '';
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const notes = noteMatch[1].split(/\s+/).filter((n: string) => n !== '~');
+        if (notes.length === 0) continue;
+        // Estimate register extremity from MIDI range
+        const density = notes.length / (noteMatch[1].split(/\s+/).length || 1);
+        const salience = noteSalience(
+          density > 0.7 ? 0.3 : 0.6, // sparse = more register movement
+          0.3, // moderate spectral baseline
+          result.name === 'arp' ? 0.6 : 0.3, // arp more syncopated
+          density > 0.5 ? 0.4 : 0.2,
+          this.state.mood, this.state.section
+        );
+        if (salience > maxSalience) {
+          maxSalience = salience;
+          maxSalienceLayer = result.name;
+        }
+      }
+      if (maxSalience > 0.05 && maxSalienceLayer) {
+        for (const result of layerResults) {
+          if (result.name === 'drone' || result.name === 'atmosphere') continue;
+          const mult = result.name === maxSalienceLayer
+            ? salienceGainBoost(maxSalience, this.state.mood)
+            : backgroundGainReduction(maxSalience, this.state.mood);
+          if (Math.abs(mult - 1.0) > 0.01) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
+                return `.gain((${expr}) * ${mult.toFixed(4)})`;
               }
             );
           }
@@ -1945,6 +1999,35 @@ export class GenerativeController {
               return `.pan(sine.range(${(mid - halfRange).toFixed(2)}, ${(mid + halfRange).toFixed(2)})`;
             }
           );
+        }
+      }
+    }
+
+    // Gestalt continuation: bias gain toward continuing established trajectories
+    if (shouldApplyContinuation(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        const gainMatch = result.code.match(/\.gain\(([0-9.]+)\)/);
+        if (!gainMatch) continue;
+        const currentGain = parseFloat(gainMatch[1]);
+        // Track gain history for this layer
+        const histKey = `gain_${result.name}`;
+        if (!this.trajectoryHistory) this.trajectoryHistory = {};
+        if (!this.trajectoryHistory[histKey]) this.trajectoryHistory[histKey] = [];
+        this.trajectoryHistory[histKey].push(currentGain);
+        if (this.trajectoryHistory[histKey].length > 6) this.trajectoryHistory[histKey].shift();
+        const momentum = trajectoryMomentum(this.trajectoryHistory[histKey]);
+        if (Math.abs(momentum) > 0.1) {
+          const bias = continuationBias(momentum, currentGain, currentGain, this.state.mood, this.state.section);
+          // Gently nudge gain in trajectory direction
+          const nudge = momentum * 0.02 * bias;
+          const nudgedGain = Math.max(0.01, Math.min(0.95, currentGain + nudge));
+          if (Math.abs(nudgedGain - currentGain) > 0.005) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              () => `.gain(${nudgedGain.toFixed(4)})`
+            );
+          }
         }
       }
     }
