@@ -22,6 +22,7 @@
 
 import { consonanceWeights } from './intervallic-consonance';
 import { tendencyWeights } from './tendency-tones';
+import { intervalCharacterWeights } from './interval-character';
 
 /**
  * Context for computing note weights.
@@ -126,6 +127,17 @@ export function melodicWeights(
     );
     for (let i = 0; i < ladderSize; i++) {
       weights[i] *= tWeights[i];
+    }
+  }
+
+  // 6. Characteristic intervals (mood-specific melodic interval DNA)
+  if (ctx.prevIndex >= 0 && ctx.ladderPitches && ctx.ladderPitches.length === ladderSize && ctx.mood) {
+    const prevPitch = ctx.ladderPitches[ctx.prevIndex];
+    if (prevPitch !== undefined) {
+      const iWeights = intervalCharacterWeights(ladderSize, ctx.ladderPitches, prevPitch, ctx.mood);
+      for (let i = 0; i < ladderSize; i++) {
+        weights[i] *= iWeights[i];
+      }
     }
   }
 
