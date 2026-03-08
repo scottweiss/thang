@@ -9,11 +9,4 @@ export default defineConfig({
       '@strudel/webaudio',
     ],
   },
-  resolve: {
-    dedupe: [
-      'superdough',
-      '@strudel/core',
-      '@strudel/webaudio',
-    ],
-  },
 });

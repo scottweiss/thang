@@ -8,4 +8,10 @@ declare module '@strudel/web' {
 declare module '@strudel/soundfonts' {
   export function registerSoundfonts(): Promise<void>;
   export function setSoundfontUrl(url: string): void;
+  export function getFontBufferSource(name: string, value: any, ctx: AudioContext): Promise<AudioBufferSourceNode>;
+}
+
+declare module '@strudel/soundfonts/gm.mjs' {
+  const gm: Record<string, string[]>;
+  export default gm;
 }
