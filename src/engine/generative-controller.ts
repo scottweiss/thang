@@ -21,6 +21,7 @@ import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../the
 import type { TrajectoryState } from '../theory/form-trajectory';
 import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
 import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theory/tritone-sub';
+import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from '../theory/chromatic-approach';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -376,6 +377,20 @@ export class GenerativeController {
         quality: 'dom7',
         notes: tritoneSubNotes(nextChord.root, 3),
         degree: nextChord.degree, // keep original degree for resolution tracking
+      };
+    }
+
+    // Chromatic approach: insert a passing dim7 chord before the target
+    // (e.g., C → C#dim7 → Dm for ascending chromatic bass)
+    if (cadentialTarget === null &&
+        shouldInsertApproachChord(this.state.currentChord.root, nextChord.root, this.state.mood, this.state.section)) {
+      const appRoot = approachChordRoot(this.state.currentChord.root, nextChord.root);
+      nextChord = {
+        symbol: `${appRoot}dim7`,
+        root: appRoot,
+        quality: 'dim',
+        notes: approachChordNotes(appRoot, 3),
+        degree: nextChord.degree, // keep target degree for resolution
       };
     }
 
