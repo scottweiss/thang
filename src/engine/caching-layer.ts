@@ -5,6 +5,7 @@ import { generateNudgePattern, shouldApplyMicroTiming } from '../theory/micro-ti
 import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../theory/filter-envelope';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../theory/spatial-depth';
 import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../theory/delay-evolution';
+import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-morph';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -37,6 +38,9 @@ export abstract class CachingLayer implements Layer {
 
     // Delay evolution: echo intensity builds with section
     result = this.applyDelayEvolution(result, state);
+
+    // Timbral morphing: FM index evolves within sections
+    result = this.applyTimbralMorph(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -193,6 +197,25 @@ export abstract class CachingLayer implements Layer {
     }
 
     return result;
+  }
+
+  /**
+   * Scale .fm() values by section-progress multiplier for timbral evolution.
+   * Builds brighten (higher FM index), breakdowns warm (lower FM index).
+   */
+  private applyTimbralMorph(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTimbralMorph(state.section)) return pattern;
+    if (!pattern.includes('.fm(')) return pattern;
+
+    const mult = fmMorphMultiplier(state.section, state.sectionProgress ?? 0);
+
+    if (Math.abs(mult - 1.0) < 0.03) return pattern;
+
+    // Scale static .fm(NUMBER) values — skip .fm() with sine.range or other patterns
+    return pattern.replace(
+      /\.fm\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.fm(${(parseFloat(val) * mult).toFixed(1)})`
+    );
   }
 
   /**
