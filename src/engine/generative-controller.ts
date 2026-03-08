@@ -252,6 +252,9 @@ import { voiceLeadingGain } from '../theory/voice-leading-smoothness';
 import { colorShiftLpf } from '../theory/harmonic-color-shift';
 import { reentryGain } from '../theory/rhythmic-expectation-reset';
 import { headroomGain } from '../theory/dynamic-headroom-management';
+import { stepPreferenceGain } from '../theory/melodic-step-preference';
+import { bassClarityHpf } from '../theory/harmonic-bass-clarity';
+import { arrivalEmphasisGain } from '../theory/section-arrival-emphasis';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4589,6 +4592,49 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Melodic step preference: stepwise motion over leaps
+    {
+      const stepInterval = Math.abs((this.state.currentChord?.degree ?? 0) - 1) * 2;
+      const spGain = stepPreferenceGain(stepInterval, this.state.mood);
+      if (Math.abs(spGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic bass clarity: HPF separation for harmony
+    {
+      const droneActive = layerResults.some(r => r.name === 'drone');
+      const bcHpf = bassClarityHpf(droneActive, this.state.mood);
+      if (bcHpf > 1.05) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.hpf\(([0-9.]+)\)/,
+            (_, val) => `.hpf(${(parseFloat(val) * bcHpf).toFixed(0)})`
+          );
+        }
+      }
+    }
+
+    // Section arrival emphasis: gain surge at boundaries
+    {
+      const aeGain = arrivalEmphasisGain(this.state.sectionProgress ?? 0, this.state.mood);
+      if (aeGain > 1.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * aeGain).toFixed(4)})`
+          );
         }
       }
     }
