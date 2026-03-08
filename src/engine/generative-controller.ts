@@ -285,6 +285,9 @@ import { phraseBoundaryGain } from '../theory/rhythmic-phrase-boundary';
 import { extensionBrightnessFm } from '../theory/chord-extension-brightness';
 import { resolutionWeightGain } from '../theory/melodic-resolution-weight';
 import { temporalDensityWaveGain } from '../theory/temporal-density-wave';
+import { attackBrightnessFm } from '../theory/attack-brightness-coupling';
+import { voiceBalanceGain } from '../theory/harmonic-voice-balance';
+import { regularityRewardGain } from '../theory/rhythmic-regularity-reward';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5410,6 +5413,60 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Attack-brightness coupling: short attacks get FM boost
+    {
+      for (const result of layerResults) {
+        if (result.name === 'arp' || result.name === 'melody') {
+          const atkMatch = result.code.match(/\.attack\(([0-9.]+)\)/);
+          if (atkMatch) {
+            const atkVal = parseFloat(atkMatch[1]);
+            if (!isNaN(atkVal)) {
+              const abFm = attackBrightnessFm(atkVal, this.state.mood);
+              if (Math.abs(abFm - 1.0) > 0.01) {
+                result.code = result.code.replace(
+                  /\.fm\(([0-9.]+)\)/,
+                  (_, val) => `.fm(${(parseFloat(val) * abFm).toFixed(4)})`
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Harmonic voice balance: outer voices get prominence
+    {
+      const harmonyResult = layerResults.find(r => r.name === 'harmony');
+      if (harmonyResult) {
+        const voiceCount = this.state.currentChord.notes.length;
+        // Harmony is an inner voice (index 1 in the ensemble)
+        const vbGain = voiceBalanceGain(1, Math.max(voiceCount, 3), this.state.mood);
+        if (Math.abs(vbGain - 1.0) > 0.005) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * vbGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic regularity reward: consistent patterns get emphasis
+    {
+      // Use sectionProgress as a proxy for regularity (steady sections = more regular)
+      const regularity = this.state.section === 'groove' || this.state.section === 'peak' ? 0.75 : 0.4;
+      const rrGain = regularityRewardGain(regularity, this.state.mood, this.state.section);
+      if (Math.abs(rrGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rrGain).toFixed(4)})`
             );
           }
         }
