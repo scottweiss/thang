@@ -60,6 +60,7 @@ import { isBreathMark, breathMarkGain, shouldApplyBreathMarks } from '../../theo
 import { arcRegisterOffset, arcSemitoneShift, shouldApplyMelodicArc } from '../../theory/melodic-arc';
 import { detectSequence, suggestSequenceContinuation, shouldDetectSequence } from '../../theory/melodic-sequence-detection';
 import { weightGainMultiplier, shouldApplyRhythmicWeight } from '../../theory/rhythmic-weight';
+import { shouldPrepare, suggestPreparation, isDissonantAgainstChord } from '../../theory/harmonic-preparation';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -386,6 +387,42 @@ export class MelodyLayer extends CachingLayer {
           elements[i] = `${pcNames[newMidi % 12]}${Math.floor(newMidi / 12)}`;
         }
         noteIdx++;
+      }
+    }
+
+    // Harmonic preparation: prepare dissonant notes by inserting consonant predecessors
+    if (state.nextChordHint && shouldPrepare(state.tick, mood, state.section)) {
+      const NOTE_PC_HP: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const nextChordMidis = state.nextChordHint.notes.map(n => {
+        const name = n.replace(/\d+$/, '');
+        const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+        return (NOTE_PC_HP[name] ?? 0) + oct * 12;
+      });
+      const currentChordMidis = state.currentChord.notes.map(n => {
+        const name = n.replace(/\d+$/, '');
+        const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+        return (NOTE_PC_HP[name] ?? 0) + oct * 12;
+      });
+      const scaleMidis = state.scale.notes.map((n, i) => (NOTE_PC_HP[n] ?? 0) + 48 + (i > 6 ? 12 : 0));
+
+      // Check last non-rest note: if it'll be dissonant against next chord, prepare it
+      for (let i = elements.length - 1; i >= 1; i--) {
+        if (elements[i] === '~') continue;
+        const n = elements[i].replace(/\d+$/, '');
+        const oct = parseInt(elements[i].match(/\d+$/)?.[0] ?? '4');
+        const midi = (NOTE_PC_HP[n] ?? 0) + oct * 12;
+        if (isDissonantAgainstChord(midi, nextChordMidis)) {
+          const prep = suggestPreparation(midi, currentChordMidis, scaleMidis);
+          if (prep !== null && i > 0 && elements[i - 1] === '~') {
+            elements[i - 1] = `${pcNames[prep % 12]}${Math.floor(prep / 12)}`;
+          }
+        }
+        break; // only check the last note
       }
     }
 

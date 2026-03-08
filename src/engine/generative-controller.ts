@@ -72,6 +72,8 @@ import { echoDensityFeedback, shouldApplyEchoDensity } from '../theory/echo-dens
 import { independenceDensityMult, shouldApplyIndependence } from '../theory/voice-independence';
 import { bloomMultiplier, bloomLpfMultiplier, bloomRoomMultiplier, shouldApplyBloom } from '../theory/harmonic-bloom';
 import { detectPhase, releaseMultiplier, releaseReverbMultiplier, shouldApplyTensionResolution } from '../theory/tension-resolution-pair';
+import { spectralTiltLpf, shouldApplySpectralTilt } from '../theory/spectral-tilt';
+import { pivotGainSwell, shouldApplyRhythmicPivot } from '../theory/rhythmic-pivot';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
@@ -1429,6 +1431,40 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.room\(([0-9.]+)\)/,
             (_, val) => `.room(${(parseFloat(val) * revMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Spectral tilt: global brightness curve across sections
+    if (shouldApplySpectralTilt(this.state.mood)) {
+      const tiltLpf = spectralTiltLpf(
+        this.state.sectionProgress ?? 0, this.state.mood, this.state.section
+      );
+      if (Math.abs(tiltLpf - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * tiltLpf)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic pivot: gain swell approaching section boundaries
+    if (shouldApplyRhythmicPivot(this.state.sectionProgress ?? 0, this.state.mood)) {
+      const swell = pivotGainSwell(
+        this.state.sectionProgress ?? 0, this.state.mood, this.state.section
+      );
+      if (Math.abs(swell - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * swell).toFixed(4)})`;
+              return `.gain((${expr}) * ${swell.toFixed(4)})`;
+            }
           );
         }
       }
