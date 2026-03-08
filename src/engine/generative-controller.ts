@@ -46,6 +46,7 @@ import { totalSurprise, surpriseBrightness, surpriseGain } from '../theory/harmo
 import { outerIntervalTension, intervalReverb, intervalFmDepth } from '../theory/intervallic-tension-map';
 import { shouldApplyGradient, gradientDensityMultiplier } from '../theory/texture-gradient';
 import { chordConsonance, updateFatigue, shouldInjectColor, resolutionBonus } from '../theory/consonance-fatigue';
+import { estimateCentroid, centroidDeviation, lpfCorrectionMultiplier, shouldCorrectCentroid } from '../theory/spectral-centroid';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1046,6 +1047,28 @@ export class GenerativeController {
                 if (!isNaN(num)) return `.gain(${(num * pocketMult).toFixed(4)})`;
                 return `.gain((${expr}) * ${pocketMult.toFixed(4)})`;
               }
+            );
+          }
+        }
+      }
+    }
+
+    // Spectral centroid: auto-correct overall brightness balance
+    {
+      const lpfValues: number[] = [];
+      for (const result of layerResults) {
+        const match = result.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+        if (match) lpfValues.push(parseFloat(match[1]));
+      }
+      if (lpfValues.length >= 2) {
+        const centroid = estimateCentroid(lpfValues);
+        const dev = centroidDeviation(centroid, this.state.mood, this.state.section);
+        if (shouldCorrectCentroid(dev, this.state.mood)) {
+          const correction = lpfCorrectionMultiplier(dev, this.state.mood);
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
             );
           }
         }

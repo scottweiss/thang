@@ -50,6 +50,7 @@ import { registerCeiling, registerFloor, constrainToRegister } from '../../theor
 import { shouldApplyEconomy, pitchVocabularySize, selectCorePitches, constrainToVocabulary } from '../../theory/melodic-economy';
 import { buildGravityMap, gravityScore, pitchGravityStrength } from '../../theory/pitch-gravity-well';
 import { classifyGesture, shouldInjectSurprise, shouldInjectStability, suggestGesture, type GestureType } from '../../theory/gestural-entropy';
+import { anticipationDelay, violationTendency } from '../../theory/temporal-expectancy';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -349,19 +350,31 @@ export class MelodyLayer extends CachingLayer {
     const pattern = this.buildMoodPattern(mood, elements, gain, dynamicGain, brightness, room, state);
 
     // Klangfarbenmelodie: per-note FM timbral variation for pointillistic color
+    let finalPattern = pattern;
     if (shouldApplyKFM(mood, state.section)) {
       const noteCount = elements.filter(e => e !== '~').length;
       const kfmMap = generateTimbreMap(noteCount, mood, state.section, state.tick);
       // Extract base FM value and create per-note FM pattern
-      const fmMatch = pattern.match(/\.fm\((\d+(?:\.\d+)?)\)/);
+      const fmMatch = finalPattern.match(/\.fm\((\d+(?:\.\d+)?)\)/);
       if (fmMatch) {
         const baseFM = parseFloat(fmMatch[1]);
         const fmValues = kfmMap.map(s => applyTimbreToFM(baseFM, s).toFixed(2)).join(' ');
-        return pattern.replace(/\.fm\(\d+(?:\.\d+)?\)/, `.fm("${fmValues}")`);
+        finalPattern = finalPattern.replace(/\.fm\(\d+(?:\.\d+)?\)/, `.fm("${fmValues}")`);
       }
     }
 
-    return pattern;
+    // Temporal expectancy: micro-timing nudge for anticipation/delay
+    if (violationTendency(mood) > 0.1) {
+      const delay = anticipationDelay([], mood, state.section, state.tick);
+      if (delay > 0.01) {
+        finalPattern = finalPattern.replace(
+          /\.orbit\((\d+)\)/,
+          (m) => `.late(${delay.toFixed(4)})${m}`
+        );
+      }
+    }
+
+    return finalPattern;
   }
 
   private buildMoodPattern(

@@ -52,6 +52,7 @@ import { shouldApplyQuartal, quartalVoicing, quintalVoicing, selectVoicingType, 
 import { shouldApplyField, overtoneVoicing, fieldPartials, blendVoicings as blendOvertone } from '../../theory/harmonic-field';
 import { shouldApplyVoicingDensity, targetVoiceCount, thinVoicing } from '../../theory/voicing-density';
 import { shouldRespace, eliminateCrossings, crossingTolerance } from '../../theory/voice-crossing';
+import { shouldBassHold, superpositionStrength } from '../../theory/harmonic-rhythm-layer';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -70,6 +71,8 @@ export class HarmonyLayer implements Layer {
   private lastVoicing: string[] | null = null;
   private lastRoot: string | null = null;
   private suspensionChain: SuspensionChainPlan | null = null;
+  private lastBassNote: string | null = null;
+  private ticksSinceBassChange = 0;
 
   generate(state: GenerativeState): string {
     let result = this.buildPattern(state);
@@ -818,6 +821,20 @@ export class HarmonyLayer implements Layer {
         const sorted = eliminateCrossings(midiPitches);
         const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         chordNotes = sorted.map(m => `${pcNames[m % 12]}${Math.floor(m / 12)}`);
+      }
+    }
+
+    // Harmonic rhythm superposition: bass holds longer than inner voices
+    if (useRawNotes && chordNotes.length >= 2 && superpositionStrength(mood) > 0.12) {
+      this.ticksSinceBassChange++;
+      const bassNote = chordNotes[chordNotes.length - 1]; // lowest note
+      if (this.lastBassNote && state.chordChanged &&
+          shouldBassHold(mood, state.section, this.ticksSinceBassChange, state.tick)) {
+        // Keep previous bass note (pedal effect)
+        chordNotes[chordNotes.length - 1] = this.lastBassNote;
+      } else if (state.chordChanged) {
+        this.lastBassNote = bassNote;
+        this.ticksSinceBassChange = 0;
       }
     }
 
