@@ -198,6 +198,9 @@ import { grooveGainMultiplier } from '../theory/groove-template-application';
 import { inversionGainAdjustment } from '../theory/inversion-context-preference';
 import { intraBarDensity } from '../theory/intra-bar-density';
 import { extensionColorLpf } from '../theory/extension-color-temperature';
+import { alignmentGainBoost } from '../theory/rhythmic-phase-alignment';
+import { qualityDecay } from '../theory/quality-envelope-decay';
+import { structuralGravityGain } from '../theory/structural-pitch-gravity';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3790,6 +3793,55 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic phase alignment: boost gain when layers hit together
+    {
+      const activeCount = layerResults.length;
+      if (activeCount > 2) {
+        const boost = alignmentGainBoost(activeCount, activeCount, this.state.mood);
+        if (boost > 1.01) {
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * Math.min(boost, 1.08)).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Quality envelope decay: chord quality shapes decay length
+    {
+      const qDecay = qualityDecay(this.state.currentChord.quality, this.state.mood);
+      if (Math.abs(qDecay - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.decay\(([0-9.]+)\)/,
+              (_, val) => `.decay(${(parseFloat(val) * qDecay).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Structural pitch gravity: chord tone proximity boosts gain
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const chordPcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const sGain = structuralGravityGain(rootPc, chordPcs, this.state.mood);
+      if (Math.abs(sGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * sGain).toFixed(4)})`
             );
           }
         }
