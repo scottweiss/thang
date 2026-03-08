@@ -1,4 +1,4 @@
-import { GenerativeState, Mood } from '../types';
+import { GenerativeState, Mood, Section } from '../types';
 
 interface Particle {
   x: number;
@@ -33,6 +33,9 @@ export class Visualizer {
   private currentBrightness = 0.5;
   private currentSpaciousness = 0.8;
   private currentMood: Mood = 'downtempo';
+  private currentSection: Section = 'intro';
+  private sectionEnergy = 0; // 0-1, how intense the current section is
+  private targetSectionEnergy = 0;
   private pulseIntensity = 0;
   private time = 0;
 
@@ -62,6 +65,17 @@ export class Visualizer {
     if (state.mood !== prevMood) {
       this.currentMood = state.mood;
     }
+
+    // Map section to visual energy level
+    const sectionEnergyMap: Record<Section, number> = {
+      intro: 0.15,
+      build: 0.4,
+      peak: 1.0,
+      breakdown: 0.25,
+      groove: 0.7,
+    };
+    this.currentSection = state.section;
+    this.targetSectionEnergy = sectionEnergyMap[state.section];
 
     if (state.chordChanged) {
       this.pulseIntensity = 1;
@@ -99,6 +113,7 @@ export class Visualizer {
 
     this.time += 0.016;
     this.currentHue += (this.targetHue - this.currentHue) * 0.02;
+    this.sectionEnergy += (this.targetSectionEnergy - this.sectionEnergy) * 0.03;
     this.pulseIntensity *= 0.97;
 
     // Background fade (creates trails)
@@ -128,18 +143,56 @@ export class Visualizer {
       this.drawParticle(ctx, p, palette);
     }
 
+    // Draw connection lines between nearby particles (ambient/downtempo only)
+    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo') && this.particles.length > 2) {
+      const connectDist = 80 + this.sectionEnergy * 60;
+      ctx.strokeStyle = `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness + 10}%, 0.06)`;
+      ctx.lineWidth = 0.5;
+      const maxConnections = Math.min(this.particles.length, 80);
+      for (let i = 0; i < maxConnections; i++) {
+        const a = this.particles[i];
+        for (let j = i + 1; j < maxConnections; j++) {
+          const b = this.particles[j];
+          const dx = a.x - b.x;
+          const dy = a.y - b.y;
+          const dist = dx * dx + dy * dy;
+          if (dist < connectDist * connectDist) {
+            const lineAlpha = (1 - Math.sqrt(dist) / connectDist) * 0.08 * a.alpha * b.alpha;
+            ctx.strokeStyle = `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness + 10}%, ${lineAlpha})`;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
     // Draw central glow on chord pulse
     if (this.pulseIntensity > 0.05) {
-      const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.4);
+      const glowSize = 0.3 + this.sectionEnergy * 0.2;
+      const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * glowSize);
       gradient.addColorStop(0, `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness}%, ${this.pulseIntensity * 0.15})`);
       gradient.addColorStop(1, 'transparent');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Cap particle count
-    if (this.particles.length > 500) {
-      this.particles.splice(0, this.particles.length - 500);
+    // Subtle ambient background glow that breathes with section energy
+    if (this.sectionEnergy > 0.3) {
+      const breathe = Math.sin(this.time * 0.3) * 0.5 + 0.5;
+      const glowAlpha = (this.sectionEnergy - 0.3) * 0.04 * breathe;
+      const gradient = ctx.createRadialGradient(w / 2, h * 0.6, 0, w / 2, h * 0.6, w * 0.6);
+      gradient.addColorStop(0, `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness * 0.5}%, ${glowAlpha})`);
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Cap particle count — higher during peak sections
+    const maxParticles = 300 + Math.floor(this.sectionEnergy * 300);
+    if (this.particles.length > maxParticles) {
+      this.particles.splice(0, this.particles.length - maxParticles);
     }
   }
 
@@ -150,7 +203,9 @@ export class Visualizer {
       lofi: 1.2,
       trance: 2.5,
     }[this.currentMood];
-    return Math.ceil(base * (0.5 + this.currentDensity) + this.pulseIntensity * 3);
+    // Section energy modulates spawn rate — intro is sparse, peak floods particles
+    const sectionMult = 0.4 + this.sectionEnergy * 0.8;
+    return Math.ceil(base * (0.5 + this.currentDensity) * sectionMult + this.pulseIntensity * 3);
   }
 
   private createParticle(w: number, h: number, palette: typeof MOOD_PALETTES[Mood]): Particle {
@@ -206,6 +261,9 @@ export class Visualizer {
         break;
       }
     }
+
+    // Section energy scales particle size — peak sections get bigger, more visible particles
+    size *= (0.7 + this.sectionEnergy * 0.5);
 
     const hue = palette.hues[Math.floor(Math.random() * palette.hues.length)];
 
