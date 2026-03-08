@@ -131,6 +131,9 @@ import { harmonicSeriesRatio, harmonicSeriesDepth } from '../theory/harmonic-ser
 import { anticipatoryGain } from '../theory/anticipatory-accent';
 import { countChromaticMotions, chromaticLeadingGain } from '../theory/chromatic-voice-leading';
 import { barElasticity, shouldApplyMetricElasticity } from '../theory/metric-elasticity';
+import { closureSpread } from '../theory/voicing-closure';
+import { densityGradientCorrection } from '../theory/rhythmic-density-gradient';
+import { shouldHoldPreviousChord } from '../theory/harmonic-parallax';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2962,6 +2965,60 @@ export class GenerativeController {
       const barPos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
       const _elasticity = barElasticity(barPos, this.state.mood, this.state.section);
       // Available for tempo chain integration
+    }
+
+    // Voicing closure: harmony spread narrows toward cadence
+    {
+      const progress = this.state.sectionProgress ?? 0;
+      const spread = closureSpread(progress, this.state.mood, this.state.section);
+      if (Math.abs(spread - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * spread).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic density gradient: layers thin when partners are busy
+    {
+      const densities: Record<string, number> = {};
+      for (const result of layerResults) {
+        // Estimate density from pattern (count non-rest notes)
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (noteMatch) {
+          const parts = noteMatch[1].split(' ');
+          const active = parts.filter(p => p !== '~').length;
+          densities[result.name] = active / Math.max(1, parts.length);
+        } else {
+          densities[result.name] = 0.5;
+        }
+      }
+      for (const result of layerResults) {
+        const corr = densityGradientCorrection(result.name, densities, this.state.mood);
+        if (Math.abs(corr - 1.0) > 0.02) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * corr).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic parallax: background layers lag behind chord changes
+    {
+      for (const result of layerResults) {
+        if (shouldHoldPreviousChord(result.name, this.state.ticksSinceChordChange, this.state.mood, this.state.section)) {
+          // Layer should still be playing previous chord — reduce gain slightly
+          // to smooth the transition rather than hard-holding
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * 0.95).toFixed(4)})`
+          );
+        }
+      }
     }
 
     // Temporal binding: groove tightness correction on layer timing
