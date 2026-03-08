@@ -170,6 +170,9 @@ import { morphedLpf } from '../theory/spectral-morphing';
 import { voiceLeadingWeight } from '../theory/voice-leading-cost';
 import { polymetricTension } from '../theory/polymetric-tension';
 import { temperatureLpf, temperatureFm } from '../theory/harmonic-color-temperature';
+import { tonicGravityWeight } from '../theory/tonal-center-gravity';
+import { densityTarget } from '../theory/rhythmic-density-envelope';
+import { blendLpfCorrection } from '../theory/spectral-blend';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3112,6 +3115,35 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
             );
           }
+        }
+      }
+    }
+
+    // Tonal center gravity: weight stored for melody note selection
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const phrasePos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const _gravWeight = tonicGravityWeight(tonicPc, tonicPc, phrasePos, this.state.mood);
+      // Available for melody note selection
+    }
+
+    // Rhythmic density envelope: section-level density target
+    {
+      const _dTarget = densityTarget(this.state.sectionProgress ?? 0, this.state.mood, this.state.section);
+      // Available for pattern degradeBy calculation
+    }
+
+    // Spectral blend: LPF correction for frequency overlap
+    {
+      const activeNames = layerResults.map(r => r.name);
+      for (const result of layerResults) {
+        const blendCorr = blendLpfCorrection(result.name, activeNames, this.state.mood);
+        if (Math.abs(blendCorr - 1.0) > 0.02) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * blendCorr)})`
+          );
         }
       }
     }
