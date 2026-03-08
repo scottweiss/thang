@@ -40,12 +40,15 @@ export class MelodyLayer extends CachingLayer {
   orbit = 2;
   private motifMemory = new MotifMemory();
   private rhythmMemory = new RhythmicMemory();
+  /** Last note played (for phrase continuity across regenerations) */
+  private lastNoteName: string | null = null;
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
     if (this.moodChanged(state)) {
       this.motifMemory.clear(); // fresh motifs for new mood
       this.rhythmMemory.clear();
+      this.lastNoteName = null;
       return true;
     }
     if (state.chordChanged) return true;
@@ -103,6 +106,14 @@ export class MelodyLayer extends CachingLayer {
     state.activeMotif = elements.filter(e => e !== '~');
     // Share melody direction for contrapuntal motion in arp
     state.melodyDirection = detectDirection(elements);
+
+    // Store last note for phrase continuity across regenerations
+    for (let i = elements.length - 1; i >= 0; i--) {
+      if (elements[i] !== '~') {
+        this.lastNoteName = elements[i];
+        break;
+      }
+    }
 
     // Per-note velocity dynamics — metric accent, contour accent, phrase taper
     const dynamicGain = applyMelodicDynamics(gain, elements);
@@ -374,7 +385,8 @@ export class MelodyLayer extends CachingLayer {
     const chordPitches = state.currentChord.notes.map(noteToPitch);
 
     const elements: string[] = [];
-    let prevIdx = -1;
+    // Phrase continuity: start from where we left off
+    let prevIdx = this.lastNoteName ? ladder.indexOf(this.lastNoteName) : -1;
     for (let i = 0; i < 16; i++) {
       if (Math.random() < density * 0.15) {
         const ctx: MelodicContext = {
@@ -429,7 +441,24 @@ export class MelodyLayer extends CachingLayer {
     const ladderPitches = ladder.map(noteToPitch);
     const chordPitches = state.currentChord.notes.map(noteToPitch);
 
-    const anchorIdx = chordIndices.length > 0
+    // Phrase continuity: prefer starting near where we left off
+    // Find nearest chord tone to the previous note for smooth connection
+    let continuityIdx = -1;
+    if (this.lastNoteName) {
+      const lastIdx = ladder.indexOf(this.lastNoteName);
+      if (lastIdx >= 0 && chordIndices.length > 0) {
+        // Find the chord tone nearest to the last note
+        let bestDist = Infinity;
+        for (const ci of chordIndices) {
+          const d = Math.abs(ci - lastIdx);
+          if (d < bestDist) { bestDist = d; continuityIdx = ci; }
+        }
+      }
+    }
+
+    const anchorIdx = continuityIdx >= 0
+      ? continuityIdx
+      : chordIndices.length > 0
       ? randomChoice(chordIndices)
       : Math.floor(ladder.length / 2);
 
