@@ -29,6 +29,7 @@ import { inverseDensityMultiplier, shouldApplyInverseDensity } from '../../theor
 import { applyCadenceGesture } from '../../theory/cadence-gesture';
 import { addOctaveDoublings } from '../../theory/octave-doubling';
 import { constrainRange, shouldConstrainRange } from '../../theory/range-constraint';
+import { addAnacrusis } from '../../theory/anacrusis';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -125,6 +126,19 @@ export class MelodyLayer extends CachingLayer {
     }
     // Safety: ensure no runaway phrases
     elements = ensurePhraseBoundary(elements, 10);
+
+    // Anacrusis: pickup notes leading into the next phrase
+    // Fills trailing rests with approach notes toward the next chord's root
+    if (state.nextChordHint) {
+      const targetRoot = state.nextChordHint.root;
+      const scaleNotes = state.scale.notes;
+      // Build a ladder of scale notes across octaves 3-5 for approach note selection
+      const anacLadder: string[] = [];
+      for (let oct = 3; oct <= 5; oct++) {
+        for (const n of scaleNotes) anacLadder.push(`${n}${oct}`);
+      }
+      elements = addAnacrusis(elements, `${targetRoot}4`, anacLadder, mood);
+    }
 
     // Rhythmic feel: shuffle or halftime transformation based on mood + section
     if (shouldApplyFeel(mood)) {

@@ -24,6 +24,7 @@ import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
 import { headroomScalar, shouldApplyHeadroom } from '../theory/headroom';
+import { shouldFireArrival, arrivalGainBoost, shouldForceRoot } from '../theory/arrival-moment';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
 import { HarmonyLayer } from './layers/harmony';
@@ -62,6 +63,7 @@ export class GenerativeController {
   private tensionMemory = new TensionMemory();
   private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
   private ticksSinceLastSurprise = 20; // start with cooldown expired
+  private arrivalActive = false;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -205,12 +207,18 @@ export class GenerativeController {
     this.state.sectionProgress = this.sections.getSectionProgress();
 
     // Strategic silence: brief drop before climactic sections
+    // Structural arrival: coordinated convergence at section landmarks
     if (this.state.sectionChanged) {
       if (shouldInsertSilence(this.state.section, true, this.prevSection)) {
         this.silenceActive = true;
         this.ticksSinceSilence = 0;
       }
+      this.arrivalActive = shouldFireArrival(
+        this.prevSection, this.state.section, this.state.mood
+      );
       this.prevSection = this.state.section;
+    } else {
+      this.arrivalActive = false; // arrivals last exactly one tick
     }
     if (this.silenceActive) {
       this.ticksSinceSilence++;
@@ -426,6 +434,43 @@ export class GenerativeController {
             return `.gain((${expr}) * ${hrScalar.toFixed(4)})`;
           }
         );
+      }
+    }
+
+    // Structural arrival: coordinated surge at section landmarks
+    if (this.arrivalActive) {
+      for (const result of layerResults) {
+        const boost = arrivalGainBoost(result.name);
+        if (boost > 1.0) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
+              return `.gain((${expr}) * ${boost.toFixed(4)})`;
+            }
+          );
+        }
+      }
+      // Force melody to land on chord root for convergence
+      if (shouldForceRoot()) {
+        const melody = layerResults.find(r => r.name === 'melody');
+        if (melody) {
+          const root = this.state.currentChord.root;
+          melody.code = melody.code.replace(
+            /note\("([^"]+)"\)/,
+            (_, notes) => {
+              const parts = notes.split(' ');
+              const firstNote = parts.findIndex((n: string) => n !== '~');
+              if (firstNote >= 0) {
+                const octMatch = parts[firstNote].match(/\d+$/);
+                const oct = octMatch ? octMatch[0] : '4';
+                parts[firstNote] = `${root}${oct}`;
+              }
+              return `note("${parts.join(' ')}")`;
+            }
+          );
+        }
       }
     }
 

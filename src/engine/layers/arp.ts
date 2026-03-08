@@ -16,6 +16,7 @@ import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel }
 import { applyRegisterSpread, shouldApplyRegisterSpread } from '../../theory/register-spread';
 import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
 import { smoothArpStart } from '../../theory/arp-voice-leading';
+import { shouldApplyHemiola, applyHemiolaToGain } from '../../theory/hemiola';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -204,7 +205,7 @@ export class ArpLayer extends CachingLayer {
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
         const tranceGain = 0.16 * (0.5 + density * 0.5);
-        const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood);
+        const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood, section, progress);
         return `note("${steps.join(' ')}")
           .sound("square")
           .fm(0.3)
@@ -312,7 +313,7 @@ export class ArpLayer extends CachingLayer {
           const syroPattern = this.pickStyle(mood, section, counterDir);
           const fill = this.pickFill16(density * sectionMult * 1.2);
           syroSteps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
-          syroVelGain = this.getVelocityGain(syroGain, 16, mood);
+          syroVelGain = this.getVelocityGain(syroGain, 16, mood, section, progress);
         }
 
         return `note("${syroSteps.join(' ')}")
@@ -339,7 +340,7 @@ export class ArpLayer extends CachingLayer {
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         const bhGain = 0.15 * (0.5 + density * 0.5);
-        const bhVelGain = this.getVelocityGain(bhGain, 8, mood);
+        const bhVelGain = this.getVelocityGain(bhGain, 8, mood, section, progress);
         return `note("${steps.join(' ')}")
           .sound("triangle")
           .fm(0.4)
@@ -392,7 +393,7 @@ export class ArpLayer extends CachingLayer {
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
         const discoGain = 0.18 * (0.5 + density * 0.5);
-        const velGain = this.getVelocityGain(discoGain, 16, mood);
+        const velGain = this.getVelocityGain(discoGain, 16, mood, section, progress);
         return `note("${steps.join(' ')}")
           .sound("sine")
           .fm(${(2 + brightness * 1.5).toFixed(1)})
@@ -491,10 +492,21 @@ export class ArpLayer extends CachingLayer {
   }
 
   /** Generate a velocity-weighted gain pattern string for Strudel */
-  private getVelocityGain(baseGain: number, steps: number, mood: Mood): string {
+  private getVelocityGain(
+    baseGain: number, steps: number, mood: Mood,
+    section?: Section, progress?: number
+  ): string {
     const pattern = MOOD_VELOCITY[mood];
     const curve = velocityCurve(steps, pattern);
-    return curve.map(v => (baseGain * v).toFixed(4)).join(' ');
+    let gains = curve.map(v => baseGain * v);
+
+    // Hemiola: cross-rhythm accents (3-over-4 or 3+3+2 clave)
+    if (section !== undefined && progress !== undefined &&
+        shouldApplyHemiola(mood, section, progress)) {
+      gains = applyHemiolaToGain(gains, mood);
+    }
+
+    return gains.map(v => v.toFixed(4)).join(' ');
   }
 
   /**
