@@ -82,6 +82,9 @@ import { phaseLockCorrection, shouldApplyPhaseLock } from '../theory/grid-phase-
 import { onsetHpfBoost, onsetLpfReduction, isInOnsetPhase, shouldCarveOnset } from '../theory/spectral-onset-carve';
 import { gravityMultiplier, shouldEscalate } from '../theory/gravity-escalation';
 import { punchGainMultiplier, shouldApplyPunch, detectAttacks } from '../theory/transient-punch';
+import { drumToHarmonyResonance, drumToHarmonyDecay, harmonyToDrumGain, shouldApplyCoupling } from '../theory/layer-feedback-coupling';
+import { modDepthMultiplier, shouldSyncModulation } from '../theory/modulation-phase-sync';
+import { clarityGainBoost, clarityLpfBoost, findDominantLayer, shouldApplyClarity } from '../theory/clarity-boost';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
@@ -1372,6 +1375,44 @@ export class GenerativeController {
       }
     }
 
+    // Layer feedback coupling: drum intensity modulates harmony, harmony enriches drums
+    if (shouldApplyCoupling(this.state.mood)) {
+      const textureResult = layerResults.find(r => r.name === 'texture');
+      const harmonyResult = layerResults.find(r => r.name === 'harmony');
+      const drumDensity = this.state.layerPhraseDensity?.texture ?? 0.5;
+      if (harmonyResult) {
+        const resMult = drumToHarmonyResonance(drumDensity, this.state.mood);
+        if (Math.abs(resMult - 1.0) > 0.02) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.resonance\(([0-9.]+)\)/,
+            (_, val) => `.resonance(${(parseFloat(val) * resMult).toFixed(1)})`
+          );
+        }
+        const decMult = drumToHarmonyDecay(drumDensity, this.state.mood);
+        if (Math.abs(decMult - 1.0) > 0.02) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.decay\(([0-9.]+)\)/,
+            (_, val) => `.decay(${(parseFloat(val) * decMult).toFixed(4)})`
+          );
+        }
+      }
+      if (textureResult && harmonyResult) {
+        const noteMatch = harmonyResult.code.match(/note\("([^"]+)"\)/);
+        const harmNotes = noteMatch ? noteMatch[1].split(/\s+/).filter(n => n !== '~').length : 3;
+        const drumBoost = harmonyToDrumGain(harmNotes, this.state.mood);
+        if (drumBoost > 1.01) {
+          textureResult.code = textureResult.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * drumBoost).toFixed(4)})`;
+              return `.gain((${expr}) * ${drumBoost.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
+
     // Articulation coupling: coordinate decay character between layers
     if (shouldCoupleArticulation(this.state.mood, layerResults.length)) {
       const melodyR = layerResults.find(r => r.name === 'melody');
@@ -1393,6 +1434,36 @@ export class GenerativeController {
               }
             }
           }
+        }
+      }
+    }
+
+    // Clarity boost: spectral gap EQ lift for masked layers
+    if (shouldApplyClarity(this.state.mood, layerResults.length)) {
+      const layerGains: Record<string, number> = {};
+      for (const result of layerResults) {
+        const match = result.code.match(/\.gain\(([0-9.]+)\)/);
+        layerGains[result.name] = match ? parseFloat(match[1]) : 0.1;
+      }
+      const dominant = findDominantLayer(layerGains);
+      for (const result of layerResults) {
+        const gBoost = clarityGainBoost(result.name, dominant, this.state.mood);
+        if (gBoost > 1.01) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
+              return `.gain((${expr}) * ${gBoost.toFixed(4)})`;
+            }
+          );
+        }
+        const lBoost = clarityLpfBoost(result.name, dominant, this.state.mood);
+        if (lBoost > 1.01) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lBoost)})`
+          );
         }
       }
     }
@@ -1765,6 +1836,26 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.room\(([0-9.]+)\)/,
             (_, val) => `.room(${(parseFloat(val) * fbMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Modulation phase sync: filter/pan modulations locked to section phase
+    if (shouldSyncModulation(this.state.mood)) {
+      const modDepth = modDepthMultiplier(this.state.mood, this.state.section);
+      if (Math.abs(modDepth - 1.0) > 0.05) {
+        for (const result of layerResults) {
+          // Scale pan range by modulation depth
+          result.code = result.code.replace(
+            /\.pan\(sine\.range\(([0-9.]+),\s*([0-9.]+)\)/,
+            (_, lo, hi) => {
+              const low = parseFloat(lo);
+              const high = parseFloat(hi);
+              const mid = (low + high) / 2;
+              const halfRange = ((high - low) / 2) * modDepth;
+              return `.pan(sine.range(${(mid - halfRange).toFixed(2)}, ${(mid + halfRange).toFixed(2)})`;
+            }
           );
         }
       }
