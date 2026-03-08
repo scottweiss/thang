@@ -348,6 +348,9 @@ import { secundalPulseGain } from '../theory/rhythmic-secundal-pulse';
 import { doubleLeadingToneFm, countLeadingTones } from '../theory/harmonic-double-leading-tone';
 import { auxiliaryToneDecayGain } from '../theory/melodic-auxiliary-tone-decay';
 import { anacrusisEmphasisGain } from '../theory/rhythmic-anacrusis-emphasis';
+import { retrogradeMotionGain } from '../theory/harmonic-retrograde-motion';
+import { goldenRatioPhrasingGain } from '../theory/melodic-golden-ratio-phrasing';
+import { impliedTempoLayerGain } from '../theory/rhythmic-implied-tempo-layer';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6857,6 +6860,61 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * aeGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic retrograde motion: boost palindromic chord progressions
+    {
+      const noteToPC182: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      if (this.state.chordHistory.length >= 3) {
+        const h = this.state.chordHistory;
+        const cur = noteToPC182[h[h.length - 1].root] ?? 0;
+        const prev = noteToPC182[h[h.length - 2].root] ?? 0;
+        const prev2 = noteToPC182[h[h.length - 3].root] ?? 0;
+        const recentMotion = ((cur - prev) % 12 + 18) % 12 - 6;
+        const priorMotion = ((prev - prev2) % 12 + 18) % 12 - 6;
+        const rmGain = retrogradeMotionGain(recentMotion, priorMotion, this.state.mood, this.state.section);
+        if (rmGain > 1.001) {
+          for (const result of layerResults) {
+            if (result.name === 'harmony' || result.name === 'melody') {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${(parseFloat(val) * rmGain).toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Melodic golden ratio phrasing: emphasis at phi point
+    {
+      const grGain = goldenRatioPhrasingGain(this.state.sectionProgress, this.state.mood, this.state.section);
+      if (grGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * grGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic implied tempo layer: drifting accent pattern
+    {
+      const beatPos = this.state.tick % 16;
+      const itGain = impliedTempoLayerGain(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (itGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * itGain).toFixed(4)})`
             );
           }
         }
