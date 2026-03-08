@@ -29,6 +29,7 @@ import { suggestPitchClassAdditions } from '../../theory/pitch-class-set';
 import { shouldApplyResultant, resultantGainMask } from '../../theory/resultant-rhythm';
 import { shouldApplyHeterophony, selectVariation, rhythmicVariant, ornamentalVariant, octaveVariant, shadowVariant } from '../../theory/heterophony';
 import { shouldApplyOstinato, selectOstinatoType, generateOstinato, ostinatoLength } from '../../theory/ostinato';
+import { shouldApplyStretto, strettoEntry, transposeForStretto, strettoOffset, strettoInterval } from '../../theory/stretto';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -127,6 +128,19 @@ export class ArpLayer extends CachingLayer {
       const validEchoed = echoed.filter(n => n !== '~' && n.match(/^[A-G]/));
       if (validEchoed.length >= 2) {
         baseNotes = [...chord.notes, ...validEchoed.slice(0, 3)];
+      }
+    }
+
+    // Stretto: overlapping canonic entry of melody motif — creates urgency in builds
+    if (state.activeMotif && state.activeMotif.length >= 3 &&
+        shouldApplyStretto(state.tick, mood, section)) {
+      const interval = strettoInterval(mood, state.tick);
+      const transposed = transposeForStretto(state.activeMotif, interval, state.scale.notes);
+      const offset = strettoOffset(state.activeMotif.length, tension, mood);
+      const entry = strettoEntry(transposed, offset, state.activeMotif.length + offset);
+      const validEntry = entry.filter(n => n !== '~' && n.match(/^[A-G]/));
+      if (validEntry.length >= 2) {
+        baseNotes = [...chord.notes, ...validEntry.slice(0, 4)];
       }
     }
 
