@@ -38,6 +38,7 @@ import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from 
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../../theory/resolution-glow';
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../../theory/tension-articulation';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
+import { planGuideTonePath, guideToneSmoothnessScore, guideToneWeight } from '../../theory/guide-tone-plan';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -577,14 +578,25 @@ export class HarmonyLayer implements Layer {
 
     // Guide tone anticipation — subtly pull inner voice toward next chord
     // Only nudge inner voices (index > 0), never the root
-    if (state.nextChordHint && !hasSuspension && Math.random() < 0.25) {
-      const guides = findGuideTones(chordNotes, state.nextChordHint.notes);
-      if (guides.length > 0) {
-        const guide = guides[0]; // use strongest guide tone connection
-        const guideIdx = chordNotes.findIndex(n => n === guide.current);
-        if (guideIdx > 0 && guide.current !== guide.next) {
-          chordNotes = [...chordNotes];
-          chordNotes[guideIdx] = guide.next;
+    // Probability scales with guide tone smoothness and mood preference
+    if (state.nextChordHint && !hasSuspension) {
+      const gtPath = planGuideTonePath(
+        chord.root, chord.quality,
+        state.nextChordHint.root, state.nextChordHint.quality
+      );
+      const smoothness = guideToneSmoothnessScore(gtPath);
+      const weight = guideToneWeight(mood);
+      // Smooth paths get anticipated more often (up to ~40% for lofi with smooth motion)
+      const anticipateProb = smoothness * weight * 0.65;
+      if (Math.random() < anticipateProb) {
+        const guides = findGuideTones(chordNotes, state.nextChordHint.notes);
+        if (guides.length > 0) {
+          const guide = guides[0];
+          const guideIdx = chordNotes.findIndex(n => n === guide.current);
+          if (guideIdx > 0 && guide.current !== guide.next) {
+            chordNotes = [...chordNotes];
+            chordNotes[guideIdx] = guide.next;
+          }
         }
       }
     }
