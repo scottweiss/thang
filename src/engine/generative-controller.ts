@@ -180,6 +180,9 @@ import { harmonicAcceleration } from '../theory/harmonic-rhythm-acceleration';
 import { commonToneWeight } from '../theory/pitch-set-intersection';
 import { contourDynamicGain } from '../theory/dynamic-contour';
 import { shapedTension } from '../theory/tension-curve-shaping';
+import { momentumGainMultiplier } from '../theory/melodic-interval-momentum';
+import { partialsReinforcementFm } from '../theory/harmonic-partials-reinforcement';
+import { expectancyGainEmphasis } from '../theory/rhythmic-expectancy-violation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3772,6 +3775,60 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic interval momentum: emphasize well-shaped melodic contours
+    {
+      // Estimate recent intervals from chord tone movement
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const tonicPc = noteToPC[this.state.scale?.root ?? 'C'] ?? 0;
+      const interval = ((rootPc - tonicPc) % 12 + 12) % 12;
+      const intervals = [interval > 6 ? -(12 - interval) : interval, 2]; // approximate contour
+      const mGain = momentumGainMultiplier(intervals, this.state.mood);
+      if (Math.abs(mGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * mGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic partials reinforcement: boost FM for overtone-aligned voicings
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const pcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      const fmMul = partialsReinforcementFm(pcs, this.state.mood);
+      if (Math.abs(fmMul - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * fmMul).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic expectancy violation: emphasize pleasingly unexpected beats
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const emphGain = expectancyGainEmphasis(beatPos, this.state.mood, this.state.section);
+      if (emphGain > 1.01) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * emphGain).toFixed(4)})`
             );
           }
         }
