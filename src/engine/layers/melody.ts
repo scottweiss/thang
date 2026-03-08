@@ -40,6 +40,7 @@ import { gestureDensityMult, gesturePitchBias } from '../../theory/gestural-arch
 import { generateTimbreMap, shouldApplyKFM, applyTimbreToFM } from '../../theory/klangfarbenmelodie';
 import { shouldFragment, fragmentLength, extractFragment, repeatFragment } from '../../theory/motivic-fragmentation';
 import { shouldApplyAugDim, applyRhythmicTransform } from '../../theory/rhythmic-augmentation';
+import { shouldApplyCompound, createCompoundMelody, compoundSeparation, compoundPattern } from '../../theory/compound-melody';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -125,6 +126,13 @@ export class MelodyLayer extends CachingLayer {
     if (shouldConstrainRange(mood)) {
       const constrained = constrainRange(elements, mood);
       for (let ri = 0; ri < elements.length; ri++) elements[ri] = constrained[ri];
+    }
+
+    // Compound melody: split into interleaved register streams for implied polyphony
+    if (shouldApplyCompound(state.tick, mood, state.section)) {
+      const sep = compoundSeparation(mood, state.section);
+      const pat = compoundPattern(mood, state.tick);
+      elements = createCompoundMelody(elements, sep, pat);
     }
 
     // Phrase peak placement: highest note toward golden section for natural arc
