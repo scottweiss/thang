@@ -372,6 +372,18 @@ import { AtmosphereLayer } from './layers/atmosphere';
 
 const TICK_INTERVAL = 2000; // ms between evolution ticks
 
+/** Safe multiply for regex replacements — prevents NaN cascade */
+function safeMul(val: string, mult: number, decimals: number = 4): string {
+  const n = parseFloat(val);
+  if (isNaN(n) || isNaN(mult)) return val;
+  return (n * mult).toFixed(decimals);
+}
+/** Safe parse with fallback — prevents NaN in complex expressions */
+function safeP(val: string, fallback: number = 1): number {
+  const n = parseFloat(val);
+  return isNaN(n) ? fallback : n;
+}
+
 // CPS ≈ BPM / 240 for 4-beat cycles
 const MOOD_TEMPOS: Record<Mood, number> = {
   ambient: 0.25,    // ~60 BPM
@@ -1116,7 +1128,7 @@ export class GenerativeController {
           if (lpfMult < 0.97) {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+              (_, val) => `.lpf(${safeMul(val, lpfMult, 0)})`
             );
           }
         }
@@ -1387,7 +1399,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fmMult, 2)})`
           );
         }
       }
@@ -1416,7 +1428,7 @@ export class GenerativeController {
         if (Math.abs(fmMult - 1.0) > 0.02) {
           result.code = result.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fmMult, 2)})`
           );
         }
       }
@@ -1560,7 +1572,7 @@ export class GenerativeController {
           if (rBoost > 1.01) {
             result.code = result.code.replace(
               /\.room\(([0-9.]+)\)/,
-              (_, val) => `.room(${(parseFloat(val) * rBoost).toFixed(2)})`
+              (_, val) => `.room(${safeMul(val, rBoost, 2)})`
             );
           }
         }
@@ -1603,7 +1615,7 @@ export class GenerativeController {
           if (brightMult > 1.01) {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
+              (_, val) => `.lpf(${safeMul(val, brightMult, 0)})`
             );
           }
           if (gainMult > 1.01) {
@@ -1644,7 +1656,7 @@ export class GenerativeController {
           for (const result of layerResults) {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
+              (_, val) => `.lpf(${safeMul(val, brightMult, 0)})`
             );
           }
         }
@@ -1657,7 +1669,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         result.code = result.code.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/,
-          (_, val) => `.lpf(${Math.round(parseFloat(val) * brightBoost)})`
+          (_, val) => `.lpf(${safeMul(val, brightBoost, 0)})`
         );
       }
     }
@@ -1700,7 +1712,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.room\(([0-9.]+)\)/,
-            (_, val) => `.room(${(parseFloat(val) * reverbMult).toFixed(2)})`
+            (_, val) => `.room(${safeMul(val, reverbMult, 2)})`
           );
         }
       }
@@ -1708,7 +1720,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmMult2).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fmMult2, 2)})`
           );
         }
       }
@@ -1917,14 +1929,14 @@ export class GenerativeController {
         if (Math.abs(resMult - 1.0) > 0.02) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.resonance\(([0-9.]+)\)/,
-            (_, val) => `.resonance(${(parseFloat(val) * resMult).toFixed(1)})`
+            (_, val) => `.resonance(${safeMul(val, resMult, 1)})`
           );
         }
         const decMult = drumToHarmonyDecay(drumDensity, this.state.mood);
         if (Math.abs(decMult - 1.0) > 0.02) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.decay\(([0-9.]+)\)/,
-            (_, val) => `.decay(${(parseFloat(val) * decMult).toFixed(4)})`
+            (_, val) => `.decay(${safeMul(val, decMult, 4)})`
           );
         }
       }
@@ -1994,7 +2006,7 @@ export class GenerativeController {
         if (lBoost > 1.01) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lBoost)})`
+            (_, val) => `.lpf(${safeMul(val, lBoost, 0)})`
           );
         }
       }
@@ -2074,7 +2086,7 @@ export class GenerativeController {
           for (const result of layerResults) {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
+              (_, val) => `.lpf(${safeMul(val, correction, 0)})`
             );
           }
         }
@@ -2091,7 +2103,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * relMult)})`
+            (_, val) => `.lpf(${safeMul(val, relMult, 0)})`
           );
         }
       }
@@ -2099,7 +2111,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.room\(([0-9.]+)\)/,
-            (_, val) => `.room(${(parseFloat(val) * revMult).toFixed(4)})`
+            (_, val) => `.room(${safeMul(val, revMult, 4)})`
           );
         }
       }
@@ -2114,7 +2126,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * tiltLpf)})`
+            (_, val) => `.lpf(${safeMul(val, tiltLpf, 0)})`
           );
         }
       }
@@ -2129,7 +2141,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+            (_, val) => `.lpf(${safeMul(val, lpfMult, 0)})`
           );
         }
       }
@@ -2137,7 +2149,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.hpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.hpf(${Math.round(parseFloat(val) * hpfMult)})`
+            (_, val) => `.hpf(${safeMul(val, hpfMult, 0)})`
           );
         }
       }
@@ -2157,7 +2169,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * predMult)})`
+            (_, val) => `.lpf(${safeMul(val, predMult, 0)})`
           );
         }
       }
@@ -2270,7 +2282,7 @@ export class GenerativeController {
           for (const result of layerResults) {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfCorr)})`
+              (_, val) => `.lpf(${safeMul(val, lpfCorr, 0)})`
             );
           }
         }
@@ -2284,7 +2296,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.decay\(([0-9.]+)\)/,
-            (_, val) => `.decay(${(parseFloat(val) * decMult).toFixed(4)})`
+            (_, val) => `.decay(${safeMul(val, decMult, 4)})`
           );
         }
       }
@@ -2300,7 +2312,7 @@ export class GenerativeController {
         if (Math.abs(susMult - 1.0) > 0.03) {
           result.code = result.code.replace(
             /\.sustain\(([0-9.]+)\)/,
-            (_, val) => `.sustain(${(parseFloat(val) * susMult).toFixed(4)})`
+            (_, val) => `.sustain(${safeMul(val, susMult, 4)})`
           );
         }
       }
@@ -2317,7 +2329,7 @@ export class GenerativeController {
           if (result.name === 'texture') continue; // drums don't bloom
           result.code = result.code.replace(
             /\.fm\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmBloom).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fmBloom, 2)})`
           );
         }
       }
@@ -2326,7 +2338,7 @@ export class GenerativeController {
           if (result.name === 'texture') continue;
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfBloom)})`
+            (_, val) => `.lpf(${safeMul(val, lpfBloom, 0)})`
           );
         }
       }
@@ -2335,7 +2347,7 @@ export class GenerativeController {
           if (result.name === 'texture') continue;
           result.code = result.code.replace(
             /\.room\(([0-9.]+)\)/,
-            (_, val) => `.room(${(parseFloat(val) * roomBloom).toFixed(4)})`
+            (_, val) => `.room(${safeMul(val, roomBloom, 4)})`
           );
         }
       }
@@ -2350,7 +2362,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.fm\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmColor).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fmColor, 2)})`
           );
         }
       }
@@ -2358,7 +2370,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.decay\(([0-9.]+)\)/,
-            (_, val) => `.decay(${(parseFloat(val) * decColor).toFixed(4)})`
+            (_, val) => `.decay(${safeMul(val, decColor, 4)})`
           );
         }
       }
@@ -2390,7 +2402,7 @@ export class GenerativeController {
         if (Math.abs(fbMult - 1.0) > 0.03) {
           result.code = result.code.replace(
             /\.room\(([0-9.]+)\)/,
-            (_, val) => `.room(${(parseFloat(val) * fbMult).toFixed(4)})`
+            (_, val) => `.room(${safeMul(val, fbMult, 4)})`
           );
         }
       }
@@ -2470,13 +2482,13 @@ export class GenerativeController {
         if (Math.abs(lpfMult - 1.0) > 0.03) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+            (_, val) => `.lpf(${safeMul(val, lpfMult, 0)})`
           );
         }
         if (Math.abs(fmMult - 1.0) > 0.03) {
           result.code = result.code.replace(
             /\.fm\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fmMult, 2)})`
           );
         }
       }
@@ -2531,7 +2543,7 @@ export class GenerativeController {
           if (revMult < 0.97) {
             result.code = result.code.replace(
               /\.room\(([0-9.]+)\)/,
-              (_, val) => `.room(${(parseFloat(val) * revMult).toFixed(4)})`
+              (_, val) => `.room(${safeMul(val, revMult, 4)})`
             );
           }
         }
@@ -2566,7 +2578,7 @@ export class GenerativeController {
           if (roomBoost > 1.01) {
             droneResult.code = droneResult.code.replace(
               /\.room\(([0-9.]+)\)/,
-              (_, val) => `.room(${(parseFloat(val) * roomBoost).toFixed(2)})`
+              (_, val) => `.room(${safeMul(val, roomBoost, 2)})`
             );
           }
         }
@@ -2786,14 +2798,14 @@ export class GenerativeController {
         if (Math.abs(fJit - 1.0) > 0.01) {
           result.code = result.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fJit).toFixed(2)})`
+            (_, val) => `.fm(${safeMul(val, fJit, 2)})`
           );
         }
         const lpfJit = filterJitter(this.state.tick, i, this.state.mood, this.state.section);
         if (Math.abs(lpfJit - 1.0) > 0.005) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfJit)})`
+            (_, val) => `.lpf(${safeMul(val, lpfJit, 0)})`
           );
         }
       }
@@ -2833,7 +2845,7 @@ export class GenerativeController {
         if (penalty < 1.0) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * penalty).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, penalty, 4)})`
           );
         }
       }
@@ -2848,12 +2860,12 @@ export class GenerativeController {
         // Boost drone gain for sustain effect
         droneResult.code = droneResult.code.replace(
           /\.gain\(([0-9.]+)\)/,
-          (_, val) => `.gain(${(parseFloat(val) * Math.min(sustainMult, 1.4)).toFixed(4)})`
+          (_, val) => `.gain(${safeMul(val, Math.min(sustainMult, 1.4), 4)})`
         );
         // Extend room for pedal resonance
         droneResult.code = droneResult.code.replace(
           /\.room\(([0-9.]+)\)/,
-          (_, val) => `.room(${Math.min(1, parseFloat(val) * decayMult).toFixed(4)})`
+          (_, val) => `.room(${Math.min(1, safeP(val) * decayMult).toFixed(4)})`
         );
       }
     }
@@ -2866,7 +2878,7 @@ export class GenerativeController {
         if (Math.abs(decayMult - 1.0) > 0.01) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * decayMult).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, decayMult, 4)})`
           );
         }
       }
@@ -2927,7 +2939,7 @@ export class GenerativeController {
           const gainMod = 1.0 + (spread - 1.0) * 0.3; // dampen effect on gain
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * gainMod).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, gainMod, 4)})`
           );
         }
       }
@@ -2962,7 +2974,7 @@ export class GenerativeController {
         if (Math.abs(correction - 1.0) > 0.01) {
           layerResults[i].code = layerResults[i].code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * correction).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, correction, 4)})`
           );
         }
       }
@@ -2979,7 +2991,7 @@ export class GenerativeController {
           const fmBoost = ornament === 'trill' ? 1.3 : ornament === 'mordent' ? 1.2 : 1.1;
           melodyResult.code = melodyResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * fmBoost).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, fmBoost, 4)})`
           );
         }
       }
@@ -2994,7 +3006,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, fmMult, 4)})`
             );
           }
         }
@@ -3032,7 +3044,7 @@ export class GenerativeController {
         if (Math.abs(correction - 1.0) > 0.01) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * correction).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, correction, 4)})`
           );
         }
       }
@@ -3047,7 +3059,7 @@ export class GenerativeController {
         if (Math.abs(lpfMult - 1.0) > 0.01) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+            (_, val) => `.lpf(${safeMul(val, lpfMult, 0)})`
           );
         }
       }
@@ -3063,7 +3075,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * mGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, mGain, 4)})`
             );
           }
         }
@@ -3073,7 +3085,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * mBright)})`
+              (_, val) => `.lpf(${safeMul(val, mBright, 0)})`
             );
           }
         }
@@ -3090,7 +3102,7 @@ export class GenerativeController {
           // Boost arp gain slightly for doubling effect
           arpResult.code = arpResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * 1.08).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, 1.08, 4)})`
           );
         }
       }
@@ -3129,7 +3141,7 @@ export class GenerativeController {
         if (droneResult) {
           droneResult.code = droneResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * depth).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, depth, 4)})`
           );
         }
       }
@@ -3144,7 +3156,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * aGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, aGain, 4)})`
             );
           }
         }
@@ -3172,7 +3184,7 @@ export class GenerativeController {
           if (harmonyResult) {
             harmonyResult.code = harmonyResult.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * boost).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, boost, 4)})`
             );
           }
         }
@@ -3195,7 +3207,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * spread).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, spread, 4)})`
           );
         }
       }
@@ -3220,7 +3232,7 @@ export class GenerativeController {
         if (Math.abs(corr - 1.0) > 0.02) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * corr).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, corr, 4)})`
           );
         }
       }
@@ -3234,7 +3246,7 @@ export class GenerativeController {
           // to smooth the transition rather than hard-holding
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * 0.95).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, 0.95, 4)})`
           );
         }
       }
@@ -3266,7 +3278,7 @@ export class GenerativeController {
             if (result.name === 'harmony') {
               result.code = result.code.replace(
                 /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${(parseFloat(val) * gBoost).toFixed(4)})`
+                (_, val) => `.gain(${safeMul(val, gBoost, 4)})`
               );
             }
           }
@@ -3276,7 +3288,7 @@ export class GenerativeController {
             if (result.name === 'harmony') {
               result.code = result.code.replace(
                 /\.lpf\((\d+(?:\.\d+)?)\)/,
-                (_, val) => `.lpf(${Math.round(parseFloat(val) * bBoost)})`
+                (_, val) => `.lpf(${safeMul(val, bBoost, 0)})`
               );
             }
           }
@@ -3292,7 +3304,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+              (_, val) => `.lpf(${safeMul(val, decayLpf, 0)})`
             );
           }
         }
@@ -3331,7 +3343,7 @@ export class GenerativeController {
           if (melodyResult) {
             melodyResult.code = melodyResult.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * cGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, cGain, 4)})`
             );
           }
         }
@@ -3358,7 +3370,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * iBright)})`
+              (_, val) => `.lpf(${safeMul(val, iBright, 0)})`
             );
           }
         }
@@ -3368,7 +3380,7 @@ export class GenerativeController {
           if (result.name === 'harmony') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * iFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, iFm, 4)})`
             );
           }
         }
@@ -3386,7 +3398,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * Math.min(durMul, 1.2)).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, Math.min(durMul, 1.2), 4)})`
             );
           }
         }
@@ -3416,7 +3428,7 @@ export class GenerativeController {
         if (Math.abs(blendCorr - 1.0) > 0.02) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * blendCorr)})`
+            (_, val) => `.lpf(${safeMul(val, blendCorr, 0)})`
           );
         }
       }
@@ -3438,7 +3450,7 @@ export class GenerativeController {
           if (result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * (1.0 + pTension)).toFixed(4)})`
+              (_, val) => `.fm(${(safeP(val) * (1.0 + pTension)).toFixed(4)})`
             );
           }
         }
@@ -3455,7 +3467,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * tLpf)})`
+            (_, val) => `.lpf(${safeMul(val, tLpf, 0)})`
           );
         }
       }
@@ -3464,7 +3476,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * tFm).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, tFm, 4)})`
           );
         }
       }
@@ -3479,7 +3491,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * cWeight).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, cWeight, 4)})`
           );
         }
       }
@@ -3494,7 +3506,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * microGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, microGain, 4)})`
             );
           }
         }
@@ -3567,7 +3579,7 @@ export class GenerativeController {
           const boost = 1.0 + (alignment - 0.7) * 0.2;
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * boost).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, boost, 4)})`
           );
         }
       }
@@ -3583,7 +3595,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * fCorr).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, fCorr, 4)})`
             );
           }
         }
@@ -3606,7 +3618,7 @@ export class GenerativeController {
         if (atmoResult) {
           atmoResult.code = atmoResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * Math.max(0.7, Math.min(1.3, decayMul))).toFixed(4)})`
+            (_, val) => `.gain(${(safeP(val) * Math.max(0.7, Math.min(1.3, decayMul))).toFixed(4)})`
           );
         }
       }
@@ -3624,7 +3636,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * gainRed).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, gainRed, 4)})`
           );
         }
       }
@@ -3633,7 +3645,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfCorr)})`
+            (_, val) => `.lpf(${safeMul(val, lpfCorr, 0)})`
           );
         }
       }
@@ -3662,7 +3674,7 @@ export class GenerativeController {
             if (result.name === 'harmony') {
               result.code = result.code.replace(
                 /\.fm\(([0-9.]+)\)/,
-                (_, val) => `.fm(${(parseFloat(val) * fmCorr).toFixed(4)})`
+                (_, val) => `.fm(${safeMul(val, fmCorr, 4)})`
               );
             }
           }
@@ -3679,7 +3691,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * qaGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, qaGain, 4)})`
             );
           }
         }
@@ -3696,7 +3708,7 @@ export class GenerativeController {
           if (Math.abs(compMul - 1.0) > 0.02) {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * compMul).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, compMul, 4)})`
             );
           }
         }
@@ -3723,7 +3735,7 @@ export class GenerativeController {
           if (cGain > 1.01) {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * cGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, cGain, 4)})`
             );
           }
         }
@@ -3738,7 +3750,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * Math.min(susMul, 1.3)).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, Math.min(susMul, 1.3), 4)})`
           );
         }
       }
@@ -3804,7 +3816,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * fmMul).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, fmMul, 4)})`
             );
           }
         }
@@ -3820,7 +3832,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * gainRed).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, gainRed, 4)})`
             );
           }
         }
@@ -3837,7 +3849,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMul)})`
+            (_, val) => `.lpf(${safeMul(val, lpfMul, 0)})`
           );
         }
       }
@@ -3855,7 +3867,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone' || result.name === 'atmosphere') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMul)})`
+              (_, val) => `.lpf(${safeMul(val, lpfMul, 0)})`
             );
           }
         }
@@ -3893,7 +3905,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * fGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, fGain, 4)})`
             );
           }
         }
@@ -3903,7 +3915,7 @@ export class GenerativeController {
           if (result.name === 'harmony') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * fBright)})`
+              (_, val) => `.lpf(${safeMul(val, fBright, 0)})`
             );
           }
         }
@@ -3924,7 +3936,7 @@ export class GenerativeController {
         if (Math.abs(decayMul - 1.0) > 0.02) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * decayMul).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, decayMul, 4)})`
           );
         }
       }
@@ -3960,7 +3972,7 @@ export class GenerativeController {
         if (droneResult) {
           droneResult.code = droneResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * pFm).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, pFm, 4)})`
           );
         }
       }
@@ -3979,7 +3991,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * (0.9 + rc * 0.1)).toFixed(4)})`
+              (_, val) => `.gain(${(safeP(val) * (0.9 + rc * 0.1)).toFixed(4)})`
             );
           }
         }
@@ -3995,7 +4007,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'harmony') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * mpGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, mpGain, 4)})`
             );
           }
         }
@@ -4014,7 +4026,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * dwGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, dwGain, 4)})`
           );
         }
       }
@@ -4030,7 +4042,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * seqGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, seqGain, 4)})`
           );
         }
       }
@@ -4044,7 +4056,7 @@ export class GenerativeController {
         if (Math.abs(rGain - 1.0) > 0.02) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * rGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, rGain, 4)})`
           );
         }
       }
@@ -4060,7 +4072,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * gGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, gGain, 4)})`
           );
         }
       }
@@ -4080,7 +4092,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * aGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, aGain, 4)})`
           );
         }
       }
@@ -4113,7 +4125,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rGain, 4)})`
             );
           }
         }
@@ -4130,7 +4142,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, spGain, 4)})`
           );
         }
       }
@@ -4145,7 +4157,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * sGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, sGain, 4)})`
             );
           }
         }
@@ -4161,7 +4173,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'harmony') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * envFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, envFm, 4)})`
             );
           }
         }
@@ -4179,7 +4191,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * Math.min(mGain, 1.06)).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, Math.min(mGain, 1.06), 4)})`
           );
         }
       }
@@ -4198,7 +4210,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'arp' || result.name === 'atmosphere') {
             result.code = result.code.replace(
               /\.pan\(([0-9.-]+)\)/,
-              (_, val) => `.pan(${(parseFloat(val) * pwMul).toFixed(4)})`
+              (_, val) => `.pan(${safeMul(val, pwMul, 4)})`
             );
           }
         }
@@ -4215,7 +4227,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * stasisFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, stasisFm, 4)})`
             );
           }
         }
@@ -4225,7 +4237,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * stasisLpf)})`
+              (_, val) => `.lpf(${safeMul(val, stasisLpf, 0)})`
             );
           }
         }
@@ -4246,7 +4258,7 @@ export class GenerativeController {
         if (Math.abs(tGain - 1.0) > 0.02) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * tGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, tGain, 4)})`
           );
         }
       }
@@ -4262,7 +4274,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.decay\(([0-9.]+)\)/,
-              (_, val) => `.decay(${(parseFloat(val) * subDecay).toFixed(4)})`
+              (_, val) => `.decay(${safeMul(val, subDecay, 4)})`
             );
           }
         }
@@ -4278,7 +4290,7 @@ export class GenerativeController {
           for (const result of layerResults) {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * Math.min(boost, 1.08)).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, Math.min(boost, 1.08), 4)})`
             );
           }
         }
@@ -4293,7 +4305,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.decay\(([0-9.]+)\)/,
-              (_, val) => `.decay(${(parseFloat(val) * qDecay).toFixed(4)})`
+              (_, val) => `.decay(${safeMul(val, qDecay, 4)})`
             );
           }
         }
@@ -4311,7 +4323,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * sGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, sGain, 4)})`
             );
           }
         }
@@ -4327,7 +4339,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * invGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, invGain, 4)})`
           );
         }
       }
@@ -4342,7 +4354,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * densityGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, densityGain, 4)})`
             );
           }
         }
@@ -4363,7 +4375,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * colorLpf)})`
+              (_, val) => `.lpf(${safeMul(val, colorLpf, 0)})`
             );
           }
         }
@@ -4380,7 +4392,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * edgeGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, edgeGain, 4)})`
             );
           }
         }
@@ -4413,7 +4425,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * gGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, gGain, 4)})`
             );
           }
         }
@@ -4432,7 +4444,7 @@ export class GenerativeController {
         if (droneResult) {
           droneResult.code = droneResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * rmGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, rmGain, 4)})`
           );
         }
       }
@@ -4451,7 +4463,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.decay\(([0-9.]+)\)/,
-            (_, val) => `.decay(${(parseFloat(val) * sPedalDecay).toFixed(4)})`
+            (_, val) => `.decay(${safeMul(val, sPedalDecay, 4)})`
           );
         }
       }
@@ -4465,7 +4477,7 @@ export class GenerativeController {
         if (Math.abs(lpfMul - 1.0) > 0.03) {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMul)})`
+            (_, val) => `.lpf(${safeMul(val, lpfMul, 0)})`
           );
         }
       }
@@ -4483,7 +4495,7 @@ export class GenerativeController {
             if (Math.abs(correction - 1.0) > 0.02) {
               result.code = result.code.replace(
                 /\.lpf\((\d+(?:\.\d+)?)\)/,
-                (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
+                (_, val) => `.lpf(${safeMul(val, correction, 0)})`
               );
             }
           }
@@ -4506,7 +4518,7 @@ export class GenerativeController {
             if (result.name === 'melody') {
               result.code = result.code.replace(
                 /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${(parseFloat(val) * vGain).toFixed(4)})`
+                (_, val) => `.gain(${safeMul(val, vGain, 4)})`
               );
             }
           }
@@ -4523,7 +4535,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * hGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, hGain, 4)})`
             );
           }
         }
@@ -4541,7 +4553,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.room\(([0-9.]+)\)/,
-              (_, val) => `.room(${Math.min(0.95, parseFloat(val) * reverbMul).toFixed(4)})`
+              (_, val) => `.room(${Math.min(0.95, safeP(val) * reverbMul).toFixed(4)})`
             );
           }
         }
@@ -4557,7 +4569,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.attack\(([0-9.]+)\)/,
-              (_, val) => `.attack(${(parseFloat(val) * atkMul).toFixed(4)})`
+              (_, val) => `.attack(${safeMul(val, atkMul, 4)})`
             );
           }
         }
@@ -4577,7 +4589,7 @@ export class GenerativeController {
           if (result.name === 'harmony') {
             result.code = result.code.replace(
               /\.slow\(([0-9.]+)\)/,
-              (_, val) => `.slow(${(parseFloat(val) * variance).toFixed(4)})`
+              (_, val) => `.slow(${safeMul(val, variance, 4)})`
             );
           }
         }
@@ -4598,7 +4610,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * mGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, mGain, 4)})`
             );
           }
         }
@@ -4615,7 +4627,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * fmMul).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, fmMul, 4)})`
             );
           }
         }
@@ -4631,7 +4643,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * emphGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, emphGain, 4)})`
             );
           }
         }
@@ -4649,7 +4661,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * fmMul).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, fmMul, 4)})`
             );
           }
         }
@@ -4668,7 +4680,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * sw).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, sw, 4)})`
           );
         }
       }
@@ -4685,7 +4697,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, breathGain, 4)})`
             );
           }
         }
@@ -4704,7 +4716,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * mtGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, mtGain, 4)})`
           );
         }
       }
@@ -4718,7 +4730,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * sdFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, sdFm, 4)})`
             );
           }
         }
@@ -4734,7 +4746,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * plGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, plGain, 4)})`
           );
         }
       }
@@ -4756,7 +4768,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * ogGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, ogGain, 4)})`
           );
         }
       }
@@ -4773,7 +4785,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * taGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, taGain, 4)})`
           );
         }
       }
@@ -4788,7 +4800,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * glGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, glGain, 4)})`
             );
           }
         }
@@ -4805,7 +4817,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * stGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, stGain, 4)})`
             );
           }
         }
@@ -4821,7 +4833,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * lpGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, lpGain, 4)})`
             );
           }
         }
@@ -4836,7 +4848,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * siFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, siFm, 4)})`
             );
           }
         }
@@ -4852,7 +4864,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * ffm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, ffm, 4)})`
             );
           }
         }
@@ -4869,7 +4881,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * rcGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, rcGain, 4)})`
           );
         }
       }
@@ -4884,7 +4896,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * gsGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, gsGain, 4)})`
             );
           }
         }
@@ -4900,7 +4912,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, spGain, 4)})`
           );
         }
       }
@@ -4915,7 +4927,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.hpf\(([0-9.]+)\)/,
-            (_, val) => `.hpf(${(parseFloat(val) * bcHpf).toFixed(0)})`
+            (_, val) => `.hpf(${safeMul(val, bcHpf, 0)})`
           );
         }
       }
@@ -4928,7 +4940,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * aeGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, aeGain, 4)})`
           );
         }
       }
@@ -4943,7 +4955,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * csLpf).toFixed(0)})`
+              (_, val) => `.lpf(${safeMul(val, csLpf, 0)})`
             );
           }
         }
@@ -4959,7 +4971,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * reGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, reGain, 4)})`
             );
           }
         }
@@ -4973,7 +4985,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * hrGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, hrGain, 4)})`
           );
         }
       }
@@ -4989,7 +5001,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * efGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, efGain, 4)})`
           );
         }
       }
@@ -5007,7 +5019,7 @@ export class GenerativeController {
           if (result.name === 'atmosphere' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * tbGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, tbGain, 4)})`
             );
           }
         }
@@ -5024,7 +5036,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * vlGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, vlGain, 4)})`
           );
         }
       }
@@ -5039,7 +5051,7 @@ export class GenerativeController {
             if (maGain < 0.97) {
               result.code = result.code.replace(
                 /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${(parseFloat(val) * maGain).toFixed(4)})`
+                (_, val) => `.gain(${safeMul(val, maGain, 4)})`
               );
               break; // only apply worst masker
             }
@@ -5057,7 +5069,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * apGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, apGain, 4)})`
             );
           }
         }
@@ -5075,7 +5087,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * pbGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, pbGain, 4)})`
           );
         }
       }
@@ -5089,7 +5101,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.decay\(([0-9.]+)\)/,
-              (_, val) => `.decay(${(parseFloat(val) * relMult).toFixed(4)})`
+              (_, val) => `.decay(${safeMul(val, relMult, 4)})`
             );
           }
         }
@@ -5110,7 +5122,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * cnFm).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, cnFm, 4)})`
           );
         }
       }
@@ -5125,7 +5137,7 @@ export class GenerativeController {
         if (arpResult) {
           arpResult.code = arpResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * diGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, diGain, 4)})`
           );
         }
       }
@@ -5142,7 +5154,7 @@ export class GenerativeController {
           if (Math.abs(rhGain - 1.0) > 0.01) {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rhGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rhGain, 4)})`
             );
           }
         }
@@ -5159,7 +5171,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * tdFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, tdFm, 4)})`
             );
           }
         }
@@ -5174,7 +5186,7 @@ export class GenerativeController {
           if (result.name !== 'drone' && result.name !== 'atmosphere') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * obGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, obGain, 4)})`
             );
           }
         }
@@ -5191,7 +5203,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * rmGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, rmGain, 4)})`
           );
         }
       }
@@ -5204,7 +5216,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * dcGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, dcGain, 4)})`
           );
         }
       }
@@ -5220,7 +5232,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * dcGain2).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, dcGain2, 4)})`
           );
         }
       }
@@ -5238,7 +5250,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * baLpf).toFixed(0)})`
+              (_, val) => `.lpf(${safeMul(val, baLpf, 0)})`
             );
           }
         }
@@ -5257,12 +5269,12 @@ export class GenerativeController {
         if (droneResult) {
           droneResult.code = droneResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * bgGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, bgGain, 4)})`
           );
           if (Math.abs(bgDecay - 1.0) > 0.02) {
             droneResult.code = droneResult.code.replace(
               /\.decay\(([0-9.]+)\)/,
-              (_, val) => `.decay(${(parseFloat(val) * bgDecay).toFixed(4)})`
+              (_, val) => `.decay(${safeMul(val, bgDecay, 4)})`
             );
           }
         }
@@ -5279,7 +5291,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * psGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, psGain, 4)})`
           );
         }
       }
@@ -5294,7 +5306,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * dbGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, dbGain, 4)})`
           );
         }
       }
@@ -5309,7 +5321,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
           );
         }
       }
@@ -5324,7 +5336,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * asGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, asGain, 4)})`
             );
           }
         }
@@ -5342,7 +5354,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * ecGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, ecGain, 4)})`
           );
         }
       }
@@ -5359,7 +5371,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * raGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, raGain, 4)})`
           );
         }
       }
@@ -5377,7 +5389,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * vcGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, vcGain, 4)})`
           );
         }
       }
@@ -5394,7 +5406,7 @@ export class GenerativeController {
           if (result.name === 'drone' || result.name === 'harmony') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rsGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rsGain, 4)})`
             );
           }
         }
@@ -5413,7 +5425,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rvMult).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rvMult, 4)})`
             );
           }
         }
@@ -5429,7 +5441,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * wCorr).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, wCorr, 4)})`
             );
           }
         }
@@ -5446,7 +5458,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * trGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, trGain, 4)})`
           );
         }
       }
@@ -5460,7 +5472,7 @@ export class GenerativeController {
         if (Math.abs(owGain - 1.0) > 0.01) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * owGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, owGain, 4)})`
           );
         }
       }
@@ -5475,7 +5487,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
             );
           }
         }
@@ -5490,7 +5502,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * sdFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, sdFm, 4)})`
             );
           }
         }
@@ -5511,7 +5523,7 @@ export class GenerativeController {
           if (melodyResult) {
             melodyResult.code = melodyResult.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * lpGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, lpGain, 4)})`
             );
           }
         }
@@ -5527,7 +5539,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * prGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, prGain, 4)})`
             );
           }
         }
@@ -5542,7 +5554,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * fwGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, fwGain, 4)})`
             );
           }
         }
@@ -5559,7 +5571,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * rfGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, rfGain, 4)})`
           );
         }
       }
@@ -5573,7 +5585,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * daGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, daGain, 4)})`
           );
         }
       }
@@ -5587,7 +5599,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * scGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, scGain, 4)})`
           );
         }
       }
@@ -5602,7 +5614,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * pcGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, pcGain, 4)})`
           );
         }
       }
@@ -5618,7 +5630,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * gcGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, gcGain, 4)})`
             );
           }
         }
@@ -5635,7 +5647,7 @@ export class GenerativeController {
           if (harmonyResult) {
             harmonyResult.code = harmonyResult.code.replace(
               /\.decay\(([0-9.]+)\)/,
-              (_, val) => `.decay(${(parseFloat(val) * ctDecay).toFixed(4)})`
+              (_, val) => `.decay(${safeMul(val, ctDecay, 4)})`
             );
           }
         }
@@ -5651,7 +5663,7 @@ export class GenerativeController {
         if (melodyResult) {
           melodyResult.code = melodyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * ceGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, ceGain, 4)})`
           );
         }
       }
@@ -5667,7 +5679,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * srGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, srGain, 4)})`
             );
           }
         }
@@ -5684,7 +5696,7 @@ export class GenerativeController {
           if (melodyResult) {
             melodyResult.code = melodyResult.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * ctgGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, ctgGain, 4)})`
             );
           }
         }
@@ -5698,7 +5710,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * tmGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, tmGain, 4)})`
           );
         }
       }
@@ -5713,7 +5725,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * svGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, svGain, 4)})`
             );
           }
         }
@@ -5727,7 +5739,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * dsGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, dsGain, 4)})`
           );
         }
       }
@@ -5741,7 +5753,7 @@ export class GenerativeController {
         if (Math.abs(bwGain - 1.0) > 0.005) {
           droneResult.code = droneResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * bwGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, bwGain, 4)})`
           );
         }
       }
@@ -5779,7 +5791,7 @@ export class GenerativeController {
           if (Math.abs(rbLpf - 1.0) > 0.01) {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * rbLpf).toFixed(4)})`
+              (_, val) => `.lpf(${safeMul(val, rbLpf, 4)})`
             );
           }
         }
@@ -5798,13 +5810,13 @@ export class GenerativeController {
           if (Math.abs(trGain - 1.0) > 0.005) {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * trGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, trGain, 4)})`
             );
           }
           if (Math.abs(trFm - 1.0) > 0.005) {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * trFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, trFm, 4)})`
             );
           }
         }
@@ -5819,7 +5831,7 @@ export class GenerativeController {
         if (Math.abs(eaMult - 1.0) > 0.01) {
           result.code = result.code.replace(
             /\.attack\(([0-9.]+)\)/,
-            (_, val) => `.attack(${(parseFloat(val) * eaMult).toFixed(4)})`
+            (_, val) => `.attack(${safeMul(val, eaMult, 4)})`
           );
         }
       }
@@ -5836,7 +5848,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.decay\(([0-9.]+)\)/,
-              (_, val) => `.decay(${(parseFloat(val) * stDecay).toFixed(4)})`
+              (_, val) => `.decay(${safeMul(val, stDecay, 4)})`
             );
           }
         }
@@ -5853,7 +5865,7 @@ export class GenerativeController {
             if (result.name === 'harmony' || result.name === 'drone') {
               result.code = result.code.replace(
                 /\.room\(([0-9.]+)\)/,
-                (_, val) => `.room(${Math.min(0.95, parseFloat(val) * pfRoom).toFixed(4)})`
+                (_, val) => `.room(${Math.min(0.95, safeP(val) * pfRoom).toFixed(4)})`
               );
             }
           }
@@ -5874,7 +5886,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * avGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, avGain, 4)})`
             );
           }
         }
@@ -5893,7 +5905,7 @@ export class GenerativeController {
         if (Math.abs(gfGain - 1.0) > 0.005) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * gfGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, gfGain, 4)})`
           );
         }
       }
@@ -5911,7 +5923,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * hiGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, hiGain, 4)})`
           );
         }
       }
@@ -5936,7 +5948,7 @@ export class GenerativeController {
             if (melodyResult) {
               melodyResult.code = melodyResult.code.replace(
                 /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${(parseFloat(val) * ivGain).toFixed(4)})`
+                (_, val) => `.gain(${safeMul(val, ivGain, 4)})`
               );
             }
           }
@@ -5956,7 +5968,7 @@ export class GenerativeController {
               if (Math.abs(abFm - 1.0) > 0.01) {
                 result.code = result.code.replace(
                   /\.fm\(([0-9.]+)\)/,
-                  (_, val) => `.fm(${(parseFloat(val) * abFm).toFixed(4)})`
+                  (_, val) => `.fm(${safeMul(val, abFm, 4)})`
                 );
               }
             }
@@ -5975,7 +5987,7 @@ export class GenerativeController {
         if (Math.abs(vbGain - 1.0) > 0.005) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * vbGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, vbGain, 4)})`
           );
         }
       }
@@ -5991,7 +6003,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rrGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rrGain, 4)})`
             );
           }
         }
@@ -6006,7 +6018,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * ebFm).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, ebFm, 4)})`
           );
         }
       }
@@ -6022,7 +6034,7 @@ export class GenerativeController {
           if (melodyResult) {
             melodyResult.code = melodyResult.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rwGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rwGain, 4)})`
             );
           }
         }
@@ -6038,7 +6050,7 @@ export class GenerativeController {
         if (Math.abs(tdwGain - 1.0) > 0.005) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * tdwGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, tdwGain, 4)})`
           );
         }
       }
@@ -6057,7 +6069,7 @@ export class GenerativeController {
           if (Math.abs(oaGain - 1.0) > 0.01) {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * oaGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, oaGain, 4)})`
             );
             break; // only apply once per layer
           }
@@ -6073,7 +6085,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * tcLpf).toFixed(4)})`
+              (_, val) => `.lpf(${safeMul(val, tcLpf, 4)})`
             );
           }
         }
@@ -6089,7 +6101,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * pbGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, pbGain, 4)})`
             );
           }
         }
@@ -6109,7 +6121,7 @@ export class GenerativeController {
         if (Math.abs(atkMult - 1.0) > 0.01) {
           melodyResult.code = melodyResult.code.replace(
             /\.attack\(([0-9.]+)\)/,
-            (_, val) => `.attack(${(parseFloat(val) * atkMult).toFixed(4)})`
+            (_, val) => `.attack(${safeMul(val, atkMult, 4)})`
           );
         }
       }
@@ -6123,7 +6135,7 @@ export class GenerativeController {
         if (droneResult) {
           droneResult.code = droneResult.code.replace(
             /\.lpf\(([0-9.]+)\)/,
-            (_, val) => `.lpf(${(parseFloat(val) * pbLpf).toFixed(4)})`
+            (_, val) => `.lpf(${safeMul(val, pbLpf, 4)})`
           );
         }
       }
@@ -6136,7 +6148,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * secGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, secGain, 4)})`
           );
         }
       }
@@ -6151,7 +6163,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'harmony') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * paGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, paGain, 4)})`
             );
           }
         }
@@ -6168,7 +6180,7 @@ export class GenerativeController {
             if (result.name === 'harmony' || result.name === 'melody') {
               result.code = result.code.replace(
                 /\.fm\(([0-9.]+)\)/,
-                (_, val) => `.fm(${(parseFloat(val) * rmFm).toFixed(4)})`
+                (_, val) => `.fm(${safeMul(val, rmFm, 4)})`
               );
             }
           }
@@ -6185,7 +6197,7 @@ export class GenerativeController {
         if (Math.abs(dbGain - 1.0) > 0.005) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * dbGain).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, dbGain, 4)})`
           );
         }
       }
@@ -6200,7 +6212,7 @@ export class GenerativeController {
         if (harmonyResult) {
           harmonyResult.code = harmonyResult.code.replace(
             /\.fm\(([0-9.]+)\)/,
-            (_, val) => `.fm(${(parseFloat(val) * vrFm).toFixed(4)})`
+            (_, val) => `.fm(${safeMul(val, vrFm, 4)})`
           );
         }
       }
@@ -6215,7 +6227,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * mtGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, mtGain, 4)})`
             );
           }
         }
@@ -6234,7 +6246,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'atmosphere') {
             result.code = result.code.replace(
               /\.room\(([0-9.]+)\)/,
-              (_, val) => `.room(${Math.min(0.95, parseFloat(val) * drGain).toFixed(4)})`
+              (_, val) => `.room(${Math.min(0.95, safeP(val) * drGain).toFixed(4)})`
             );
           }
         }
@@ -6250,7 +6262,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * rwGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, rwGain, 4)})`
             );
           }
         }
@@ -6266,7 +6278,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * bsGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, bsGain, 4)})`
             );
           }
         }
@@ -6281,7 +6293,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone' || result.name === 'atmosphere') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * tdFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, tdFm, 4)})`
             );
           }
         }
@@ -6298,7 +6310,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * cwGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, cwGain, 4)})`
             );
           }
         }
@@ -6315,7 +6327,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * sdGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, sdGain, 4)})`
             );
           }
         }
@@ -6332,7 +6344,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * dsGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, dsGain, 4)})`
             );
           }
         }
@@ -6353,7 +6365,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * ppFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, ppFm, 4)})`
             );
           }
         }
@@ -6373,7 +6385,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
             );
           }
         }
@@ -6389,7 +6401,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * gpGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, gpGain, 4)})`
             );
           }
         }
@@ -6408,7 +6420,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * drLpf).toFixed(1)})`
+              (_, val) => `.lpf(${safeMul(val, drLpf, 1)})`
             );
           }
         }
@@ -6427,7 +6439,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * srGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, srGain, 4)})`
             );
           }
         }
@@ -6443,7 +6455,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * caGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, caGain, 4)})`
             );
           }
         }
@@ -6462,7 +6474,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * peFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, peFm, 4)})`
             );
           }
         }
@@ -6480,7 +6492,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * casGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, casGain, 4)})`
             );
           }
         }
@@ -6496,7 +6508,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * paGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, paGain, 4)})`
             );
           }
         }
@@ -6513,7 +6525,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * mmLpf).toFixed(1)})`
+              (_, val) => `.lpf(${safeMul(val, mmLpf, 1)})`
             );
           }
         }
@@ -6532,7 +6544,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * ntGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, ntGain, 4)})`
             );
           }
         }
@@ -6548,7 +6560,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * hpGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, hpGain, 4)})`
             );
           }
         }
@@ -6567,7 +6579,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'drone') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * scFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, scFm, 4)})`
             );
           }
         }
@@ -6586,7 +6598,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * awGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, awGain, 4)})`
             );
           }
         }
@@ -6602,7 +6614,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * agGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, agGain, 4)})`
             );
           }
         }
@@ -6620,7 +6632,7 @@ export class GenerativeController {
           if (result.name === 'drone' || result.name === 'harmony') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * ppFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, ppFm, 4)})`
             );
           }
         }
@@ -6638,7 +6650,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * etLpf).toFixed(1)})`
+              (_, val) => `.lpf(${safeMul(val, etLpf, 1)})`
             );
           }
         }
@@ -6654,7 +6666,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * mmGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, mmGain, 4)})`
             );
           }
         }
@@ -6669,7 +6681,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * tpGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, tpGain, 4)})`
             );
           }
         }
@@ -6687,7 +6699,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * ptGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, ptGain, 4)})`
             );
           }
         }
@@ -6703,7 +6715,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * caGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, caGain, 4)})`
             );
           }
         }
@@ -6722,7 +6734,7 @@ export class GenerativeController {
         if (mult < 0.999) {
           result.code = result.code.replace(
             /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(parseFloat(val) * mult).toFixed(4)})`
+            (_, val) => `.gain(${safeMul(val, mult, 4)})`
           );
         }
       }
@@ -6738,7 +6750,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * itFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, itFm, 4)})`
             );
           }
         }
@@ -6754,7 +6766,7 @@ export class GenerativeController {
           if (result.name === 'texture' || result.name === 'arp') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * taGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, taGain, 4)})`
             );
           }
         }
@@ -6772,7 +6784,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'atmosphere') {
             result.code = result.code.replace(
               /\.lpf\(([0-9.]+)\)/,
-              (_, val) => `.lpf(${(parseFloat(val) * pcLpf).toFixed(1)})`
+              (_, val) => `.lpf(${safeMul(val, pcLpf, 1)})`
             );
           }
         }
@@ -6791,7 +6803,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * cfGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, cfGain, 4)})`
             );
           }
         }
@@ -6807,7 +6819,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, spGain, 4)})`
             );
           }
         }
@@ -6828,7 +6840,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
-              (_, val) => `.fm(${(parseFloat(val) * dltFm).toFixed(4)})`
+              (_, val) => `.fm(${safeMul(val, dltFm, 4)})`
             );
           }
         }
@@ -6843,7 +6855,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * atGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, atGain, 4)})`
             );
           }
         }
@@ -6859,7 +6871,7 @@ export class GenerativeController {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'texture') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * aeGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, aeGain, 4)})`
             );
           }
         }
@@ -6882,7 +6894,7 @@ export class GenerativeController {
             if (result.name === 'harmony' || result.name === 'melody') {
               result.code = result.code.replace(
                 /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${(parseFloat(val) * rmGain).toFixed(4)})`
+                (_, val) => `.gain(${safeMul(val, rmGain, 4)})`
               );
             }
           }
@@ -6898,7 +6910,7 @@ export class GenerativeController {
           if (result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * grGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, grGain, 4)})`
             );
           }
         }
@@ -6914,7 +6926,7 @@ export class GenerativeController {
           if (result.name === 'arp' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(parseFloat(val) * itGain).toFixed(4)})`
+              (_, val) => `.gain(${safeMul(val, itGain, 4)})`
             );
           }
         }
@@ -7076,7 +7088,7 @@ export class GenerativeController {
           if (result.name === 'harmony' || result.name === 'melody') {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
-              (_, val) => `.lpf(${Math.round(parseFloat(val) * flashMult)})`
+              (_, val) => `.lpf(${safeMul(val, flashMult, 0)})`
             );
           }
         }
