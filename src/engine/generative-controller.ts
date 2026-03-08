@@ -336,6 +336,9 @@ import { additiveGroupingGain } from '../theory/rhythmic-additive-grouping';
 import { pedalPointTensionFm } from '../theory/harmonic-pedal-point-tension';
 import { escapeToneColorLpf } from '../theory/melodic-escape-tone-color';
 import { metricModulationFeelGain } from '../theory/rhythmic-metric-modulation-feel';
+import { tritonePullGain } from '../theory/harmonic-tritone-pull';
+import { passingToneSmoothingGain } from '../theory/melodic-passing-tone-smoothing';
+import { claveAlignmentGain } from '../theory/rhythmic-clave-alignment';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6640,6 +6643,55 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * mmGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic tritone pull: gain emphasis on dominant tritone chords
+    {
+      const tpGain = tritonePullGain(this.state.currentChord.quality, this.state.ticksSinceChordChange, this.state.mood, this.state.section);
+      if (tpGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * tpGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic passing tone smoothing: soften stepwise passing motion
+    {
+      const p = this.state.sectionProgress;
+      const arr = Math.round(Math.sin(p * Math.PI * 6) * 1.5);
+      const dep = Math.round(Math.sin((p + 0.03) * Math.PI * 6) * 1.5);
+      const ptGain = passingToneSmoothingGain(arr, dep, this.state.mood, this.state.section);
+      if (ptGain < 0.999) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * ptGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic clave alignment: Afro-Cuban clave accent patterns
+    {
+      const beatPos = this.state.tick % 16;
+      const caGain = claveAlignmentGain(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (caGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * caGain).toFixed(4)})`
             );
           }
         }
