@@ -4,6 +4,7 @@ import { getPentatonicSubset } from '../../theory/scales';
 import { randomChoice, weightedChoice } from '../random';
 import { noteIndex } from '../../theory/scales';
 import { buildNarmourPhrase, applyChordToneGravity } from '../../theory/narmour';
+import { phraseDensityMask } from '../../theory/phrase';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -373,20 +374,39 @@ export class MelodyLayer extends CachingLayer {
       disco: effectiveDensity * 0.45,
     }[mood];
 
-    const totalNotes = Math.max(1, Math.floor(noteCount * noteProbability));
+    // Breathiness: gentle moods get more space between phrases
+    const breathiness = {
+      ambient: 0.8, downtempo: 0.5, lofi: 0.5,
+      trance: 0.2, avril: 0.7, xtal: 0.8,
+      syro: 0.15, blockhead: 0.4, flim: 0.7, disco: 0.25,
+    }[mood];
 
-    // Place motif in first half
-    const firstHalf = this.placeMotif(motif, 0, 7, totalNotes);
-    for (const { pos, note } of firstHalf) {
-      if (pos < noteCount) elements[pos] = note;
+    // Use phrase-aware density mask for note placement
+    const mask = phraseDensityMask(8, noteProbability, breathiness);
+
+    // Place motif notes at phrase-masked positions in first half
+    let motifIdx = 0;
+    for (let i = 0; i < 8; i++) {
+      if (mask[i] && motifIdx < motif.length) {
+        elements[i] = motif[motifIdx++];
+      }
+    }
+    // Fill remaining masked positions with ladder notes
+    for (let i = 0; i < 8; i++) {
+      if (mask[i] && elements[i] === '~') {
+        elements[i] = ladder[Math.floor(Math.random() * ladder.length)];
+      }
     }
 
     // Call-and-response in second half (only during build/peak/groove)
     if (section.useCallResponse) {
       const variation = this.varyMotif(motif, ladder);
-      const secondHalf = this.placeMotif(variation, 0, 7, totalNotes);
-      for (const { pos, note } of secondHalf) {
-        if (pos + 8 < noteCount) elements[pos + 8] = note;
+      const mask2 = phraseDensityMask(8, noteProbability, breathiness);
+      let varIdx = 0;
+      for (let i = 0; i < 8; i++) {
+        if (mask2[i] && varIdx < variation.length) {
+          elements[i + 8] = variation[varIdx++];
+        }
       }
     }
 
