@@ -71,6 +71,8 @@ import { tensionFmColor, tensionDecayColor, shouldApplyTensionColor } from '../t
 import { echoDensityFeedback, shouldApplyEchoDensity } from '../theory/echo-density';
 import { independenceDensityMult, shouldApplyIndependence } from '../theory/voice-independence';
 import { bloomMultiplier, bloomLpfMultiplier, bloomRoomMultiplier, shouldApplyBloom } from '../theory/harmonic-bloom';
+import { detectPhase, releaseMultiplier, releaseReverbMultiplier, shouldApplyTensionResolution } from '../theory/tension-resolution-pair';
+import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -1402,6 +1404,77 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Tension-resolution pair: coordinated brightness/reverb shift during release
+    if (shouldApplyTensionResolution(this.state.mood)) {
+      const tension = this.state.tension?.overall ?? 0.5;
+      const phase = detectPhase(tension, this.prevEnergy, this.state.mood);
+      const relMult = releaseMultiplier(phase, this.state.mood);
+      const revMult = releaseReverbMultiplier(phase, this.state.mood);
+      if (Math.abs(relMult - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * relMult)})`
+          );
+        }
+      }
+      if (Math.abs(revMult - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.room\(([0-9.]+)\)/,
+            (_, val) => `.room(${(parseFloat(val) * revMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Bass weight: prevent bass frequency buildup between layers
+    {
+      const NOTE_MIDI_BW: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const layerMidis: Record<string, number> = {};
+      for (const result of layerResults) {
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const notes = noteMatch[1].split(/\s+/).filter(n => n !== '~');
+        if (notes.length === 0) continue;
+        let sum = 0;
+        for (const n of notes) {
+          const name = n.replace(/\d+$/, '');
+          const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+          sum += (NOTE_MIDI_BW[name] ?? 0) + oct * 12;
+        }
+        layerMidis[result.name] = sum / notes.length;
+      }
+      const bassCount = bassLayerCount(layerMidis);
+      if (bassCount >= 2) {
+        for (const result of layerResults) {
+          const isMain = result.name === 'drone';
+          const hpf = bassHpfCorrection(bassCount, this.state.mood, isMain);
+          if (hpf > 5) {
+            result.code = result.code.replace(
+              /\.hpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.hpf(${Math.round(parseFloat(val) + hpf)})`
+            );
+          }
+          const gCorr = bassGainCorrection(bassCount, this.state.mood, isMain);
+          if (gCorr < 0.97) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gCorr).toFixed(4)})`;
+                return `.gain((${expr}) * ${gCorr.toFixed(4)})`;
+              }
             );
           }
         }

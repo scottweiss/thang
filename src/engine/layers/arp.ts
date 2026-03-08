@@ -33,6 +33,7 @@ import { shouldApplyStretto, strettoEntry, transposeForStretto, strettoOffset, s
 import { shouldApplyTintinnabuli, generateTVoice, selectPosition } from '../../theory/tintinnabuli';
 import { shouldApplyColorPedal, selectPedalTone, pedalOctave } from '../../theory/color-pedal';
 import { shouldApplyPhaseShift, phaseOffset, phaseToLate, phaseCycleLength } from '../../theory/phase-shift';
+import { arpDensityDegrade, shouldApplyArpDensityWave } from '../../theory/arp-density-wave';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -91,9 +92,15 @@ export class ArpLayer extends CachingLayer {
     const brightness = state.params.brightness * (0.85 + tension * 0.3);
     const room = (0.4 + state.params.spaciousness * 0.4) * (1.1 - tension * 0.2);
     const progress = state.sectionProgress ?? 0;
-    const sectionMult = shouldApplyDensityContour(progress)
+    let sectionMult = shouldApplyDensityContour(progress)
       ? densityContour(state.section, progress, SECTION_DENSITY[state.section])
       : SECTION_DENSITY[state.section];
+
+    // Arp density wave: independent breathing rhythm
+    if (shouldApplyArpDensityWave(mood)) {
+      const degrade = arpDensityDegrade(state.tick, mood, state.section);
+      sectionMult *= (1.0 - degrade);
+    }
     const section = state.section;
     this.lastMood = mood;
 
