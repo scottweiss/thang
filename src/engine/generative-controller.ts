@@ -116,6 +116,9 @@ import { characteristicToneWeight } from '../theory/modal-coloring';
 import { expectancyWeight } from '../theory/melodic-expectancy';
 import { breathingSpread, shouldApplyBreathing } from '../theory/harmonic-breathing';
 import { shouldDisplace, displacementAmount } from '../theory/rhythmic-displacement-pattern';
+import { registralGainCorrection } from '../theory/registral-balance';
+import { shouldOrnamentCadence, selectOrnament } from '../theory/cadential-ornamentation';
+import { timbralContrastMultiplier, shouldApplyTimbralContrast } from '../theory/timbral-contrast-curve';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2708,6 +2711,58 @@ export class GenerativeController {
             /\.late\(([0-9.]+)\)/,
             () => `.late(${newLate.toFixed(4)})`
           );
+        }
+      }
+    }
+
+    // Registral balance: gain correction for frequency-space crowding
+    {
+      // Approximate center frequencies per layer type
+      const layerFreqs: Record<string, number> = {
+        drone: 80, harmony: 350, melody: 700, texture: 200, arp: 900, atmosphere: 500
+      };
+      const activeCenters = layerResults.map(r => layerFreqs[r.name] ?? 400);
+      for (let i = 0; i < layerResults.length; i++) {
+        const center = activeCenters[i];
+        const correction = registralGainCorrection(center, activeCenters, this.state.mood);
+        if (Math.abs(correction - 1.0) > 0.01) {
+          layerResults[i].code = layerResults[i].code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * correction).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Cadential ornamentation: decorative figures at phrase endings
+    {
+      const isPhraseEnd = (this.state.sectionProgress ?? 0) > 0.85;
+      if (shouldOrnamentCadence(this.state.tick, this.state.mood, this.state.section, isPhraseEnd)) {
+        const ornament = selectOrnament(this.state.tick, this.state.mood);
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          // Apply ornament as FM depth boost (trills/mordents = faster FM)
+          const fmBoost = ornament === 'trill' ? 1.3 : ornament === 'mordent' ? 1.2 : 1.1;
+          melodyResult.code = melodyResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmBoost).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Timbral contrast curve: FM depth follows section-level arc
+    if (shouldApplyTimbralContrast(this.state.mood)) {
+      const progress = this.state.sectionProgress ?? 0;
+      const fmMult = timbralContrastMultiplier(progress, this.state.mood, this.state.section);
+      if (Math.abs(fmMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(4)})`
+            );
+          }
         }
       }
     }
