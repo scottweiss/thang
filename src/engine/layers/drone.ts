@@ -2,6 +2,9 @@ import { Layer } from '../layer';
 import { GenerativeState, NoteName, Section } from '../../types';
 import { generateBassPattern, bassFollowsChord } from '../../theory/bass-pattern';
 import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } from '../../theory/pedal-point';
+import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
+import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
+import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -16,10 +19,58 @@ export class DroneLayer implements Layer {
   orbit = 0;
 
   generate(state: GenerativeState): string {
-    const pattern = this.buildPattern(state);
+    let result = this.buildPattern(state);
+
+    // Spatial depth: reverb breathes with section progress
+    if (shouldApplySpatialDepth(state.section)) {
+      const progress = state.sectionProgress ?? 0;
+      const tension = state.tension?.overall ?? 0.5;
+      const rMult = roomMultiplier(state.section, progress, tension);
+      const sMult = roomsizeMultiplier(state.section, progress);
+      if (Math.abs(rMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.room\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.room(${(parseFloat(val) * rMult).toFixed(2)})`
+        );
+      }
+      if (Math.abs(sMult - 1.0) > 0.02) {
+        result = result.replace(
+          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+        );
+      }
+    }
+
+    // Resonance sweep: filter Q evolves with section
+    if (shouldApplyResonanceSweep(state.section) && result.includes('.resonance(')) {
+      const resMult = resonanceSweepMultiplier(state.section, state.sectionProgress ?? 0);
+      if (Math.abs(resMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.resonance\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.resonance(${Math.round(parseFloat(val) * resMult)})`
+        );
+      }
+    }
+
+    // Gain arc: crescendo/decrescendo within sections
+    if (shouldApplyGainArc(state.section)) {
+      const arcMult = gainArcMultiplier(state.section, state.sectionProgress ?? 0);
+      if (Math.abs(arcMult - 1.0) >= 0.03) {
+        result = result.replace(
+          /\.gain\(([^)]+)\)/,
+          (_, gainExpr) => {
+            const num = parseFloat(gainExpr);
+            if (!isNaN(num)) return `.gain(${(num * arcMult).toFixed(4)})`;
+            return `.gain((${gainExpr}) * ${arcMult.toFixed(4)})`;
+          }
+        );
+      }
+    }
+
+    // Section transition fade
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
     if (multiplier < 1.0) {
-      return pattern.replace(
+      return result.replace(
         /\.gain\(([^)]+)\)/,
         (_, gainExpr) => {
           const num = parseFloat(gainExpr);
@@ -28,7 +79,7 @@ export class DroneLayer implements Layer {
         }
       );
     }
-    return pattern;
+    return result;
   }
 
   private buildPattern(state: GenerativeState): string {
