@@ -11,6 +11,7 @@ import { HarmonyLayer } from './layers/harmony';
 import { MelodyLayer } from './layers/melody';
 import { TextureLayer } from './layers/texture';
 import { ArpLayer } from './layers/arp';
+import { AtmosphereLayer } from './layers/atmosphere';
 
 const TICK_INTERVAL = 2000; // ms between evolution ticks
 
@@ -63,6 +64,7 @@ export class GenerativeController {
       new MelodyLayer(),
       new TextureLayer(),
       new ArpLayer(),
+      new AtmosphereLayer(),
     ];
   }
 
