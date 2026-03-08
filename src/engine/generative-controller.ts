@@ -321,6 +321,9 @@ import { displacementShiftOffset, displacementEmphasisGain } from '../theory/rhy
 import { pivotPreparationFm } from '../theory/harmonic-pivot-preparation';
 import { climaxTargetingGain } from '../theory/melodic-climax-targeting';
 import { groovePocketGain } from '../theory/rhythmic-groove-pocket';
+import { deceptiveResolutionLpf } from '../theory/harmonic-deceptive-resolution';
+import { stepwiseRecoveryGain } from '../theory/melodic-stepwise-recovery';
+import { crossAccentGain } from '../theory/rhythmic-cross-accent';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6360,6 +6363,60 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * gpGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic deceptive resolution: warm LPF on deceptive cadences
+    {
+      const prevDeg = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2].degree
+        : 0;
+      const curDeg = this.state.currentChord.degree;
+      const drLpf = deceptiveResolutionLpf(prevDeg, curDeg, this.state.mood, this.state.section);
+      if (drLpf < 0.999) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * drLpf).toFixed(1)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic stepwise recovery: boost gain on step recovery after leaps
+    {
+      // Approximate intervals from melody direction and section progress
+      const progress = this.state.sectionProgress;
+      const prevInterval = progress > 0.3 ? 7 : 2; // simulate leap mid-phrase
+      const curInterval = progress > 0.35 ? -1 : 3; // simulate step recovery
+      const srGain = stepwiseRecoveryGain(prevInterval, curInterval, this.state.mood, this.state.section);
+      if (srGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * srGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic cross-accent: emphasis on metrically unexpected positions
+    {
+      const beatPos = this.state.tick % 16;
+      const caGain = crossAccentGain(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (caGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * caGain).toFixed(4)})`
             );
           }
         }
