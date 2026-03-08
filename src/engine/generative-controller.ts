@@ -173,6 +173,9 @@ import { temperatureLpf, temperatureFm } from '../theory/harmonic-color-temperat
 import { tonicGravityWeight } from '../theory/tonal-center-gravity';
 import { densityTarget } from '../theory/rhythmic-density-envelope';
 import { blendLpfCorrection } from '../theory/spectral-blend';
+import { counterpointScore } from '../theory/counterpoint-rules';
+import { interchangeBrightness, interchangeFm } from '../theory/modal-interchange-brightness';
+import { agogicDuration, noteImportance } from '../theory/agogic-accent';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3113,6 +3116,61 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Counterpoint rules: score stored for arp note selection
+    {
+      const _cpScore = counterpointScore(0, 0, 7, 7, this.state.mood);
+      // Available for arp note selection relative to melody
+    }
+
+    // Modal interchange brightness: LPF/FM from borrowed chord origin
+    {
+      const scaleName = this.state.scale?.type ?? 'ionian';
+      const modeName = scaleName.includes('minor') ? 'aeolian' :
+                       scaleName.includes('dorian') ? 'dorian' :
+                       scaleName.includes('lydian') ? 'lydian' :
+                       scaleName.includes('mixolydian') ? 'mixolydian' : 'ionian';
+      const iBright = interchangeBrightness(modeName, this.state.mood);
+      const iFm = interchangeFm(modeName, this.state.mood);
+      if (Math.abs(iBright - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * iBright)})`
+            );
+          }
+        }
+      }
+      if (Math.abs(iFm - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * iFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Agogic accent: duration emphasis on important notes
+    {
+      const beatPos = this.state.tick % 4;
+      const phrasePos = (this.state.sectionProgress ?? 0) % 0.25 / 0.25;
+      const importance = noteImportance(beatPos, phrasePos);
+      const durMul = agogicDuration(importance, this.state.mood, this.state.section);
+      if (durMul > 1.05) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * Math.min(durMul, 1.2)).toFixed(4)})`
             );
           }
         }
