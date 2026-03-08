@@ -21,6 +21,7 @@ import { RhythmicMemory } from '../../theory/rhythmic-memory';
 import { ladderToScaleDegrees } from '../../theory/tendency-tones';
 import { applyBlueNotes } from '../../theory/blue-notes';
 import { shouldTransformMotif, sectionTransform, applyTransform } from '../../theory/motivic-transform';
+import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -106,6 +107,17 @@ export class MelodyLayer extends CachingLayer {
     }
     // Safety: ensure no runaway phrases
     elements = ensurePhraseBoundary(elements, 10);
+
+    // Rhythmic feel: shuffle or halftime transformation based on mood + section
+    if (shouldApplyFeel(mood)) {
+      const feel = moodFeel(mood, state.section);
+      const intensity = feelIntensity(mood, state.section);
+      if (feel === 'shuffle') {
+        elements = applyShuffle(elements, intensity, '~');
+      } else if (feel === 'halftime') {
+        elements = applyHalftime(elements, intensity, '~');
+      }
+    }
 
     // Report phrase density, step pattern, and active motif for cross-layer coordination
     state.layerPhraseDensity[this.name] = elements.filter(e => e !== '~').length / Math.max(1, elements.length);

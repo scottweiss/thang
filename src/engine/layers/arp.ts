@@ -12,6 +12,7 @@ import { generateArpSequence, moodArpStyles, biasStyleForMotion, ArpStyle } from
 import { suggestCounterDirection } from '../../theory/contrapuntal-motion';
 import { shouldUseIsorhythm, moodTalea, isorhythmicPattern, isorhythmToStrudel } from '../../theory/isorhythm';
 import { complementWeights, weightLadder, selectComplement, shouldApplyComplement, complementStrength } from '../../theory/pitch-complement';
+import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -526,6 +527,18 @@ export class ArpLayer extends CachingLayer {
         result = filtered;
       }
     }
+
+    // Rhythmic feel: shuffle or halftime transformation based on mood + section
+    if (shouldApplyFeel(state.mood)) {
+      const feel = moodFeel(state.mood, state.section);
+      const intensity = feelIntensity(state.mood, state.section);
+      if (feel === 'shuffle') {
+        result = applyShuffle(result, intensity, '~');
+      } else if (feel === 'halftime') {
+        result = applyHalftime(result, intensity, '~');
+      }
+    }
+
     return result;
   }
 
