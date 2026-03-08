@@ -59,7 +59,7 @@ describe('MotifMemory', () => {
     expect(second!.useCount).toBe(2);
   });
 
-  it('develop returns array of notes', () => {
+  it('develop returns array of notes or rests', () => {
     const mem = new MotifMemory();
     mem.store(['C4', 'D4', 'E4', 'F4'], 0);
     const motif = mem.recall(1)!;
@@ -67,7 +67,7 @@ describe('MotifMemory', () => {
       const developed = mem.develop(motif, LADDER);
       expect(developed.length).toBeGreaterThan(0);
       developed.forEach(note => {
-        expect(LADDER).toContain(note);
+        expect(note === '~' || LADDER.includes(note)).toBe(true);
       });
     }
   });
@@ -102,5 +102,53 @@ describe('MotifMemory', () => {
       }
     }
     expect(foundFragment).toBe(true);
+  });
+
+  it('augmentation interleaves rests', () => {
+    const mem = new MotifMemory();
+    mem.store(['C4', 'D4', 'E4'], 0);
+    const motif = mem.recall(1)!;
+    let foundAugmented = false;
+    for (let i = 0; i < 100; i++) {
+      const developed = mem.develop(motif, LADDER);
+      // Augmented = notes interleaved with rests, so length = 2 * original
+      if (developed.length === 6 && developed[1] === '~' && developed[3] === '~') {
+        foundAugmented = true;
+        expect(developed[0]).toBe('C4');
+        expect(developed[2]).toBe('D4');
+        expect(developed[4]).toBe('E4');
+        break;
+      }
+    }
+    expect(foundAugmented).toBe(true);
+  });
+
+  it('diminution compresses motif', () => {
+    const mem = new MotifMemory();
+    mem.store(['C4', 'D4', 'E4', 'F4'], 0);
+    const motif = mem.recall(1)!;
+    let foundDiminished = false;
+    for (let i = 0; i < 100; i++) {
+      const developed = mem.develop(motif, LADDER);
+      // Diminished = every other note, so length = ceil(original/2)
+      if (developed.length === 2 && developed[0] === 'C4' && developed[1] === 'E4') {
+        foundDiminished = true;
+        break;
+      }
+    }
+    expect(foundDiminished).toBe(true);
+  });
+
+  it('develop includes augmented notes from ladder or rests', () => {
+    const mem = new MotifMemory();
+    mem.store(['C4', 'E4', 'G4'], 0);
+    const motif = mem.recall(1)!;
+    for (let i = 0; i < 50; i++) {
+      const developed = mem.develop(motif, LADDER);
+      for (const note of developed) {
+        // Notes should be from ladder or be rests (from augmentation)
+        expect(note === '~' || LADDER.includes(note)).toBe(true);
+      }
+    }
   });
 });

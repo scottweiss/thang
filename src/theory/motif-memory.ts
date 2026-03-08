@@ -86,22 +86,22 @@ export class MotifMemory {
   develop(motif: StoredMotif, ladder: string[]): string[] {
     const technique = Math.random();
 
-    if (technique < 0.2) {
+    if (technique < 0.15) {
       // Exact repetition (recognition)
       return [...motif.notes];
     }
 
-    if (technique < 0.45) {
+    if (technique < 0.35) {
       // Transposition: shift all notes up or down
       return this.transpose(motif.notes, ladder, Math.random() < 0.5 ? 1 : -1);
     }
 
-    if (technique < 0.6) {
+    if (technique < 0.48) {
       // Inversion: reverse the direction of intervals
       return this.invert(motif.notes, ladder);
     }
 
-    if (technique < 0.75) {
+    if (technique < 0.58) {
       // Fragmentation: use first or last half
       const half = Math.ceil(motif.notes.length / 2);
       return Math.random() < 0.5
@@ -109,9 +109,21 @@ export class MotifMemory {
         : motif.notes.slice(-half);
     }
 
-    if (technique < 0.9) {
+    if (technique < 0.68) {
       // Extension: add a note to the end
       return this.extend(motif.notes, ladder);
+    }
+
+    if (technique < 0.78) {
+      // Augmentation: stretch the motif by interleaving rests
+      // Creates a "slow motion" version of the motif
+      return this.augment(motif.notes);
+    }
+
+    if (technique < 0.88) {
+      // Diminution: compress the motif by taking every other note
+      // Creates a "fast forward" version
+      return this.diminish(motif.notes);
     }
 
     // Retrograde: play backwards
@@ -162,6 +174,26 @@ export class MotifMemory {
     ));
 
     return [...notes, ladder[newIdx]];
+  }
+
+  /** Augment: interleave rests between notes for a stretched feel */
+  private augment(notes: string[]): string[] {
+    const result: string[] = [];
+    for (const note of notes) {
+      result.push(note);
+      result.push('~');
+    }
+    return result;
+  }
+
+  /** Diminish: take every other note for a compressed feel */
+  private diminish(notes: string[]): string[] {
+    if (notes.length <= 2) return [...notes];
+    const result: string[] = [];
+    for (let i = 0; i < notes.length; i += 2) {
+      result.push(notes[i]);
+    }
+    return result;
   }
 
   /** Clear all stored motifs (e.g., on mood change) */
