@@ -37,6 +37,7 @@ import { gravityPlacementWeights, rhythmicGravityStrength } from '../../theory/r
 import { elisionTendency } from '../../theory/phrase-elision';
 import { anticipationProbability, anticipationTones, anticipationBias, shouldAnticipate } from '../../theory/harmonic-anticipation';
 import { gestureDensityMult, gesturePitchBias } from '../../theory/gestural-archetype';
+import { generateTimbreMap, shouldApplyKFM, applyTimbreToFM } from '../../theory/klangfarbenmelodie';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -195,6 +196,29 @@ export class MelodyLayer extends CachingLayer {
       })
       .join(' ');
 
+    const pattern = this.buildMoodPattern(mood, elements, gain, dynamicGain, brightness, room, state);
+
+    // Klangfarbenmelodie: per-note FM timbral variation for pointillistic color
+    if (shouldApplyKFM(mood, state.section)) {
+      const noteCount = elements.filter(e => e !== '~').length;
+      const kfmMap = generateTimbreMap(noteCount, mood, state.section, state.tick);
+      // Extract base FM value and create per-note FM pattern
+      const fmMatch = pattern.match(/\.fm\((\d+(?:\.\d+)?)\)/);
+      if (fmMatch) {
+        const baseFM = parseFloat(fmMatch[1]);
+        const fmValues = kfmMap.map(s => applyTimbreToFM(baseFM, s).toFixed(2)).join(' ');
+        return pattern.replace(/\.fm\(\d+(?:\.\d+)?\)/, `.fm("${fmValues}")`);
+      }
+    }
+
+    return pattern;
+  }
+
+  private buildMoodPattern(
+    mood: string, elements: string[], gain: number,
+    dynamicGain: string, brightness: number, room: number,
+    state: GenerativeState
+  ): string {
     switch (mood) {
       case 'ambient':
         // Triangle to distinguish from sine/4 harmony
@@ -434,6 +458,9 @@ export class MelodyLayer extends CachingLayer {
           .delaytime(0.25)
           .delayfeedback(0.25)
           .orbit(${this.orbit})`;
+
+      default:
+        return `note("${elements.join(' ')}").sound("sine").fm(1).gain(${gain.toFixed(4)}).slow(2).orbit(${this.orbit})`;
     }
   }
 

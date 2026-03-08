@@ -41,6 +41,7 @@ import { texturalEnvelopeMultipliers, shouldApplyTexturalContrast } from '../the
 import { spectralLpfMultiplier, spectralHpfOffset, shouldApplySpectralBalance } from '../theory/spectral-balance';
 import { breathSyncGainPattern, shouldApplyBreathSync } from '../theory/rhythmic-breath-sync';
 import { sectionTimbre, shouldApplyTimbralVariety } from '../theory/timbral-variety';
+import { shouldApplyResultant, resultantGainMask } from '../theory/resultant-rhythm';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -211,6 +212,9 @@ export abstract class CachingLayer implements Layer {
 
     // Rhythmic breath sync: micro-dips before strong beats for collective lift
     result = this.applyBreathSync(result, state);
+
+    // Resultant rhythm: polyrhythmic accent mask for complex groove layers
+    result = this.applyResultantRhythm(result, state);
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
@@ -865,6 +869,28 @@ export abstract class CachingLayer implements Layer {
         const gains = gainStr.split(' ').map(Number);
         const modified = gains.map((g: number, i: number) =>
           (g * (breathPattern[i % breathPattern.length] ?? 1.0)).toFixed(4)
+        ).join(' ');
+        return `.gain("${modified}")`;
+      }
+    );
+  }
+
+  /**
+   * Apply resultant rhythm accents: polyrhythmic gain pattern from combined periods.
+   * Creates mathematically complex accent patterns for arp/texture layers.
+   */
+  private applyResultantRhythm(pattern: string, state: GenerativeState): string {
+    // Only apply to rhythmically active layers
+    if (this.name !== 'arp' && this.name !== 'texture') return pattern;
+    if (!shouldApplyResultant(state.tick, state.mood, state.section)) return pattern;
+
+    return pattern.replace(
+      /\.gain\("([^"]+)"\)/g,
+      (_match, gainStr) => {
+        const gains = gainStr.split(' ').map(Number);
+        const mask = resultantGainMask(gains.length, state.mood, state.section);
+        const modified = gains.map((g: number, i: number) =>
+          (g * (mask[i] ?? 1.0)).toFixed(4)
         ).join(' ');
         return `.gain("${modified}")`;
       }

@@ -26,6 +26,7 @@ import { shouldEchoMotif, transposeMotif, selectEchoInterval } from '../../theor
 import { arpRegisterOffset, shouldApplyRegisterComplement } from '../../theory/register-complement';
 import { shouldExchangeVoices, selectExchangeNotes } from '../../theory/voice-exchange';
 import { suggestPitchClassAdditions } from '../../theory/pitch-class-set';
+import { shouldApplyResultant, resultantGainMask } from '../../theory/resultant-rhythm';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
