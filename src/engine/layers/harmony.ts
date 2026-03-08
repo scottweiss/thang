@@ -9,6 +9,7 @@ import { generateNudgePattern, shouldApplyMicroTiming } from '../../theory/micro
 import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../../theory/filter-envelope';
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
 import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../../theory/delay-evolution';
+import { hpfSweepOffset, shouldApplyHpfSweep } from '../../theory/hpf-sweep';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -87,6 +88,17 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * fbMult).toFixed(2)})`
+        );
+      }
+    }
+
+    // HPF sweep: build-up tension via rising high-pass filter
+    if (shouldApplyHpfSweep(state.section) && result.includes('.hpf(')) {
+      const offset = hpfSweepOffset(state.section, state.sectionProgress ?? 0);
+      if (offset >= 5) {
+        result = result.replace(
+          /\.hpf\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.hpf(${Math.round(parseFloat(val) + offset)})`
         );
       }
     }

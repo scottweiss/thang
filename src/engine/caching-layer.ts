@@ -6,6 +6,7 @@ import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../theory/f
 import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../theory/spatial-depth';
 import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../theory/delay-evolution';
 import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-morph';
+import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -41,6 +42,9 @@ export abstract class CachingLayer implements Layer {
 
     // Timbral morphing: FM index evolves within sections
     result = this.applyTimbralMorph(result, state);
+
+    // HPF sweep: build-up tension via rising high-pass filter
+    result = this.applyHpfSweep(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -215,6 +219,23 @@ export abstract class CachingLayer implements Layer {
     return pattern.replace(
       /\.fm\((\d+(?:\.\d+)?)\)/g,
       (_match, val) => `.fm(${(parseFloat(val) * mult).toFixed(1)})`
+    );
+  }
+
+  /**
+   * Add HPF offset for build-up sweep tension.
+   * Additively raises .hpf(NUMBER) values during builds/breakdowns.
+   */
+  private applyHpfSweep(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyHpfSweep(state.section)) return pattern;
+    if (!pattern.includes('.hpf(')) return pattern;
+
+    const offset = hpfSweepOffset(state.section, state.sectionProgress ?? 0);
+    if (offset < 5) return pattern;
+
+    return pattern.replace(
+      /\.hpf\((\d+(?:\.\d+)?)\)/g,
+      (_match, val) => `.hpf(${Math.round(parseFloat(val) + offset)})`
     );
   }
 
