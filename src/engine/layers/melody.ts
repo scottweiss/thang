@@ -58,6 +58,8 @@ import { generateCell, applyCell, cellAdherence, shouldApplyRhythmicMotif } from
 import { dynamicAccents, shouldApplyDynamicAccent } from '../../theory/dynamic-accent';
 import { isBreathMark, breathMarkGain, shouldApplyBreathMarks } from '../../theory/phrase-breath-mark';
 import { arcRegisterOffset, arcSemitoneShift, shouldApplyMelodicArc } from '../../theory/melodic-arc';
+import { detectSequence, suggestSequenceContinuation, shouldDetectSequence } from '../../theory/melodic-sequence-detection';
+import { weightGainMultiplier, shouldApplyRhythmicWeight } from '../../theory/rhythmic-weight';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -326,6 +328,38 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
+    // Melodic sequence detection: reinforce naturally emerging sequences
+    if (shouldDetectSequence(mood)) {
+      const NOTE_PC_SD: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const seqMidis: number[] = [];
+      for (const e of elements) {
+        if (e === '~') continue;
+        const n = e.replace(/\d+$/, '');
+        const oct = parseInt(e.match(/\d+$/)?.[0] ?? '4');
+        const pc = NOTE_PC_SD[n];
+        if (pc !== undefined) seqMidis.push(pc + oct * 12);
+      }
+      if (seqMidis.length >= 6) for (let fLen = 3; fLen >= 2; fLen--) {
+        const interval = detectSequence(seqMidis, fLen);
+        if (interval !== null && interval !== 0) {
+          const suggestion = suggestSequenceContinuation(seqMidis, fLen, interval);
+          if (suggestion !== null && suggestion >= 36 && suggestion <= 84) {
+            // Bias the last note toward the sequence continuation
+            const lastNoteIdx = elements.length - 1 - [...elements].reverse().findIndex(e => e !== '~');
+            if (lastNoteIdx >= 0 && lastNoteIdx < elements.length && elements[lastNoteIdx] !== '~') {
+              const pcNamesSeq = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+              elements[lastNoteIdx] = `${pcNamesSeq[suggestion % 12]}${Math.floor(suggestion / 12)}`;
+            }
+            break;
+          }
+        }
+      }
+    }
+
     // Melodic target: bias phrase endings toward target chord tones
     if (shouldApplyTargeting(mood)) {
       const NOTE_PC_MT: Record<string, number> = {
@@ -487,6 +521,8 @@ export class MelodyLayer extends CachingLayer {
     const breathGain = shouldApplyBreathMarks(mood)
       ? breathMarkGain(mood, state.section)
       : 1.0;
+    // Rhythmic weight: metric position affects gain
+    const applyWeight = shouldApplyRhythmicWeight(mood);
     const dynamicGain = rawDynamicGain.split(' ')
       .map((g, i) => {
         let v = parseFloat(g) * (accents[i] ?? 1.0);
@@ -494,6 +530,7 @@ export class MelodyLayer extends CachingLayer {
         v *= tessMap[i] ?? 1.0;
         if (dynAccent) v *= dynAccent[i] ?? 1.0;
         if (breathGain < 0.99 && isBreathMark(elements, i)) v *= breathGain;
+        if (applyWeight) v *= weightGainMultiplier(i, elements.length, mood);
         return v.toFixed(4);
       })
       .join(' ');

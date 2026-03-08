@@ -70,6 +70,7 @@ import { registerLpfMultiplier, registerFmMultiplier, shouldApplyRegisterWarmth 
 import { tensionFmColor, tensionDecayColor, shouldApplyTensionColor } from '../theory/harmonic-tension-color';
 import { echoDensityFeedback, shouldApplyEchoDensity } from '../theory/echo-density';
 import { independenceDensityMult, shouldApplyIndependence } from '../theory/voice-independence';
+import { bloomMultiplier, bloomLpfMultiplier, bloomRoomMultiplier, shouldApplyBloom } from '../theory/harmonic-bloom';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -1463,6 +1464,41 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.decay\(([0-9.]+)\)/,
             (_, val) => `.decay(${(parseFloat(val) * decMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic bloom: sustained chords open up over time (FM/LPF/room increase)
+    if (shouldApplyBloom(this.state.mood) && (this.state.ticksSinceChordChange ?? 0) >= 2) {
+      const ticks = this.state.ticksSinceChordChange ?? 0;
+      const fmBloom = bloomMultiplier(ticks, this.state.mood, this.state.section);
+      const lpfBloom = bloomLpfMultiplier(ticks, this.state.mood);
+      const roomBloom = bloomRoomMultiplier(ticks, this.state.mood);
+      if (fmBloom > 1.02) {
+        for (const result of layerResults) {
+          if (result.name === 'texture') continue; // drums don't bloom
+          result.code = result.code.replace(
+            /\.fm\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmBloom).toFixed(2)})`
+          );
+        }
+      }
+      if (lpfBloom > 1.02) {
+        for (const result of layerResults) {
+          if (result.name === 'texture') continue;
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfBloom)})`
+          );
+        }
+      }
+      if (roomBloom > 1.02) {
+        for (const result of layerResults) {
+          if (result.name === 'texture') continue;
+          result.code = result.code.replace(
+            /\.room\(([0-9.]+)\)/,
+            (_, val) => `.room(${(parseFloat(val) * roomBloom).toFixed(4)})`
           );
         }
       }
