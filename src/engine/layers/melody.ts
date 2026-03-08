@@ -918,14 +918,18 @@ export class MelodyLayer extends CachingLayer {
 
   // Structured phrase with contour, motifs, and chord-tone anchoring
   private buildStructuredPhrase(state: GenerativeState, density: number): string[] {
-    const penta = getPentatonicSubset(state.scale);
     const mood = state.mood;
+    // Use full diatonic scale for moods that need harmonic tension (leading tones, 4ths),
+    // keep pentatonic for ethereal/dreamy moods where safety sounds better
+    const useDiatonic = mood === 'trance' || mood === 'syro' || mood === 'blockhead'
+      || mood === 'disco' || mood === 'downtempo' || mood === 'lofi';
+    const scaleNotes = useDiatonic ? state.scale.notes : getPentatonicSubset(state.scale);
     const section = SECTION_MELODY[state.section];
 
-    // Build a pitch ladder: pentatonic notes across 2 octaves
+    // Build a pitch ladder across 2 octaves
     const [adjLow, adjHigh] = getAdjustedOctaveRange('melody', state.layerCenterPitches);
     const baseOct = Math.max(adjLow, mood === 'trance' ? 3 : 4);
-    const ladder = this.buildLadder(penta, baseOct, baseOct + 1);
+    const ladder = this.buildLadder(scaleNotes, baseOct, baseOct + 1);
 
     // Store center pitch for register coordination
     state.layerCenterPitches['melody'] = (baseOct + 1) * 12;
@@ -1276,11 +1280,11 @@ export class MelodyLayer extends CachingLayer {
     return addOctaveDoublings(blued, tension, state.section, mood);
   }
 
-  // Build a pitch ladder from pentatonic notes across octaves
-  private buildLadder(penta: string[], lowOct: number, highOct: number): string[] {
+  // Build a pitch ladder from scale notes across octaves
+  private buildLadder(scaleNotes: string[], lowOct: number, highOct: number): string[] {
     const result: string[] = [];
     for (let oct = lowOct; oct <= highOct; oct++) {
-      for (const note of penta) {
+      for (const note of scaleNotes) {
         result.push(`${note}${oct}`);
       }
     }
