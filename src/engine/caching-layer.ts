@@ -19,6 +19,7 @@ import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../theory/density-balance';
 import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../theory/tension-brightness';
 import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../theory/tension-space';
+import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -81,6 +82,9 @@ export abstract class CachingLayer implements Layer {
 
     // Velocity evolution: per-note dynamics morph with section progress
     result = this.applyVelocityEvolution(result, state);
+
+    // Metric accent: mood-specific beat emphasis (backbeat, downbeat, etc.)
+    result = this.applyMetricAccent(result, state);
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
@@ -472,6 +476,25 @@ export abstract class CachingLayer implements Layer {
 
     const evolved = applyVelocityEvolution(match[1], velocities);
     return pattern.replace(`.gain("${match[1]}")`, `.gain("${evolved}")`);
+  }
+
+  /**
+   * Apply mood-specific metric accent pattern to velocity gains.
+   * Shapes the rhythmic feel: disco backbeat, trance downbeat, etc.
+   */
+  private applyMetricAccent(pattern: string, state: GenerativeState): string {
+    const match = pattern.match(/\.gain\("([^"]+)"\)/);
+    if (!match) return pattern;
+
+    const profile = moodAccentProfile(state.mood);
+    if (profile.strength < 0.1) return pattern;
+
+    const gains = match[1].split(' ').map(parseFloat);
+    if (gains.some(isNaN)) return pattern;
+
+    const accented = applyAccentProfile(gains, profile);
+    const newGain = accented.map(v => v.toFixed(4)).join(' ');
+    return pattern.replace(`.gain("${match[1]}")`, `.gain("${newGain}")`);
   }
 
   /**
