@@ -424,11 +424,11 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'syro':
-        // Glitchy FM bell/pluck — sits below melody, above drone
+        // Glitchy FM bell/pluck — triangle carrier for contrast with sine melody
         return `${chordStart}
-          .sound("sine")
-          .fm(${(4 + brightness * 3).toFixed(1)})
-          .fmh(7)
+          .sound("triangle")
+          .fm(${(3 + brightness * 2).toFixed(1)})
+          .fmh(5)
           .fmenv("exp")
           .fmdecay(0.03)
           .attack(0.001)

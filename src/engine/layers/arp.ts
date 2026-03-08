@@ -88,9 +88,9 @@ export class ArpLayer extends CachingLayer {
         const fill = this.pickFill16(density * sectionMult * 0.3);
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'up', 16, fill), state);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(0.5)
-          .fmh(5)
+          .sound("triangle")
+          .fm(0.4)
+          .fmh(6)
           .fmenv("exp")
           .fmdecay(0.6)
           .attack(0.05)
@@ -168,16 +168,20 @@ export class ArpLayer extends CachingLayer {
         const tranceGain = 0.16 * (0.5 + density * 0.5);
         const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood);
         return `note("${steps.join(' ')}")
-          .sound("sawtooth")
+          .sound("square")
+          .fm(0.3)
+          .fmh(0.5)
+          .fmenv("exp")
+          .fmdecay(0.03)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(1)
           .gain("${tranceVelGain}")
           .hpf(250)
           .lpf(${(2000 + brightness * 6000).toFixed(0)})
-          .resonance(5)
+          .resonance(${(8 + brightness * 6).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(3))
-          .room(${(room * 0.4).toFixed(2)})
-          .roomsize(1.5)
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
           .delay(0.35)
           .delaytime(0.1875)
           .delayfeedback(0.4)
