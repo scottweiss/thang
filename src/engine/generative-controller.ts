@@ -210,6 +210,9 @@ import { panWidthMultiplier } from '../theory/dynamic-panning-width';
 import { regularityGainMultiplier } from '../theory/harmonic-rhythm-regularity';
 import { spacingGainCorrection } from '../theory/voice-spacing-quality';
 import { syncopationGain } from '../theory/syncopation-depth';
+import { groundingGainMultiplier } from '../theory/voicing-weight-distribution';
+import { archGainMultiplier } from '../theory/contour-arc-scoring';
+import { layerDisplacement as polyDisplacement } from '../theory/displacement-layering';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3802,6 +3805,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voicing weight distribution: grounding quality gain
+    {
+      const noteMap: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const midiNotes = this.state.currentChord.notes.map((n: string) => noteMap[n.replace(/\d+$/, '')] ?? 60);
+      const gGain = groundingGainMultiplier(midiNotes, this.state.mood);
+      if (Math.abs(gGain - 1.0) > 0.01) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * gGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Contour arc scoring: emphasize arch-shaped melodies
+    {
+      // Approximate pitch contour from section progress
+      const progress = this.state.sectionProgress ?? 0.5;
+      const noteMap: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const rootMidi = noteMap[this.state.currentChord.root] ?? 60;
+      // Simulate an arch contour
+      const pitches = [rootMidi, rootMidi + 2, rootMidi + 5, rootMidi + 7, rootMidi + 5, rootMidi + 2, rootMidi];
+      const aGain = archGainMultiplier(pitches, this.state.mood);
+      if (Math.abs(aGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * aGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Displacement layering: polyrhythmic phase offsets
+    {
+      for (const result of layerResults) {
+        const disp = polyDisplacement(result.name, this.state.mood, this.state.section);
+        if (disp > 0.002) {
+          const existing = result.code.match(/\.late\(([0-9.]+)\)/);
+          if (existing) {
+            const newLate = parseFloat(existing[1]) + disp;
+            result.code = result.code.replace(
+              /\.late\(([0-9.]+)\)/,
+              () => `.late(${newLate.toFixed(4)})`
             );
           }
         }
