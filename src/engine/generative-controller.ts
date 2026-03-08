@@ -92,6 +92,9 @@ import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory
 import { subsonicGainBoost, subsonicRoomBoost, shouldApplySubsonicPulse } from '../theory/subsonic-pulse';
 import { beatWarpMultiplier, shouldApplyBeatWarp } from '../theory/beat-elastic-warp';
 import { registerCollision, suggestOctaveShift, collisionGainReduction, shouldAvoidCollisions } from '../theory/register-collision-avoidance';
+import { coherenceFmMultiplier, shouldApplyCoherence } from '../theory/spectral-temporal-coherence';
+import { shouldApplyFugato, fugatoEntryDelay, fugatoOctaveOffset, transposeMotif } from '../theory/cross-layer-fugato';
+import { harmonicInertia, changeReluctance, cadentialEscape, shouldApplyInertia } from '../theory/harmonic-inertia';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -298,9 +301,39 @@ export class GenerativeController {
     }
 
     if (chordChange) {
-      this.advanceChord();
-      this.state.chordChanged = true;
-      this.state.ticksSinceChordChange = 0;
+      // Harmonic inertia: resist chord change when voicing is settled
+      let allowChange = true;
+      if (shouldApplyInertia(this.state.mood, this.state.section)) {
+        const chordPcs = this.state.currentChord.notes
+          .map(n => {
+            const name = n.replace(/\d+$/, '');
+            const map: Record<string, number> = {
+              'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+              'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+              'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+            };
+            return map[name];
+          })
+          .filter((pc): pc is number => pc !== undefined);
+        // Simple consonance estimate: more thirds/fifths = more consonant
+        const consonance = chordPcs.length >= 3 ? 0.7 : 0.4;
+        const inertia = harmonicInertia(
+          consonance, this.state.ticksSinceChordChange,
+          this.state.mood, this.state.section
+        );
+        const escape = cadentialEscape(this.state.sectionProgress ?? 0, this.state.mood);
+        const effectiveInertia = Math.max(0, inertia + escape);
+        // Hash-based probability gate (deterministic)
+        const hash = ((this.state.tick * 2654435761 + 7919) >>> 0) / 4294967296;
+        if (hash < effectiveInertia * 0.5) {
+          allowChange = false; // inertia blocks this chord change
+        }
+      }
+      if (allowChange) {
+        this.advanceChord();
+        this.state.chordChanged = true;
+        this.state.ticksSinceChordChange = 0;
+      }
     }
 
     // Evolve sections (steers density/brightness, manages transitions)
@@ -1017,6 +1050,55 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
             (_, val) => `.lpf(${Math.round(cadentialLpf(parseFloat(val), tension, true, this.state.mood))})`
+          );
+        }
+      }
+    }
+
+    // Spectral-temporal coherence: couple FM depth to rhythm/spectrum alignment
+    if (shouldApplyCoherence(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const notes = noteMatch[1].split(/\s+/);
+        const rhythmDensity = notes.filter((n: string) => n !== '~').length / notes.length;
+        // Estimate spectral density from active layer count (normalized)
+        const spectralDensity = Math.min(1.0, layerResults.length / 6);
+        const fmMult = coherenceFmMultiplier(rhythmDensity, spectralDensity, this.state.mood, this.state.section);
+        if (Math.abs(fmMult - 1.0) > 0.02) {
+          result.code = result.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+          );
+        }
+      }
+    }
+
+    // Cross-layer fugato: staggered motivic imitation at section boundaries
+    if (this.state.activeMotif && this.state.activeMotif.length >= 3 &&
+        shouldApplyFugato(this.state.tick, this.state.mood, this.state.section, this.state.sectionChanged)) {
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'texture' || result.name === 'atmosphere') continue;
+        const delay = fugatoEntryDelay(result.name, this.state.mood);
+        if (delay < 0) continue;
+        if (delay === 0) continue; // melody keeps its own motif
+        // Inject transposed motif into answering layers
+        const octOffset = fugatoOctaveOffset(result.name);
+        const transposed = transposeMotif(this.state.activeMotif, octOffset * 12);
+        if (transposed.length > 0) {
+          result.code = result.code.replace(
+            /note\("([^"]+)"\)/,
+            (_, notes) => {
+              const parts = notes.split(' ');
+              let injected = 0;
+              for (let i = 0; i < parts.length && injected < transposed.length; i++) {
+                if (parts[i] === '~' || i < delay * 4) continue;
+                parts[i] = transposed[injected];
+                injected++;
+              }
+              return `note("${parts.join(' ')}")`;
+            }
           );
         }
       }
