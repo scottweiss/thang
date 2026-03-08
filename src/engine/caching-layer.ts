@@ -22,6 +22,7 @@ import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../theory/tensi
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../theory/tension-delay';
 import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
 import { arrivalEmphasis } from '../theory/arrival-emphasis';
+import { syncedDelayTime } from '../theory/delay-sync';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -63,6 +64,9 @@ export abstract class CachingLayer implements Layer {
 
     // Tension space: reverb tracks real-time tension (stacks on spatial depth)
     result = this.applyTensionSpace(result, state);
+
+    // Delay sync: replace fixed delay times with tempo-synced values
+    result = this.applyDelaySync(result, state);
 
     // Delay evolution: echo intensity builds with section
     result = this.applyDelayEvolution(result, state);
@@ -307,6 +311,22 @@ export abstract class CachingLayer implements Layer {
       (_match, val) => `.roomsize(${(parseFloat(val) * mult).toFixed(1)})`
     );
     return result;
+  }
+
+  /**
+   * Replace hardcoded .delaytime() with tempo-synced values.
+   * Creates rhythmic echoes that reinforce the groove.
+   */
+  private applyDelaySync(pattern: string, state: GenerativeState): string {
+    if (!pattern.includes('.delaytime(')) return pattern;
+    const cps = state.params.tempo;
+    if (cps <= 0) return pattern;
+
+    const synced = syncedDelayTime(state.mood, cps);
+    return pattern.replace(
+      /\.delaytime\((\d+(?:\.\d+)?)\)/g,
+      () => `.delaytime(${synced.toFixed(4)})`
+    );
   }
 
   /**
