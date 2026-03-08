@@ -3,6 +3,7 @@ import { GenerativeState, Section } from '../../types';
 import { randomChoice } from '../random';
 import { evolveDrumPattern } from '../../theory/drum-evolution';
 import { applyDrumDynamics, TRANCE_VELOCITIES, AVRIL_VELOCITIES } from '../../theory/drum-dynamics';
+import { addIntelligentGhosts, moodGhostDensity } from '../../theory/ghost-notes';
 
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
@@ -179,9 +180,10 @@ export class TextureLayer extends CachingLayer {
     return false;
   }
 
-  // Stored per buildPattern call for applyVelocity to use
+  // Stored per buildPattern call for applyVelocity and evolveForSection to use
   private _section: Section = 'intro';
   private _tension = 0.5;
+  private _sectionProgress = 0;
 
   protected buildPattern(state: GenerativeState): string {
     const density = state.params.density;
@@ -189,6 +191,7 @@ export class TextureLayer extends CachingLayer {
     const tension = state.tension?.overall ?? 0.5;
     this._section = state.section;
     this._tension = tension;
+    this._sectionProgress = state.sectionProgress ?? 0;
     // Tension brightens drums, dries reverb, adds presence
     const gain = 0.3 * density * (0.9 + tension * 0.15);
     const room = (0.3 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.2);
@@ -273,8 +276,8 @@ export class TextureLayer extends CachingLayer {
     if (section === 'breakdown') {
       pattern = this.thinPattern(pattern, 0.4);
     }
-    if (density > 0.5) {
-      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.25);
+    if (density > 0.3) {
+      pattern = addIntelligentGhosts(pattern, 'downtempo', moodGhostDensity('downtempo') * density);
     }
     pattern = this.evolveForSection(pattern, section, tick);
 
@@ -302,8 +305,8 @@ export class TextureLayer extends CachingLayer {
     if (section === 'breakdown') {
       pattern = this.thinPattern(pattern, 0.4);
     }
-    if (density > 0.5) {
-      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
+    if (density > 0.3) {
+      pattern = addIntelligentGhosts(pattern, 'lofi', moodGhostDensity('lofi') * density);
     }
     pattern = this.evolveForSection(pattern, section, tick);
 
@@ -384,8 +387,8 @@ export class TextureLayer extends CachingLayer {
     if (section === 'breakdown') {
       pattern = this.thinPattern(pattern, 0.35);
     }
-    if (density > 0.5) {
-      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.2);
+    if (density > 0.3) {
+      pattern = addIntelligentGhosts(pattern, 'xtal', moodGhostDensity('xtal') * density);
     }
     pattern = this.evolveForSection(pattern, section, tick);
 
@@ -415,7 +418,7 @@ export class TextureLayer extends CachingLayer {
       pattern = this.thinPattern(pattern, 0.5);
     }
     // Always add ghost hats for density — syro is busy
-    pattern = this.addGhostHats(pattern, 0.15 + density * 0.15);
+    pattern = addIntelligentGhosts(pattern, 'syro', moodGhostDensity('syro') * (0.5 + density * 0.5));
     pattern = this.evolveForSection(pattern, section, tick);
 
     // Syro: tight, dry, precise — minimal reverb, bright, crisp
@@ -440,8 +443,8 @@ export class TextureLayer extends CachingLayer {
     if (section === 'breakdown') {
       pattern = this.thinPattern(pattern, 0.4);
     }
-    if (density > 0.5) {
-      pattern = this.addGhostHats(pattern, (density - 0.5) * 0.3);
+    if (density > 0.3) {
+      pattern = addIntelligentGhosts(pattern, 'blockhead', moodGhostDensity('blockhead') * density);
     }
     pattern = this.evolveForSection(pattern, section, tick);
 
@@ -498,8 +501,8 @@ export class TextureLayer extends CachingLayer {
       }
     } else {
       pattern = randomChoice(DISCO_PATTERNS);
-      if (density > 0.5) {
-        pattern = this.addGhostHats(pattern, (density - 0.5) * 0.2);
+      if (density > 0.3) {
+        pattern = addIntelligentGhosts(pattern, 'disco', moodGhostDensity('disco') * density);
       }
     }
     pattern = this.evolveForSection(pattern, section, tick);
@@ -551,9 +554,8 @@ export class TextureLayer extends CachingLayer {
   }
 
   // Evolve pattern based on section — builds add, breakdowns thin
-  private evolveForSection(pattern: string, section: Section, tick: number): string {
-    // Estimate section progress (sections last ~15-25 ticks)
-    const progress = Math.min(1.0, (tick % 20) / 20);
+  private evolveForSection(pattern: string, section: Section, _tick: number): string {
+    const progress = this._sectionProgress;
     switch (section) {
       case 'build':
         return evolveDrumPattern(pattern, progress, 'build', 0.6);
