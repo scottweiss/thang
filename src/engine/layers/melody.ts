@@ -77,9 +77,14 @@ export class MelodyLayer extends CachingLayer {
       ? this.buildAmbientPhrase(state, density)
       : this.buildStructuredPhrase(state, density);
 
+    // Blue note inflections for ambient/xtal (structured phrases handle this internally)
+    if (mood === 'ambient' || mood === 'xtal') {
+      elements = applyBlueNotes(elements, state.scale.notes, mood, state.tension?.overall ?? 0.5);
+    }
+
     // Register evolution: shift melody register during builds/breakdowns
     if (shouldShiftRegister(mood)) {
-      const progress = Math.min(1.0, (state.tick % 15) / 15);
+      const progress = state.sectionProgress ?? 0;
       const shift = registerShift(state.section, progress, 4) - 4; // delta from base octave 4
       if (shift !== 0) {
         elements = elements.map(e => {
