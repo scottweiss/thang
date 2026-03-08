@@ -15,6 +15,7 @@ import { complementWeights, weightLadder, selectComplement, shouldApplyComplemen
 import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
 import { applyRegisterSpread, shouldApplyRegisterSpread } from '../../theory/register-spread';
 import { densityContour, shouldApplyDensityContour } from '../../theory/density-contour';
+import { smoothArpStart } from '../../theory/arp-voice-leading';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -44,6 +45,7 @@ const SECTION_DENSITY: Record<Section, number> = {
 export class ArpLayer extends CachingLayer {
   name = 'arp';
   orbit = 4;
+  private lastPlayedNote: string | null = null;
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -422,7 +424,7 @@ export class ArpLayer extends CachingLayer {
     return randomChoice(styles);
   }
 
-  // Spread chord notes with register dynamics applied
+  // Spread chord notes with register dynamics and voice leading applied
   private spreadWithDynamics(
     notes: string[], lowOct: number, highOct: number, state: GenerativeState
   ): string[] {
@@ -432,7 +434,12 @@ export class ArpLayer extends CachingLayer {
         lowOct, highOct, this.name, tension, state.section, state.mood
       );
     }
-    return this.spreadOctaves(notes, lowOct, highOct);
+    let spread = this.spreadOctaves(notes, lowOct, highOct);
+    // Smooth voice leading: start from the note nearest to last played
+    if (this.lastPlayedNote && state.chordChanged) {
+      spread = smoothArpStart(spread, this.lastPlayedNote);
+    }
+    return spread;
   }
 
   // Spread chord notes across multiple octaves
@@ -543,6 +550,14 @@ export class ArpLayer extends CachingLayer {
           if (firstNote >= 0) filtered[firstNote] = steps[firstNote];
         }
         result = filtered;
+      }
+    }
+
+    // Track last played note for voice leading across chord changes
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (result[i] !== '~') {
+        this.lastPlayedNote = result[i];
+        break;
       }
     }
 
