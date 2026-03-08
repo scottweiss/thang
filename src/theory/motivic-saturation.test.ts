@@ -103,12 +103,11 @@ describe('saturatedLayers', () => {
     expect(saturatedLayers(0.4)).toContain('harmony');
   });
 
-  it('all layers at high saturation', () => {
+  it('caps at arp + harmony at high saturation', () => {
     const layers = saturatedLayers(0.8);
     expect(layers).toContain('arp');
     expect(layers).toContain('harmony');
-    expect(layers).toContain('drone');
-    expect(layers).toContain('atmosphere');
+    expect(layers).toHaveLength(2); // drone/atmosphere excluded — sustained tones
   });
 });
 

@@ -143,9 +143,7 @@ export function selectMotifFragment(
 export function saturatedLayers(level: number): string[] {
   if (level < 0.15) return [];           // too low — melody only
   if (level < 0.35) return ['arp'];      // arp starts echoing
-  if (level < 0.55) return ['arp', 'harmony']; // harmony joins
-  if (level < 0.75) return ['arp', 'harmony', 'drone'];
-  return ['arp', 'harmony', 'drone', 'atmosphere']; // full saturation
+  return ['arp', 'harmony'];             // max — drone/atmosphere use sustained tones, not rhythmic patterns
 }
 
 /**

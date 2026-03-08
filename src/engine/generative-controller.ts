@@ -107,6 +107,9 @@ import { attentionEnergy, needsNovelty, noveltyGainBoost, shouldTrackAttention }
 import { phraseTensionProfile, tensionGainMultiplier } from '../theory/phrase-consonance-curve';
 import { gainJitter, fmJitter, filterJitter, shouldApplyResonance } from '../theory/stochastic-resonance';
 import { grooveTightness, timingCorrection, shouldApplyBinding } from '../theory/temporal-binding';
+import { shouldUseLydian, lydianFourth, naturalFourth } from '../theory/lydian-brightness';
+import { maxHarmonyVoices, densityGainPenalty, shouldBalanceVoiceDensity } from '../theory/voice-density-balance';
+import { shouldHoldPedal, pedalSustainMultiplier, pedalDecayMultiplier } from '../theory/pedal-bass-sustain';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2550,6 +2553,65 @@ export class GenerativeController {
             (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfJit)})`
           );
         }
+      }
+    }
+
+    // Lydian brightness: substitute natural 4th with #4 in melody for luminous color
+    if (shouldUseLydian(this.state.tick, this.state.mood, this.state.section)) {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const pcToNote = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+      const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+      const nat4 = naturalFourth(rootPc);
+      const lyd4 = lydianFourth(rootPc);
+      const natName = pcToNote[nat4];
+      const lydName = pcToNote[lyd4];
+      const melodyResult = layerResults.find(r => r.name === 'melody');
+      if (melodyResult) {
+        melodyResult.code = melodyResult.code.replace(
+          /note\("([^"]+)"\)/,
+          (full, notes) => {
+            const replaced = notes.replace(
+              new RegExp(`\\b${natName}(\\d)`, 'g'),
+              `${lydName}$1`
+            );
+            return `note("${replaced}")`;
+          }
+        );
+      }
+    }
+
+    // Voice density balance: reduce harmony voice gain when melody is active
+    {
+      const melodyActive = layerResults.some(r => r.name === 'melody' && !r.code.includes('gain(0.0000)'));
+      const harmonyResult = layerResults.find(r => r.name === 'harmony');
+      if (harmonyResult && shouldBalanceVoiceDensity(this.state.mood, melodyActive, 4)) {
+        const max = maxHarmonyVoices(this.state.mood, melodyActive);
+        const penalty = densityGainPenalty(4, max, this.state.mood);
+        if (penalty < 1.0) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * penalty).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Pedal bass sustain: extend drone sustain during chord changes
+    {
+      const droneResult = layerResults.find(r => r.name === 'drone');
+      if (droneResult && shouldHoldPedal(this.state.tick, this.state.mood, this.state.section, this.state.ticksSinceChordChange)) {
+        const sustainMult = pedalSustainMultiplier(this.state.mood, this.state.section);
+        const decayMult = pedalDecayMultiplier(this.state.mood);
+        // Boost drone gain for sustain effect
+        droneResult.code = droneResult.code.replace(
+          /\.gain\(([0-9.]+)\)/,
+          (_, val) => `.gain(${(parseFloat(val) * Math.min(sustainMult, 1.4)).toFixed(4)})`
+        );
+        // Extend room for pedal resonance
+        droneResult.code = droneResult.code.replace(
+          /\.room\(([0-9.]+)\)/,
+          (_, val) => `.room(${Math.min(1, parseFloat(val) * decayMult).toFixed(4)})`
+        );
       }
     }
 
