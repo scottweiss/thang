@@ -32,6 +32,7 @@ import { addOctaveDoublings } from '../../theory/octave-doubling';
 import { constrainRange, shouldConstrainRange } from '../../theory/range-constraint';
 import { addAnacrusis } from '../../theory/anacrusis';
 import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
+import { anchorBias, melodicAnchorStrength } from '../../theory/melodic-anchor';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -600,6 +601,54 @@ export class MelodyLayer extends CachingLayer {
           section.useCallResponse ? 2 : 1  // Stronger pull during call-response sections
         ).map(i => ladder[Math.max(0, Math.min(ladder.length - 1, i))])
       : rawMotif;
+
+    // Melodic anchor: bias first and last notes toward structural anchors
+    if (melodicAnchorStrength(mood) >= 0.1 && motif.length >= 2) {
+      const scaleNotes = state.scale.notes;
+      // Try to replace first note with nearest anchor
+      const firstBias = anchorBias(motif[0], scaleNotes, mood, true);
+      if (firstBias > 1.2 && Math.random() < (firstBias - 1.0)) {
+        // Already an anchor — keep it
+      } else if (firstBias <= 1.0) {
+        // Not an anchor — find nearest anchor in ladder
+        for (let d = 1; d <= 3; d++) {
+          const firstIdx = ladder.indexOf(motif[0]);
+          if (firstIdx < 0) break;
+          for (const offset of [d, -d]) {
+            const candidateIdx = firstIdx + offset;
+            if (candidateIdx >= 0 && candidateIdx < ladder.length) {
+              const candidate = ladder[candidateIdx];
+              if (anchorBias(candidate, scaleNotes, mood, true) > 1.2 &&
+                  Math.random() < melodicAnchorStrength(mood)) {
+                motif[0] = candidate;
+                break;
+              }
+            }
+          }
+          if (anchorBias(motif[0], scaleNotes, mood, true) > 1.2) break;
+        }
+      }
+      // Try to replace last note with nearest anchor (phrase ending resolution)
+      const lastIdx = ladder.indexOf(motif[motif.length - 1]);
+      if (lastIdx >= 0 && anchorBias(motif[motif.length - 1], scaleNotes, mood, true) <= 1.0) {
+        for (let d = 1; d <= 2; d++) {
+          let found = false;
+          for (const offset of [d, -d]) {
+            const candidateIdx = lastIdx + offset;
+            if (candidateIdx >= 0 && candidateIdx < ladder.length) {
+              const candidate = ladder[candidateIdx];
+              if (anchorBias(candidate, scaleNotes, mood, true) > 1.2 &&
+                  Math.random() < melodicAnchorStrength(mood) * 1.2) {
+                motif[motif.length - 1] = candidate;
+                found = true;
+                break;
+              }
+            }
+          }
+          if (found) break;
+        }
+      }
+    }
 
     const noteCount = 16;
     const elements: string[] = new Array(noteCount).fill('~');
