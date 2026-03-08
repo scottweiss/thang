@@ -53,6 +53,7 @@ import { classifyGesture, shouldInjectSurprise, shouldInjectStability, suggestGe
 import { anticipationDelay, violationTendency } from '../../theory/temporal-expectancy';
 import { intervalVariety, suggestIntervalBias, biasOffset, varietyAppetite } from '../../theory/intervallic-variety';
 import { selectTargetTone, targetPull, biasTowardTarget, shouldApplyTargeting } from '../../theory/melodic-target';
+import { directionBias, biasInterval, shouldApplyBrightnessBias } from '../../theory/brightness-bias';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -324,6 +325,38 @@ export class MelodyLayer extends CachingLayer {
           elements[i] = `${pcNames[newMidi % 12]}${Math.floor(newMidi / 12)}`;
         }
         noteIdx++;
+      }
+    }
+
+    // Brightness bias: nudge intervals toward ascending/opening motion for joy
+    if (shouldApplyBrightnessBias(mood, state.section)) {
+      const NOTE_PC_BB: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      const pcNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const bias = directionBias(mood, state.section);
+      if (Math.abs(bias) > 0.05) {
+        let prevMidi = -1;
+        for (let i = 0; i < elements.length; i++) {
+          if (elements[i] === '~') continue;
+          const n = elements[i].replace(/\d+$/, '');
+          const oct = parseInt(elements[i].match(/\d+$/)?.[0] ?? '4');
+          const currMidi = (NOTE_PC_BB[n] ?? 0) + oct * 12;
+          if (prevMidi >= 0) {
+            const interval = currMidi - prevMidi;
+            const biased = biasInterval(interval, bias);
+            if (biased !== interval) {
+              const newMidi = Math.max(36, Math.min(84, prevMidi + biased));
+              elements[i] = `${pcNames[newMidi % 12]}${Math.floor(newMidi / 12)}`;
+            }
+          }
+          // Update prevMidi from element (may have been modified)
+          const n2 = elements[i].replace(/\d+$/, '');
+          const oct2 = parseInt(elements[i].match(/\d+$/)?.[0] ?? '4');
+          prevMidi = (NOTE_PC_BB[n2] ?? 0) + oct2 * 12;
+        }
       }
     }
 

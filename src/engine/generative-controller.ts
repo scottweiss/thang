@@ -61,6 +61,8 @@ import { isPhraseEnding, overlapGainBoost, shouldApplyPhraseOverlap } from '../t
 import { elasticTempoMultiplier, shouldApplyElasticity } from '../theory/rhythmic-elasticity';
 import { cadentialAccelMultiplier, shouldAccelerate, phraseProgressFromSection } from '../theory/cadential-acceleration';
 import { densityWaveMultiplier, shouldApplyDensityWave } from '../theory/density-wave';
+import { hocketDensityMultiplier, shouldApplyHocket } from '../theory/rhythmic-hocket';
+import { shouldSurpriseTiming, surpriseOffset, shouldApplyTimingSurprise } from '../theory/timing-surprise';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -752,6 +754,33 @@ export class GenerativeController {
       }
     }
 
+    // Rhythmic hocket: cross-layer density anticorrelation for clarity
+    if (shouldApplyHocket(this.state.mood, this.state.section)) {
+      const densities: Record<string, number> = {};
+      for (const result of layerResults) {
+        densities[result.name] = this.state.layerPhraseDensity?.[result.name] ?? 0.5;
+      }
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        const otherDens = Object.entries(densities)
+          .filter(([n]) => n !== result.name && n !== 'drone' && n !== 'atmosphere')
+          .map(([, d]) => d);
+        const hMult = hocketDensityMultiplier(
+          densities[result.name] ?? 0.5, otherDens, this.state.mood, this.state.section
+        );
+        if (hMult < 0.97) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * hMult).toFixed(4)})`;
+              return `.gain((${expr}) * ${hMult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
+
     // Motivic saturation: inject motif fragments into non-melody layers as tension builds
     if (this.state.activeMotif && this.state.activeMotif.length >= 3 &&
         shouldApplySaturation(this.state.tick, this.state.mood, this.state.section)) {
@@ -1382,6 +1411,24 @@ export class GenerativeController {
                 }
               );
             }
+          }
+        }
+      }
+    }
+
+    // Timing surprise: rare micro-rhythmic deviations for playful looseness
+    if (shouldApplyTimingSurprise(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere') continue;
+        if (shouldSurpriseTiming(this.state.tick, 0, this.state.mood, this.state.section)) {
+          const offset = surpriseOffset(this.state.tick, 0, this.state.mood);
+          if (Math.abs(offset) > 0.005) {
+            // Add as .late() offset (positive = late, negative handled via small positive)
+            const lateVal = Math.max(0.001, offset + 0.03); // shift to positive range
+            result.code = result.code.replace(
+              /\.orbit\((\d+)\)/,
+              (m) => `.late(${lateVal.toFixed(4)})${m}`
+            );
           }
         }
       }
