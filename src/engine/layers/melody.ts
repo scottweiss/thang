@@ -191,8 +191,7 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'syro':
-        // Fast intricate FM plucks — busy, precise, digital
-        // Syro style: detailed, playful, technical
+        // Fast intricate FM plucks — sits above arp in frequency
         return `note("${elements.join(' ')}")
           .sound("sine")
           .fm(${(3 + brightness * 2).toFixed(1)})
@@ -204,9 +203,9 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.08)
           .slow(1)
-          .gain(${(gain * 1.0).toFixed(3)})
-          .hpf(400)
-          .lpf(${(4000 + brightness * 6000).toFixed(0)})
+          .gain(${(gain * 0.8).toFixed(3)})
+          .hpf(600)
+          .lpf(${(3000 + brightness * 4000).toFixed(0)})
           .crush(${(10 + brightness * 3).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(1.5))
           .room(${(room * 0.25).toFixed(2)})

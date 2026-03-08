@@ -179,8 +179,7 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'syro':
-        // Glitchy FM bell/pluck — high harmonicity, bit crush, stereo ping-pong
-        // Syro style: precise, digital, detailed
+        // Glitchy FM bell/pluck — sits below melody, above drone
         return `chord("${chord.symbol}")
           .voicing()
           .sound("sine")
@@ -193,9 +192,9 @@ export class HarmonyLayer implements Layer {
           .sustain(0.03)
           .release(0.15)
           .slow(1)
-          .gain(${(gain * 0.9).toFixed(3)})
-          .hpf(300)
-          .lpf(${(3500 + brightness * 5000).toFixed(0)})
+          .gain(${(gain * 0.75).toFixed(3)})
+          .hpf(200)
+          .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .crush(${(8 + brightness * 2).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(2))
           .room(${(room * 0.3).toFixed(2)})

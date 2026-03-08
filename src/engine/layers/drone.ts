@@ -154,8 +154,7 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'syro':
-        // Acid 303-style bass — sawtooth with high resonance, fast filter sweep
-        // Short decay, squelchy, aggressive
+        // Acid 303-style bass — sawtooth, resonant but controlled to avoid masking upper layers
         return `note("${root}2 ${root}2 ${fifth}2 ${root}2")
           .sound("sawtooth")
           .fm(${(0.8 + brightness * 0.5).toFixed(1)})
@@ -167,9 +166,9 @@ export class DroneLayer implements Layer {
           .sustain(0.15)
           .release(0.05)
           .slow(1)
-          .gain(${(gain * 1.2).toFixed(3)})
-          .lpf(sine.range(${(400 + brightness * 600).toFixed(0)}, ${(1200 + brightness * 2000).toFixed(0)}).slow(1.5))
-          .resonance(${(20 + brightness * 8).toFixed(0)})
+          .gain(${(gain * 1.0).toFixed(3)})
+          .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(800 + brightness * 1200).toFixed(0)}).slow(1.5))
+          .resonance(${(14 + brightness * 6).toFixed(0)})
           .hpf(30)
           .detune(sine.range(-5, 5).slow(2))
           .pan(sine.range(0.35, 0.65).slow(3))
