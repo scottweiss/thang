@@ -1,8 +1,7 @@
-import { NoteName, ChordQuality, ChordState, ScaleState } from '../types';
+import { NoteName, ChordQuality, ChordState, ScaleState, Mood } from '../types';
 import { noteIndex, noteFromIndex, getScaleNotes } from './scales';
 
-// Consonant chord qualities only - no diminished or augmented
-// For ambient/downtempo, favor 7ths and sus chords
+// Base chord qualities per scale type (used as foundation, mood overrides apply)
 const MAJOR_SCALE_QUALITIES: ChordQuality[] = ['maj7', 'min7', 'min7', 'maj7', 'dom7', 'min7', 'min7'];
 const MINOR_SCALE_QUALITIES: ChordQuality[] = ['min7', 'min7', 'maj7', 'min7', 'min7', 'maj7', 'dom7'];
 const DORIAN_SCALE_QUALITIES: ChordQuality[] = ['min7', 'min7', 'maj7', 'dom7', 'min7', 'min7', 'maj7'];
@@ -21,6 +20,37 @@ const QUALITY_MAP: Record<string, ChordQuality[]> = {
   pentatonic: MAJOR_SCALE_QUALITIES,
   minor_pentatonic: MINOR_SCALE_QUALITIES,
 };
+
+// Mood-specific quality transforms — applied on top of base scale qualities
+function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQuality[] {
+  switch (mood) {
+    case 'ambient':
+      // Open, floating — replace some 7ths with sus chords
+      return baseQualities.map((q, i) => {
+        if (i === 0 || i === 3) return 'sus2'; // I and IV become sus2
+        if (i === 4) return 'sus4';             // V becomes sus4
+        if (q === 'min7') return 'min';         // simplify minor 7ths to triads
+        return q;
+      });
+    case 'downtempo':
+      // Warm, sophisticated — keep most 7ths, add some sus
+      return baseQualities.map((q, i) => {
+        if (i === 3 && Math.random() < 0.4) return 'sus4'; // occasional IV → sus4
+        return q;
+      });
+    case 'lofi':
+      // Jazzy — all 7ths, this is the sweet spot
+      return baseQualities;
+    case 'trance':
+      // Simple, powerful — mostly triads
+      return baseQualities.map(q => {
+        if (q === 'maj7') return 'maj';
+        if (q === 'min7') return 'min';
+        if (q === 'dom7') return 'maj';
+        return q;
+      });
+  }
+}
 
 // Only consonant intervals - no tritones, no minor 2nds
 const CHORD_INTERVALS: Record<ChordQuality, number[]> = {
@@ -59,9 +89,14 @@ export function getChordSymbol(root: NoteName, quality: ChordQuality): string {
   return `${root}${qualityStr[quality]}`;
 }
 
-export function chordsInScale(scale: ScaleState): ChordState[] {
+export function chordsInScale(scale: ScaleState, mood?: Mood): ChordState[] {
   const scaleNotes = getScaleNotes(scale.root, scale.type);
-  const qualities = QUALITY_MAP[scale.type] || MAJOR_SCALE_QUALITIES;
+  let qualities = QUALITY_MAP[scale.type] || MAJOR_SCALE_QUALITIES;
+
+  if (mood) {
+    qualities = applyMoodQualities(qualities, mood);
+  }
+
   const degreesToUse = Math.min(scaleNotes.length, 7);
 
   return Array.from({ length: degreesToUse }, (_, i) => {

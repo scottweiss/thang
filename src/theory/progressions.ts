@@ -51,12 +51,14 @@ export class ProgressionGenerator {
   private scale: ScaleState;
   private chords: ChordState[];
   private currentDegree: number;
+  private mood: Mood;
 
   constructor(scale: ScaleState, mood: Mood, startDegree: number = 0) {
     const degrees = [0, 1, 2, 3, 4, 5, 6];
     this.chain = new MarkovChain(degrees, MOOD_MATRICES[mood]);
     this.scale = scale;
-    this.chords = chordsInScale(scale);
+    this.mood = mood;
+    this.chords = chordsInScale(scale, mood);
     this.currentDegree = startDegree;
   }
 
@@ -72,12 +74,15 @@ export class ProgressionGenerator {
   }
 
   setMood(mood: Mood): void {
+    this.mood = mood;
     this.chain.setMatrix(MOOD_MATRICES[mood]);
+    // Rebuild chords with new mood qualities
+    this.chords = chordsInScale(this.scale, mood);
   }
 
   setScale(scale: ScaleState): void {
     this.scale = scale;
-    this.chords = chordsInScale(scale);
+    this.chords = chordsInScale(scale, this.mood);
     this.currentDegree = this.currentDegree % this.chords.length;
   }
 
