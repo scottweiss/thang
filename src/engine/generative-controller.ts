@@ -207,6 +207,9 @@ import { subdivisionDecay } from '../theory/subdivision-articulation';
 import { envelopeFmMultiplier } from '../theory/timbral-envelope-following';
 import { momentumDriveGain } from '../theory/progression-momentum';
 import { panWidthMultiplier } from '../theory/dynamic-panning-width';
+import { regularityGainMultiplier } from '../theory/harmonic-rhythm-regularity';
+import { spacingGainCorrection } from '../theory/voice-spacing-quality';
+import { syncopationGain } from '../theory/syncopation-depth';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3799,6 +3802,55 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic rhythm regularity: emphasize regular chord change patterns
+    {
+      const ticksSince = this.state.ticksSinceChordChange ?? 4;
+      const intervals = [ticksSince, ticksSince]; // approximate regularity
+      const rGain = regularityGainMultiplier(intervals, this.state.mood);
+      if (Math.abs(rGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * rGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Voice spacing quality: gain correction for voicing spacing
+    {
+      const noteMap: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const midiNotes = this.state.currentChord.notes.map((n: string) => noteMap[n.replace(/\d+$/, '')] ?? 60);
+      const spGain = spacingGainCorrection(midiNotes, this.state.mood);
+      if (Math.abs(spGain - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Syncopation depth: mood-appropriate syncopation emphasis
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const sGain = syncopationGain(beatPos, this.state.mood);
+      if (Math.abs(sGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * sGain).toFixed(4)})`
             );
           }
         }
