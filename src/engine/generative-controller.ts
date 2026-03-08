@@ -264,6 +264,9 @@ import { sectionIdentityFm } from '../theory/timbral-section-identity';
 import { opennessGain } from '../theory/voicing-openness-score';
 import { tensionArcGain } from '../theory/melodic-tension-arc';
 import { grooveLockGain } from '../theory/rhythmic-groove-lock';
+import { motionTypeGain, detectMotion } from '../theory/harmonic-motion-type';
+import { spectralDensityFm } from '../theory/spectral-density-control';
+import { phraseLengthGain } from '../theory/phrase-length-variation';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4601,6 +4604,54 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic motion type: reward contrary/oblique voice motion
+    {
+      const degree8 = this.state.currentChord?.degree ?? 1;
+      const bassDelta = degree8 - 1;
+      const melDelta = -(degree8 - 1); // assume contrary by default
+      const motion = detectMotion(bassDelta, melDelta);
+      const mtGain = motionTypeGain(motion, this.state.mood);
+      if (Math.abs(mtGain - 1.0) > 0.01) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * mtGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Spectral density control: FM depth inversely tracks active layers
+    {
+      const sdFm = spectralDensityFm(layerResults.length, this.state.mood);
+      if (Math.abs(sdFm - 1.0) > 0.03) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * sdFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Phrase length variation: varied lengths prevent monotony
+    {
+      const curLen = Math.max(1, Math.round((this.state.sectionProgress ?? 0) * 16));
+      const plGain = phraseLengthGain(curLen, 8, this.state.mood);
+      if (Math.abs(plGain - 1.0) > 0.01) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * plGain).toFixed(4)})`
+          );
         }
       }
     }
