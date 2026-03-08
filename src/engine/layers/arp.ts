@@ -23,6 +23,7 @@ import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory
 import { shouldApplyPolyrhythm, selectGrouping, polyrhythmAccentMask } from '../../theory/polyrhythm';
 import { shouldArpAnticipate, blendNextChordTones } from '../../theory/arp-anticipation';
 import { shouldEchoMotif, transposeMotif, selectEchoInterval } from '../../theory/imitative-echo';
+import { arpRegisterOffset, shouldApplyRegisterComplement } from '../../theory/register-complement';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -137,8 +138,17 @@ export class ArpLayer extends CachingLayer {
     }
 
     // Register awareness: get adjusted octave range to avoid melody collision
-    const [adjLow, adjHigh] = getAdjustedOctaveRange('arp', state.layerCenterPitches);
+    let [adjLow, adjHigh] = getAdjustedOctaveRange('arp', state.layerCenterPitches);
     state.layerCenterPitches['arp'] = 60; // middle C as default center
+
+    // Register complementarity: shift arp octave opposite to melody register
+    if (shouldApplyRegisterComplement(mood) && state.activeMotif && state.activeMotif.length > 0) {
+      const regOffset = arpRegisterOffset(state.activeMotif, mood);
+      if (regOffset !== 0) {
+        adjLow = Math.max(1, adjLow + regOffset);
+        adjHigh = Math.max(adjLow, adjHigh + regOffset);
+      }
+    }
 
     // Contrapuntal motion: bias arp style based on melody's direction
     const counterDir = state.melodyDirection
