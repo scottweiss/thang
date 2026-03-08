@@ -345,6 +345,9 @@ import { tresilloAccentGain } from '../theory/rhythmic-tresillo-accent';
 import { planingColorLpf } from '../theory/harmonic-planing-color';
 import { cambiataFigureGain } from '../theory/melodic-cambiata-figure';
 import { secundalPulseGain } from '../theory/rhythmic-secundal-pulse';
+import { doubleLeadingToneFm, countLeadingTones } from '../theory/harmonic-double-leading-tone';
+import { auxiliaryToneDecayGain } from '../theory/melodic-auxiliary-tone-decay';
+import { anacrusisEmphasisGain } from '../theory/rhythmic-anacrusis-emphasis';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6802,6 +6805,58 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic double leading tone: FM richness from chromatic approaches
+    {
+      const noteToPC181: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const curPcs = this.state.currentChord.notes.map((n: string) => noteToPC181[n] ?? 0);
+      const prevPcs = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2].notes.map((n: string) => noteToPC181[n] ?? 0)
+        : [];
+      const ltCount = countLeadingTones(curPcs, prevPcs);
+      const dltFm = doubleLeadingToneFm(ltCount, this.state.mood, this.state.section);
+      if (dltFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * dltFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic auxiliary tone decay: fade repeated pitch centers
+    {
+      const atGain = auxiliaryToneDecayGain(this.state.ticksSinceChordChange, this.state.mood, this.state.section);
+      if (atGain < 0.999) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * atGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic anacrusis emphasis: pickup beat momentum
+    {
+      const beatPos = this.state.tick % 16;
+      const aeGain = anacrusisEmphasisGain(beatPos, this.state.mood, this.state.section);
+      if (aeGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * aeGain).toFixed(4)})`
             );
           }
         }
