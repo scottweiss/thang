@@ -41,6 +41,7 @@ import { generateTimbreMap, shouldApplyKFM, applyTimbreToFM } from '../../theory
 import { shouldFragment, fragmentLength, extractFragment, repeatFragment } from '../../theory/motivic-fragmentation';
 import { shouldApplyAugDim, applyRhythmicTransform } from '../../theory/rhythmic-augmentation';
 import { shouldApplyCompound, createCompoundMelody, compoundSeparation, compoundPattern } from '../../theory/compound-melody';
+import { shouldApplyRhythmicCadence, selectCadenceType, applyRhythmicCadence } from '../../theory/rhythmic-cadence';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -161,6 +162,12 @@ export class MelodyLayer extends CachingLayer {
         for (const n of scaleNotes) anacLadder.push(`${n}${oct}`);
       }
       elements = addAnacrusis(elements, `${targetRoot}4`, anacLadder, mood);
+    }
+
+    // Rhythmic cadence: shape phrase endings for closure (agogic, deceleration, terminal, rhyme)
+    if (shouldApplyRhythmicCadence(state.tick, mood, state.section)) {
+      const cadType = selectCadenceType(mood, state.tick);
+      elements = applyRhythmicCadence(elements, cadType);
     }
 
     // Rhythmic feel: shuffle or halftime transformation based on mood + section
