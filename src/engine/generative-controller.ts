@@ -13,6 +13,7 @@ import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
 import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
 import { rubatoMultiplier, cadentialRubato } from '../theory/rubato';
+import { tempoTrajectoryMultiplier } from '../theory/tempo-trajectory';
 import { shouldInsertSilence, silenceGainMultiplier } from '../theory/strategic-silence';
 import { TensionMemory } from '../theory/tension-memory';
 import { phraseCadenceBias } from '../theory/phrase-harmony';
@@ -409,7 +410,11 @@ export class GenerativeController {
           this.state.mood
         )
       : 1.0;
-    const effectiveTempo = this.state.params.tempo * rubato * cadRubato;
+    // Tempo trajectory: gradual tempo evolution within sections
+    const tempoTraj = tempoTrajectoryMultiplier(
+      this.state.section, this.state.sectionProgress ?? 0, this.state.mood
+    );
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
