@@ -1,0 +1,87 @@
+import { Mood, ChordState, ScaleState } from '../types';
+import { MarkovChain } from '../engine/markov';
+import { chordsInScale } from './chords';
+
+// Transition matrices: rows = current degree (0-6), columns = next degree
+const MOOD_MATRICES: Record<Mood, number[][]> = {
+  ambient: [
+    // Very slow, stays close — I, IV, vi dominant
+    [3, 0, 0, 3, 2, 2, 0],
+    [3, 1, 1, 1, 2, 1, 0],
+    [2, 1, 1, 2, 1, 2, 0],
+    [3, 0, 0, 2, 3, 1, 0],
+    [4, 0, 0, 2, 1, 2, 0],
+    [2, 0, 1, 2, 2, 2, 0],
+    [3, 0, 0, 2, 2, 1, 0],
+  ],
+  downtempo: [
+    // Smooth movement — favors IV, V, vi, ii
+    [1, 2, 1, 3, 2, 3, 0],
+    [2, 1, 2, 1, 2, 2, 0],
+    [2, 2, 0, 2, 1, 2, 0],
+    [2, 1, 1, 1, 3, 2, 0],
+    [3, 1, 0, 2, 1, 2, 0],
+    [2, 1, 2, 2, 2, 1, 0],
+    [3, 1, 0, 2, 2, 1, 0],
+  ],
+  lofi: [
+    // Jazz-influenced — ii-V-I, vi, iii movement
+    [0, 3, 2, 2, 1, 3, 0],
+    [1, 1, 2, 1, 3, 2, 0],
+    [1, 2, 1, 2, 1, 3, 0],
+    [1, 2, 1, 1, 2, 3, 0],
+    [2, 2, 1, 2, 0, 2, 0],
+    [2, 2, 2, 2, 1, 1, 0],
+    [2, 2, 1, 2, 1, 2, 0],
+  ],
+  trance: [
+    // Energetic — strong I-V-vi-IV progressions
+    [1, 0, 0, 3, 3, 3, 0],
+    [2, 1, 1, 2, 2, 2, 0],
+    [2, 1, 1, 2, 2, 2, 0],
+    [2, 0, 0, 1, 4, 2, 0],
+    [3, 0, 0, 2, 1, 3, 0],
+    [3, 0, 0, 3, 2, 1, 0],
+    [3, 0, 0, 2, 2, 2, 0],
+  ],
+};
+
+export class ProgressionGenerator {
+  private chain: MarkovChain<number>;
+  private scale: ScaleState;
+  private chords: ChordState[];
+  private currentDegree: number;
+
+  constructor(scale: ScaleState, mood: Mood, startDegree: number = 0) {
+    const degrees = [0, 1, 2, 3, 4, 5, 6];
+    this.chain = new MarkovChain(degrees, MOOD_MATRICES[mood]);
+    this.scale = scale;
+    this.chords = chordsInScale(scale);
+    this.currentDegree = startDegree;
+  }
+
+  next(): ChordState {
+    const result = this.chain.nextByIndex(this.currentDegree);
+    this.currentDegree = result.index;
+    const chordIdx = this.currentDegree % this.chords.length;
+    return this.chords[chordIdx];
+  }
+
+  current(): ChordState {
+    return this.chords[this.currentDegree % this.chords.length];
+  }
+
+  setMood(mood: Mood): void {
+    this.chain.setMatrix(MOOD_MATRICES[mood]);
+  }
+
+  setScale(scale: ScaleState): void {
+    this.scale = scale;
+    this.chords = chordsInScale(scale);
+    this.currentDegree = this.currentDegree % this.chords.length;
+  }
+
+  getCurrentDegree(): number {
+    return this.currentDegree;
+  }
+}
