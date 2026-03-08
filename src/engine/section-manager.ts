@@ -121,6 +121,10 @@ export class SectionManager {
     state.activeLayers = new Set(config.activeLayers);
   }
 
+  forceAdvance(state: GenerativeState): void {
+    this.advanceSection(state);
+  }
+
   reset(mood: Mood): void {
     this.pastIntro = false;
     this.currentIndex = 0;

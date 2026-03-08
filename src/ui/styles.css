@@ -288,6 +288,29 @@ input[type="range"]::-moz-range-track {
   margin: 0.75rem 0;
 }
 
+/* ---- Keyboard shortcuts hint ---- */
+.shortcuts-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  justify-content: center;
+}
+
+.shortcut-key {
+  display: inline-block;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  border-radius: 3px;
+  padding: 0.1rem 0.35rem;
+  font-family: inherit;
+  font-size: 0.6rem;
+  color: var(--text);
+  margin-right: 0.15rem;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 460px) {
   #app {

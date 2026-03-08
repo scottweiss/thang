@@ -23,6 +23,8 @@ const { updateState } = setupUI(app, {
   onDensity: (v) => controller.setDensity(v),
   onBrightness: (v) => controller.setBrightness(v),
   onSpaciousness: (v) => controller.setSpaciousness(v),
+  onForceChord: () => controller.forceNextChord(),
+  onForceSection: () => controller.forceNextSection(),
 });
 
 controller.setStateChangeCallback((state) => {

@@ -104,6 +104,21 @@ export class GenerativeController {
   setBrightness(v: number): void { this.state.params.brightness = v; }
   setSpaciousness(v: number): void { this.state.params.spaciousness = v; }
 
+  forceNextChord(): void {
+    this.advanceChord();
+    this.state.chordChanged = true;
+    this.rebuildAll();
+    this.onStateChange?.(this.state);
+  }
+
+  forceNextSection(): void {
+    this.state.sectionChanged = true;
+    // Trigger section advance by setting elapsed past duration
+    this.sections.forceAdvance(this.state);
+    this.rebuildAll();
+    this.onStateChange?.(this.state);
+  }
+
   getState(): GenerativeState {
     return this.state;
   }

@@ -7,6 +7,8 @@ interface ControlsCallbacks {
   onDensity: (v: number) => void;
   onBrightness: (v: number) => void;
   onSpaciousness: (v: number) => void;
+  onForceChord?: () => void;
+  onForceSection?: () => void;
 }
 
 const MOODS: Mood[] = ['ambient', 'downtempo', 'lofi', 'trance'];
@@ -67,6 +69,17 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
           <div class="state-value" id="elapsedDisplay">0:00</div>
         </div>
       </div>
+
+      <div class="divider"></div>
+
+      <div class="shortcuts-hint" id="shortcutsHint">
+        <span class="shortcut-key">space</span> play
+        <span class="shortcut-key">1-4</span> mood
+        <span class="shortcut-key">c</span> chord
+        <span class="shortcut-key">s</span> section
+        <span class="shortcut-key">&uarr;&darr;</span> density
+        <span class="shortcut-key">&larr;&rarr;</span> bright
+      </div>
     </div>
   `;
 
@@ -117,6 +130,59 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
     const v = parseInt(spaciousnessSlider.value) / 100;
     (app.querySelector('#spaciousnessVal') as HTMLElement).textContent = spaciousnessSlider.value;
     callbacks.onSpaciousness(v);
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Don't capture when typing in inputs
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        playBtn.click();
+        break;
+      case '1': case '2': case '3': case '4': {
+        const idx = parseInt(e.key) - 1;
+        const mood = MOODS[idx];
+        if (mood) {
+          moodSelector.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('active'));
+          const btn = moodSelector.querySelector(`[data-mood="${mood}"]`);
+          btn?.classList.add('active');
+          document.body.setAttribute('data-mood', mood);
+          callbacks.onMoodChange(mood);
+        }
+        break;
+      }
+      case 'c':
+      case 'C':
+        callbacks.onForceChord?.();
+        break;
+      case 's':
+      case 'S':
+        callbacks.onForceSection?.();
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        densitySlider.value = Math.min(100, parseInt(densitySlider.value) + 5).toString();
+        densitySlider.dispatchEvent(new Event('input'));
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        densitySlider.value = Math.max(0, parseInt(densitySlider.value) - 5).toString();
+        densitySlider.dispatchEvent(new Event('input'));
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        brightnessSlider.value = Math.min(100, parseInt(brightnessSlider.value) + 5).toString();
+        brightnessSlider.dispatchEvent(new Event('input'));
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        brightnessSlider.value = Math.max(0, parseInt(brightnessSlider.value) - 5).toString();
+        brightnessSlider.dispatchEvent(new Event('input'));
+        break;
+    }
   });
 
   function updateState(state: GenerativeState): void {
