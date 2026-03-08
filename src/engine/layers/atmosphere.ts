@@ -11,7 +11,7 @@ export class AtmosphereLayer extends CachingLayer {
     if (state.sectionChanged) return true;
 
     // Atmosphere is slow-evolving, regenerate infrequently
-    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6 }[state.mood] ?? 12;
+    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6, avril: 15 }[state.mood] ?? 12;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -35,6 +35,9 @@ export class AtmosphereLayer extends CachingLayer {
 
       case 'trance':
         return this.buildTranceAtmosphere(density, brightness, room, section);
+
+      case 'avril':
+        return this.buildAvrilAtmosphere(density, brightness, room);
     }
   }
 
@@ -110,6 +113,26 @@ export class AtmosphereLayer extends CachingLayer {
       .pan(sine.range(0.3, 0.7).slow(11))
       .room(${(room * 0.3).toFixed(2)})
       .roomsize(1)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildAvrilAtmosphere(density: number, brightness: number, room: number): string {
+    // Very quiet tape hiss — sparse hh with heavy HPF, barely audible
+    const gain = 0.02 * (0.2 + density * 0.3);
+
+    const hissSteps: string[] = [];
+    for (let i = 0; i < 16; i++) {
+      hissSteps.push(Math.random() < 0.08 ? 'hh' : '~');
+    }
+
+    return `sound("${hissSteps.join(' ')}")
+      .slow(3)
+      .gain(${(gain * 0.3).toFixed(4)})
+      .hpf(${(5000 + brightness * 2000).toFixed(0)})
+      .lpf(${(9000 + brightness * 3000).toFixed(0)})
+      .pan(sine.range(0.3, 0.7).slow(11))
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(3)
       .orbit(${this.orbit})`;
   }
 

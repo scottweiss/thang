@@ -49,6 +49,13 @@ function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQua
         if (q === 'dom7') return 'maj';
         return q;
       });
+    case 'avril':
+      // Intimate, bittersweet — keep most 7ths, add sus2 for open warmth
+      return baseQualities.map((q, i) => {
+        if (i === 0) return 'sus2';              // I becomes sus2 — open, wistful
+        if (i === 3 && Math.random() < 0.5) return 'sus2'; // IV sometimes sus2
+        return q;                                 // keep maj7/min7 for warmth
+      });
   }
 }
 

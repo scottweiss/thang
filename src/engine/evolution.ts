@@ -7,6 +7,7 @@ const CHORD_TIMING: Record<Mood, [number, number]> = {
   downtempo: [15, 45],
   lofi: [12, 35],
   trance: [8, 24],
+  avril: [20, 60],
 };
 
 const SCALE_CHANGE_MIN = 120;

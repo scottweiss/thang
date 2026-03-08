@@ -39,6 +39,13 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.4, duration: [12, 24] },
     groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.75, brightnessTarget: 0.65, duration: [25, 45] },
   },
+  avril: {
+    intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.25, duration: [30, 50] },
+    build:     { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.35, duration: [40, 70] },
+    peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.5, brightnessTarget: 0.45, duration: [50, 80] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.3, duration: [35, 60] },
+    groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.4, brightnessTarget: 0.4, duration: [45, 75] },
+  },
 };
 
 // Section flow: intro → build → peak → breakdown → groove → build → ...

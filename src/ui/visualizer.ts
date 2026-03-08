@@ -17,6 +17,7 @@ const MOOD_PALETTES: Record<Mood, { bg: string; hues: number[]; saturation: numb
   downtempo: { bg: '#0a0808', hues: [20, 35, 280, 320], saturation: 35, lightness: 30 },
   lofi: { bg: '#0c0a08', hues: [330, 20, 40, 350], saturation: 25, lightness: 35 },
   trance: { bg: '#040810', hues: [190, 210, 240, 170], saturation: 60, lightness: 40 },
+  avril: { bg: '#0a0806', hues: [35, 45, 25, 15], saturation: 25, lightness: 35 },
 };
 
 export class Visualizer {
@@ -117,7 +118,7 @@ export class Visualizer {
     this.pulseIntensity *= 0.97;
 
     // Background fade (creates trails)
-    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : 0.06;
+    const fadeAlpha = this.currentMood === 'trance' ? 0.12 : this.currentMood === 'avril' ? 0.04 : 0.06;
     ctx.fillStyle = palette.bg;
     ctx.globalAlpha = fadeAlpha + this.pulseIntensity * 0.05;
     ctx.fillRect(0, 0, w, h);
@@ -144,7 +145,7 @@ export class Visualizer {
     }
 
     // Draw connection lines between nearby particles (ambient/downtempo only)
-    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo') && this.particles.length > 2) {
+    if ((this.currentMood === 'ambient' || this.currentMood === 'downtempo' || this.currentMood === 'avril') && this.particles.length > 2) {
       const connectDist = 80 + this.sectionEnergy * 60;
       ctx.strokeStyle = `hsla(${this.currentHue}, ${palette.saturation}%, ${palette.lightness + 10}%, 0.06)`;
       ctx.lineWidth = 0.5;
@@ -202,6 +203,7 @@ export class Visualizer {
       downtempo: 0.8,
       lofi: 1.2,
       trance: 2.5,
+      avril: 0.2,
     }[this.currentMood];
     // Section energy modulates spawn rate — intro is sparse, peak floods particles
     const sectionMult = 0.4 + this.sectionEnergy * 0.8;
@@ -260,6 +262,16 @@ export class Visualizer {
         maxLife = 60 + Math.random() * 100;
         break;
       }
+      case 'avril': {
+        // Very slow dust motes drifting gently downward in warm light
+        x = Math.random() * w;
+        y = Math.random() * h * 0.3;
+        vx = (Math.random() - 0.5) * 0.15;
+        vy = 0.05 + Math.random() * 0.15;
+        size = 0.8 + Math.random() * 1.8;
+        maxLife = 300 + Math.random() * 400;
+        break;
+      }
     }
 
     // Section energy scales particle size — peak sections get bigger, more visible particles
@@ -304,6 +316,13 @@ export class Visualizer {
         const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
         p.vx += (dx / dist) * 0.02;
         p.vy += (dy / dist) * 0.02;
+        break;
+      }
+      case 'avril': {
+        // Gentle downward drift with very slight horizontal sway
+        p.vx += Math.sin(this.time * 0.2 + p.x * 0.005) * 0.005;
+        p.vx *= 0.995;
+        p.vy *= 0.999;
         break;
       }
     }

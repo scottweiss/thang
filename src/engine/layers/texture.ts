@@ -58,7 +58,7 @@ export class TextureLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const loopTicks = { downtempo: 8, lofi: 8, trance: 6 }[state.mood] ?? 8;
+    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
@@ -83,6 +83,9 @@ export class TextureLayer extends CachingLayer {
 
       case 'trance':
         return this.buildTrancePattern(density, gain * 1.2, room * 0.5, brightness, state.section);
+
+      case 'avril':
+        return this.buildAvrilPattern(density, gain, room, brightness);
     }
   }
 
@@ -187,6 +190,29 @@ export class TextureLayer extends CachingLayer {
       .lpf(${(3500 + brightness * 5000).toFixed(0)})
       .room(${(room * 0.3).toFixed(2)})
       .roomsize(0.5)
+      .orbit(${this.orbit})`;
+  }
+
+  private buildAvrilPattern(
+    density: number, gain: number, room: number, brightness: number
+  ): string {
+    // Near-silent sparse pops — like tape crackle, barely audible
+    const steps: string[] = [];
+    for (let i = 0; i < 16; i++) {
+      if (Math.random() < density * 0.06) {
+        steps.push('hh');
+      } else {
+        steps.push('~');
+      }
+    }
+
+    return `sound("${steps.join(' ')}")
+      .slow(4)
+      .gain(${(gain * 0.15).toFixed(3)})
+      .hpf(${(4000 + brightness * 2000).toFixed(0)})
+      .lpf(${(8000 + brightness * 3000).toFixed(0)})
+      .room(${(room * 0.8).toFixed(2)})
+      .roomsize(3)
       .orbit(${this.orbit})`;
   }
 

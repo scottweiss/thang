@@ -22,6 +22,7 @@ const MOOD_TEMPOS: Record<Mood, number> = {
   downtempo: 0.375, // ~90 BPM
   lofi: 0.35,       // ~84 BPM
   trance: 0.55,     // ~132 BPM
+  avril: 0.27,      // ~65 BPM
 };
 
 export class GenerativeController {

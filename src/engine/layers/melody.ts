@@ -31,7 +31,7 @@ export class MelodyLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
@@ -140,6 +140,30 @@ export class MelodyLayer extends CachingLayer {
           .delaytime(0.1875)
           .delayfeedback(0.35)
           .orbit(${this.orbit})`;
+
+      case 'avril':
+        // Higher octave bell tones — very sparse, lots of room and delay
+        return `note("${elements.join(' ')}")
+          .sound("sine")
+          .fm(4)
+          .fmh(4)
+          .fmenv("exp")
+          .fmdecay(0.1)
+          .attack(0.003)
+          .decay(1)
+          .sustain(0.03)
+          .release(0.8)
+          .slow(4)
+          .gain(${(gain * 0.6).toFixed(3)})
+          .hpf(300)
+          .lpf(${(1800 + brightness * 2000).toFixed(0)})
+          .pan(sine.range(0.2, 0.8).slow(7))
+          .room(${(room * 1.2).toFixed(2)})
+          .roomsize(5)
+          .delay(0.45)
+          .delaytime(0.5)
+          .delayfeedback(0.4)
+          .orbit(${this.orbit})`;
     }
   }
 
@@ -197,6 +221,7 @@ export class MelodyLayer extends CachingLayer {
       downtempo: effectiveDensity * 0.3,
       lofi: effectiveDensity * 0.4,
       trance: effectiveDensity * 0.5,
+      avril: effectiveDensity * 0.25,
     }[mood];
 
     const totalNotes = Math.max(1, Math.floor(noteCount * noteProbability));

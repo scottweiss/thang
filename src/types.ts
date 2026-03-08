@@ -14,7 +14,7 @@ export type ScaleType =
 
 export type ChordQuality = 'maj' | 'min' | 'maj7' | 'min7' | 'dom7' | 'sus2' | 'sus4' | 'dim' | 'aug';
 
-export type Mood = 'ambient' | 'downtempo' | 'lofi' | 'trance';
+export type Mood = 'ambient' | 'downtempo' | 'lofi' | 'trance' | 'avril';
 
 export interface ScaleState {
   root: NoteName;

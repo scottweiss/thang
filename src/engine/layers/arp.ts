@@ -33,7 +33,7 @@ export class ArpLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12 }[state.mood] ?? 8;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -153,6 +153,34 @@ export class ArpLayer extends CachingLayer {
           .delay(0.35)
           .delaytime(0.1875)
           .delayfeedback(0.4)
+          .orbit(${this.orbit})`;
+      }
+
+      case 'avril': {
+        // Very sparse broken chord — high FM bell sound, long decay
+        // Like occasional piano notes ringing out in an empty room
+        const notes = this.spreadOctaves(baseNotes, 4, 5);
+        const fill = this.pickFill16(density * sectionMult * 0.2);
+        const steps = this.buildFromFill(notes, 'broken', 16, fill);
+        return `note("${steps.join(' ')}")
+          .sound("sine")
+          .fm(5)
+          .fmh(3)
+          .fmenv("exp")
+          .fmdecay(0.1)
+          .attack(0.003)
+          .decay(1.5)
+          .sustain(0.02)
+          .release(1.5)
+          .slow(5)
+          .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
+          .hpf(250)
+          .lpf(${(2000 + brightness * 2500).toFixed(0)})
+          .room(${(room * 1.3).toFixed(2)})
+          .roomsize(6)
+          .delay(0.5)
+          .delaytime(0.66)
+          .delayfeedback(0.5)
           .orbit(${this.orbit})`;
       }
     }

@@ -101,6 +101,26 @@ export class DroneLayer implements Layer {
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
           .orbit(${this.orbit})`;
+
+      case 'avril':
+        // Soft root note pedal — very quiet sine, slow attack, intimate
+        return `note("${root}2")
+          .sound("sine")
+          .fm(${(0.3 + brightness * 0.3).toFixed(1)})
+          .fmh(1)
+          .fmenv("exp")
+          .fmdecay(1)
+          .attack(1.5)
+          .decay(3)
+          .sustain(0.15)
+          .release(2)
+          .slow(6)
+          .gain(${(gain * 0.4).toFixed(3)})
+          .lpf(sine.range(${(120 + brightness * 100).toFixed(0)}, ${(250 + brightness * 200).toFixed(0)}).slow(19))
+          .pan(sine.range(0.4, 0.6).slow(15))
+          .room(${(room * 1.2).toFixed(2)})
+          .roomsize(5)
+          .orbit(${this.orbit})`;
     }
   }
 }

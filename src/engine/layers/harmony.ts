@@ -111,6 +111,32 @@ export class HarmonyLayer implements Layer {
           .delaytime(0.25)
           .delayfeedback(0.35)
           .orbit(${this.orbit})`;
+
+      case 'avril':
+        // Prepared piano — sine with bell-like percussive FM attack
+        // This is the KEY sound: intimate, warm, Avril 14th character
+        return `chord("${chord.symbol}")
+          .voicing()
+          .sound("sine")
+          .fm(5)
+          .fmh(3)
+          .fmenv("exp")
+          .fmdecay(0.08)
+          .attack(0.005)
+          .decay(1.2)
+          .sustain(0.06)
+          .release(1)
+          .slow(3)
+          .gain(${(gain * 0.8).toFixed(3)})
+          .hpf(180)
+          .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 1500).toFixed(0)}).slow(11))
+          .pan(sine.range(0.3, 0.7).slow(9))
+          .room(${(room * 1.1).toFixed(2)})
+          .roomsize(4)
+          .delay(0.3)
+          .delaytime(0.5)
+          .delayfeedback(0.35)
+          .orbit(${this.orbit})`;
     }
   }
 }
