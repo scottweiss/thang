@@ -17,6 +17,7 @@ import { crushOffset, shouldApplyCrushEvolution } from '../../theory/crush-evolu
 import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../../theory/frequency-band';
 import { chorusDepth, shouldApplyChorus } from '../../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../../theory/pattern-density';
+import { densityBalanceDegrade, shouldApplyDensityBalance } from '../../theory/density-balance';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -207,13 +208,19 @@ export class HarmonyLayer implements Layer {
       }
     }
 
-    // Pattern degradation: thin out notes in sparse sections
-    if (shouldApplyDegrade(this.name, state.section) && !result.includes('.degradeBy(')) {
-      const amount = patternDegrade(this.name, state.section, state.sectionProgress ?? 0);
-      if (amount >= 0.03) {
+    // Pattern degradation: section-based + density-based thinning
+    if (!result.includes('.degradeBy(')) {
+      let degradeAmount = shouldApplyDegrade(this.name, state.section)
+        ? patternDegrade(this.name, state.section, state.sectionProgress ?? 0)
+        : 0;
+      if (shouldApplyDensityBalance(this.name, state.activeLayers)) {
+        degradeAmount += densityBalanceDegrade(this.name, state.activeLayers, state.tension?.overall ?? 0.5);
+      }
+      degradeAmount = Math.min(0.7, degradeAmount);
+      if (degradeAmount >= 0.03) {
         result = result.replace(
           /\.orbit\((\d+)\)/,
-          `.degradeBy(${amount.toFixed(2)}).orbit($1)`
+          `.degradeBy(${degradeAmount.toFixed(2)}).orbit($1)`
         );
       }
     }

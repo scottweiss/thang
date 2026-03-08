@@ -16,6 +16,7 @@ import { evolvedVelocity, applyVelocityEvolution } from '../theory/velocity-evol
 import { slowMultiplier, shouldApplyRhythmicAcceleration } from '../theory/rhythmic-acceleration';
 import { chorusDepth, shouldApplyChorus } from '../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
+import { densityBalanceDegrade, shouldApplyDensityBalance } from '../theory/density-balance';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -448,15 +449,29 @@ export abstract class CachingLayer implements Layer {
   }
 
   /**
-   * Apply degradeBy() to thin out note patterns in sparse sections.
-   * Intros/breakdowns lose notes, peaks play at full density.
-   * Inserted before .orbit() in the chain.
+   * Apply degradeBy() to thin patterns based on section AND layer density.
+   * Combines section-based degradation (sparse intros/breakdowns) with
+   * adaptive density balancing (thin secondary layers when mix is crowded).
    */
   private applyPatternDegrade(pattern: string, state: GenerativeState): string {
-    if (!shouldApplyDegrade(this.name, state.section)) return pattern;
     if (pattern.includes('.degradeBy(')) return pattern;
 
-    const amount = patternDegrade(this.name, state.section, state.sectionProgress ?? 0);
+    // Section-based degradation
+    let amount = shouldApplyDegrade(this.name, state.section)
+      ? patternDegrade(this.name, state.section, state.sectionProgress ?? 0)
+      : 0;
+
+    // Density-based degradation (additive)
+    if (shouldApplyDensityBalance(this.name, state.activeLayers)) {
+      amount += densityBalanceDegrade(
+        this.name,
+        state.activeLayers,
+        state.tension?.overall ?? 0.5
+      );
+    }
+
+    // Clamp total degradation
+    amount = Math.min(0.7, amount);
     if (amount < 0.03) return pattern;
 
     // Insert .degradeBy() before .orbit()
