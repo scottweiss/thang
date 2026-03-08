@@ -37,6 +37,7 @@ import { bestPivotChord, shouldUsePivot } from '../theory/pivot-modulation';
 import { macroDynamicGain, transitionDynamicAccent, shouldApplyMacroDynamics } from '../theory/macro-dynamics';
 import { shouldApplyNR, suggestNRMove } from '../theory/neo-riemannian';
 import { shouldGrandPause, gpDuration } from '../theory/grand-pause';
+import { shouldApplySymmetric, selectAxisType, suggestSymmetricMove } from '../theory/symmetric-division';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -368,7 +369,21 @@ export class GenerativeController {
       this.state.scale = buildScaleState(this.state.scale.root, newScaleType);
       this.progression.setScale(this.state.scale);
     } else {
-      // Same scale type - try changing root instead (relative modulation)
+      // Same scale type - try changing root instead
+
+      // Symmetric axis navigation: Coltrane-style geometric key movement
+      if (shouldApplySymmetric(this.state.tick, this.state.mood, this.state.section)) {
+        const axisType = selectAxisType(this.state.mood, this.state.tick);
+        const newRoot = suggestSymmetricMove(this.state.scale.root, axisType, this.state.tick);
+        if (newRoot !== this.state.scale.root) {
+          this.state.scale = buildScaleState(newRoot, this.state.scale.type);
+          this.progression.setScale(this.state.scale);
+          this.tonalGravity.record(this.state.scale.root, this.state.scale.type, this.state.tick);
+          return;
+        }
+      }
+
+      // Relative modulation fallback
       const related = getRelatedScales(this.state.scale);
       if (related.length > 0) {
         const candidates = related.slice(0, 3);
