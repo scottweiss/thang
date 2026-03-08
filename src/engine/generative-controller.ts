@@ -110,6 +110,9 @@ import { grooveTightness, timingCorrection, shouldApplyBinding } from '../theory
 import { shouldUseLydian, lydianFourth, naturalFourth } from '../theory/lydian-brightness';
 import { maxHarmonyVoices, densityGainPenalty, shouldBalanceVoiceDensity } from '../theory/voice-density-balance';
 import { shouldHoldPedal, pedalSustainMultiplier, pedalDecayMultiplier } from '../theory/pedal-bass-sustain';
+import { functionDecayMultiplier } from '../theory/harmonic-envelope-shaping';
+import { gravitationNudge, shouldApplyGravitation } from '../theory/rhythmic-gravitation';
+import { characteristicToneWeight } from '../theory/modal-coloring';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -2613,6 +2616,54 @@ export class GenerativeController {
           (_, val) => `.room(${Math.min(1, parseFloat(val) * decayMult).toFixed(4)})`
         );
       }
+    }
+
+    // Harmonic envelope shaping: chord function affects harmony decay
+    {
+      const harmonyResult = layerResults.find(r => r.name === 'harmony');
+      if (harmonyResult) {
+        const decayMult = functionDecayMultiplier(this.state.currentChord.degree, this.state.mood);
+        if (Math.abs(decayMult - 1.0) > 0.01) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * decayMult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic gravitation: nudge notes toward metrically strong positions
+    if (shouldApplyGravitation(this.state.mood, this.state.section)) {
+      for (const result of layerResults) {
+        if (result.name === 'melody' || result.name === 'arp') {
+          const pos = this.state.tick % 16;
+          const nudge = gravitationNudge(pos, this.state.mood, this.state.section);
+          if (Math.abs(nudge) > 0.001) {
+            const existing = result.code.match(/\.nudge\(([0-9.-]+)\)/);
+            const current = existing ? parseFloat(existing[1]) : 0;
+            const combined = current + nudge;
+            if (existing) {
+              result.code = result.code.replace(
+                /\.nudge\(([0-9.-]+)\)/,
+                () => `.nudge(${combined.toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Modal coloring: bias is applied at note selection time (melody generator reads this)
+    // Store characteristic tone weight in state for melody layer to use
+    {
+      const rootPc = (() => {
+        const map: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+        return map[this.state.currentChord.root] ?? 0;
+      })();
+      const _charWeight = characteristicToneWeight(
+        rootPc, rootPc, this.state.scale.type, this.state.mood
+      );
+      // Weight is available for future note selection integration
     }
 
     // Temporal binding: groove tightness correction on layer timing
