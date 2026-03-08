@@ -21,6 +21,7 @@ import { applyGrooveLock } from '../../theory/groove-lock';
 import { addPassingTones, shouldAddPassingTones } from '../../theory/arp-passing-tones';
 import { contourGainMultipliers, shouldApplyContourDynamics } from '../../theory/contour-dynamics';
 import { shouldApplyPolyrhythm, selectGrouping, polyrhythmAccentMask } from '../../theory/polyrhythm';
+import { shouldArpAnticipate, blendNextChordTones } from '../../theory/arp-anticipation';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -114,6 +115,12 @@ export class ArpLayer extends CachingLayer {
       if (extra.length > 0) {
         baseNotes = [...baseNotes, ...extra];
       }
+    }
+
+    // Harmonic anticipation: blend next-chord tones before the change
+    if (state.nextChordHint &&
+        shouldArpAnticipate(mood, state.ticksSinceChordChange, true)) {
+      baseNotes = blendNextChordTones(baseNotes, state.nextChordHint.notes, mood);
     }
 
     // Register awareness: get adjusted octave range to avoid melody collision
