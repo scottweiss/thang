@@ -23,6 +23,7 @@ import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/te
 import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { shouldUsePlaning, planedVoicing } from '../../theory/harmonic-planing';
+import { syncedDelayTime } from '../../theory/delay-sync';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -123,6 +124,15 @@ export class HarmonyLayer implements Layer {
           (_match, val) => `.roomsize(${(parseFloat(val) * tsMult).toFixed(1)})`
         );
       }
+    }
+
+    // Delay sync: replace fixed delay times with tempo-synced values
+    if (result.includes('.delaytime(') && state.params.tempo > 0) {
+      const synced = syncedDelayTime(state.mood, state.params.tempo);
+      result = result.replace(
+        /\.delaytime\((\d+(?:\.\d+)?)\)/g,
+        () => `.delaytime(${synced.toFixed(4)})`
+      );
     }
 
     // Delay evolution: echo intensity evolves with section
