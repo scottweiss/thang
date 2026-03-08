@@ -1,6 +1,6 @@
 import { CachingLayer } from '../caching-layer';
 import { GenerativeState, Section, Mood } from '../../types';
-import { randomChoice, shuffle } from '../random';
+import { randomChoice } from '../random';
 import { euclideanFillPositions } from '../../theory/euclidean';
 import { velocityCurve, VelocityPattern } from '../../theory/groove';
 import { getAdjustedOctaveRange } from '../../theory/register';
@@ -8,6 +8,7 @@ import { displaceSteps, syncopate, moodDisplacement } from '../../theory/rhythmi
 import { sectionArticulation, articulationToStrudel } from '../../theory/articulation';
 import { complementaryDensity, callResponseAmount } from '../../theory/call-response';
 import { generateComplementaryRhythm, counterpointDensity } from '../../theory/rhythmic-counterpoint';
+import { generateArpSequence, moodArpStyles, ArpStyle } from '../../theory/arp-pattern';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -110,7 +111,7 @@ export class ArpLayer extends CachingLayer {
       case 'downtempo': {
         // Square tick — rhythmic clicks distinct from triangle melody
         const notes = this.spreadOctaves(baseNotes, 3, 4);
-        const pattern = randomChoice<ArpPattern>(['up', 'updown', 'broken']);
+        const pattern = randomChoice(moodArpStyles(mood, section));
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         return `note("${steps.join(' ')}")
@@ -136,7 +137,7 @@ export class ArpLayer extends CachingLayer {
       case 'lofi': {
         // Triangle pluck — warm tick, distinct from square melody
         const notes = this.spreadOctaves(baseNotes, 3, 4);
-        const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'down']);
+        const pattern = randomChoice(moodArpStyles(mood, section));
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         return `note("${steps.join(' ')}")
@@ -161,12 +162,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'trance': {
         const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
-        // Section-aware pattern: build uses updown, peak uses up, breakdown sparse
-        const trancePattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
-          ? randomChoice<ArpPattern>(['up', 'updown'])
-          : state.section === 'build'
-            ? 'updown'
-            : 'broken';
+        const trancePattern = randomChoice(moodArpStyles(mood, section));
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
         const tranceGain = 0.16 * (0.5 + density * 0.5);
@@ -242,11 +238,7 @@ export class ArpLayer extends CachingLayer {
         // Dense 16th note arps — acid-style, resonant filter sweep, multiple octaves
         // Syro style: restless, intricate, technical
         const notes = this.spreadOctaves(baseNotes, Math.max(2, adjLow), Math.min(5, adjHigh));
-        const syroPattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
-          ? randomChoice<ArpPattern>(['up', 'updown'])
-          : state.section === 'build'
-            ? 'updown'
-            : randomChoice<ArpPattern>(['broken', 'down']);
+        const syroPattern = randomChoice(moodArpStyles(mood, section));
         const fill = this.pickFill16(density * sectionMult * 1.2);
         const steps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
         const syroGain = 0.12 * (0.5 + density * 0.5);
@@ -271,7 +263,7 @@ export class ArpLayer extends CachingLayer {
       case 'blockhead': {
         // Triangle tick — percussive, distinct from sawtooth melody and square harmony
         const notes = this.spreadOctaves(baseNotes, 3, 4);
-        const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'up']);
+        const pattern = randomChoice(moodArpStyles(mood, section));
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
         const bhGain = 0.15 * (0.5 + density * 0.5);
@@ -324,11 +316,7 @@ export class ArpLayer extends CachingLayer {
       case 'disco': {
         // Bubbly disco arp — sine with high FM, fast 16th notes, funky
         const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
-        const discoPattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
-          ? randomChoice<ArpPattern>(['up', 'updown'])
-          : state.section === 'build'
-            ? 'updown'
-            : 'broken';
+        const discoPattern = randomChoice(moodArpStyles(mood, section));
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
         const discoGain = 0.18 * (0.5 + density * 0.5);
@@ -382,9 +370,10 @@ export class ArpLayer extends CachingLayer {
 
   // Build steps using rhythmic fill positions instead of random
   private buildFromFill(
-    notes: string[], pattern: ArpPattern, length: number, fillPositions: number[]
+    notes: string[], pattern: ArpPattern | ArpStyle, length: number, fillPositions: number[]
   ): string[] {
-    const sequence = this.getArpSequence(notes, pattern);
+    // Use the new interval-based arp patterns
+    const sequence = generateArpSequence(notes, pattern as ArpStyle, notes.length);
     const steps: string[] = new Array(length).fill('~');
     let hasNote = false;
 
@@ -443,21 +432,4 @@ export class ArpLayer extends CachingLayer {
     return result;
   }
 
-  // Create the note ordering for different arp patterns
-  private getArpSequence(notes: string[], pattern: ArpPattern): string[] {
-    switch (pattern) {
-      case 'up':
-        return notes;
-      case 'down':
-        return [...notes].reverse();
-      case 'updown': {
-        if (notes.length <= 2) return notes;
-        const mid = notes.slice(1, -1);
-        return [...notes, ...mid.reverse()];
-      }
-      case 'broken': {
-        return shuffle(notes);
-      }
-    }
-  }
 }
