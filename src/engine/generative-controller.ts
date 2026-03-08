@@ -101,6 +101,9 @@ import { trajectoryMomentum, continuationBias, shouldApplyContinuation } from '.
 import { shouldBreakPattern, reengagementGain } from '../theory/loop-engagement-cycle';
 import { harmonicComplexity, shouldSimplifyChord, simplificationImpactBonus } from '../theory/harmonic-saturation-index';
 import { estimateMetabolism, metabolismDensityCorrection, shouldAdjustMetabolism } from '../theory/event-metabolism';
+import { spectralWeight, weightLpfMultiplier, weightHpfMultiplier, shouldApplyWeight } from '../theory/spectral-weight';
+import { magneticPull, attractorPitch, shouldApplyMagnetism } from '../theory/tonal-magnetism';
+import { attentionEnergy, needsNovelty, noveltyGainBoost, shouldTrackAttention } from '../theory/attention-decay';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -600,6 +603,25 @@ export class GenerativeController {
       if (shouldApplyTopology(this.state.mood)) {
         const dist = chordDistance(currentDegree, degree, currentQuality, 'maj');
         bias *= distanceBias(dist, this.state.mood, this.state.section);
+      }
+      // Tonal magnetism: bias toward pitch-space attractor
+      if (shouldApplyMagnetism(this.state.mood, this.state.section)) {
+        const NOTE_PC_TM: Record<string, number> = {
+          'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+          'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+          'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+        };
+        const rootPc = NOTE_PC_TM[this.state.currentChord.root] ?? 0;
+        const candidateRoot = this.state.scale.notes[degree % 7] ?? 'C';
+        const candidatePc = NOTE_PC_TM[candidateRoot] ?? 0;
+        const attractor = attractorPitch(
+          rootPc,
+          (rootPc + 4) % 12, // major 3rd estimate
+          (rootPc + 7) % 12, // perfect 5th
+          this.state.section,
+          this.state.sectionProgress ?? 0
+        );
+        bias *= magneticPull(candidatePc, attractor, this.state.mood, this.state.section);
       }
       return bias;
     });
@@ -1296,6 +1318,28 @@ export class GenerativeController {
       }
     }
 
+    // Attention decay: boost gain when novelty arrives after stale period
+    if (shouldTrackAttention(this.state.mood)) {
+      const ticksSinceChange = this.state.ticksSinceChordChange ?? 0;
+      const attention = attentionEnergy(ticksSinceChange, this.state.mood, this.state.section);
+      if (this.state.chordChanged && needsNovelty(attention, this.state.mood)) {
+        // Chord change arrived when attention was low — novelty boost
+        const boost = noveltyGainBoost(0, this.state.mood);
+        if (boost > 1.01) {
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
+                return `.gain((${expr}) * ${boost.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
     // Harmonic surprise: unexpected chords get brightness/gain flash
     if (this.state.chordChanged && this.state.chordHistory.length > 0) {
       const prevChord2 = this.state.chordHistory[this.state.chordHistory.length - 1];
@@ -1822,6 +1866,29 @@ export class GenerativeController {
           result.code = result.code.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
             (_, val) => `.lpf(${Math.round(parseFloat(val) * tiltLpf)})`
+          );
+        }
+      }
+    }
+
+    // Spectral weight: perceived heaviness/lightness shift across sections
+    if (shouldApplyWeight(this.state.mood, this.state.section)) {
+      const weight = spectralWeight(this.state.mood, this.state.section, this.state.sectionProgress ?? 0);
+      const lpfMult = weightLpfMultiplier(weight, this.state.mood);
+      const hpfMult = weightHpfMultiplier(weight, this.state.mood);
+      if (Math.abs(lpfMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+          );
+        }
+      }
+      if (Math.abs(hpfMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.hpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.hpf(${Math.round(parseFloat(val) * hpfMult)})`
           );
         }
       }
