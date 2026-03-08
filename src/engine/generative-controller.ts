@@ -270,6 +270,9 @@ import { phraseLengthGain } from '../theory/phrase-length-variation';
 import { rhythmWeightGain } from '../theory/harmonic-rhythm-weight';
 import { breathSpacingGain } from '../theory/melodic-breath-spacing';
 import { timbralDecayFm } from '../theory/timbral-decay-curve';
+import { voicingRegisterFm } from '../theory/chord-voicing-register';
+import { momentumTransferGain } from '../theory/rhythmic-momentum-transfer';
+import { distanceReverbGain } from '../theory/harmonic-distance-reverb';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5395,6 +5398,56 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Chord voicing register: FM adjusts by pitch register
+    {
+      const avgMidi = this.state.layerCenterPitches?.['harmony'] ?? 64;
+      const vrFm = voicingRegisterFm(avgMidi, this.state.mood);
+      if (Math.abs(vrFm - 1.0) > 0.01) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * vrFm).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic momentum transfer: energy carries after onsets
+    {
+      const beatsSince = Math.floor((this.state.sectionProgress ?? 0) * 16) % 4;
+      const mtGain = momentumTransferGain(beatsSince, this.state.mood, this.state.section);
+      if (Math.abs(mtGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * mtGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic distance reverb: distant chords get more space
+    {
+      const drGain = distanceReverbGain(
+        this.state.currentChord.root,
+        this.state.scale.root,
+        this.state.mood,
+      );
+      if (Math.abs(drGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'atmosphere') {
+            result.code = result.code.replace(
+              /\.room\(([0-9.]+)\)/,
+              (_, val) => `.room(${Math.min(0.95, parseFloat(val) * drGain).toFixed(4)})`
             );
           }
         }
