@@ -38,6 +38,7 @@ import { elisionTendency } from '../../theory/phrase-elision';
 import { anticipationProbability, anticipationTones, anticipationBias, shouldAnticipate } from '../../theory/harmonic-anticipation';
 import { gestureDensityMult, gesturePitchBias } from '../../theory/gestural-archetype';
 import { generateTimbreMap, shouldApplyKFM, applyTimbreToFM } from '../../theory/klangfarbenmelodie';
+import { shouldFragment, fragmentLength, extractFragment, repeatFragment } from '../../theory/motivic-fragmentation';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -629,6 +630,14 @@ export class MelodyLayer extends CachingLayer {
         const sequencedPhrase = flattenSequence(sequences, 1);
         // Truncate to fit the pattern — sequences can be longer than the target
         rawMotif = sequencedPhrase.slice(0, 16);
+      }
+      // Motivic fragmentation: during builds/peaks, truncate to essential kernel
+      if (shouldFragment(state.tick, mood, state.section)) {
+        const fragLen = fragmentLength(rawMotif.length, mood, state.section, state.tension?.overall ?? 0.5);
+        if (fragLen < rawMotif.length) {
+          const fragment = extractFragment(rawMotif, fragLen);
+          rawMotif = repeatFragment(fragment, rawMotif.length, true);
+        }
       }
     } else {
       // Create a new motif via Narmour I-R model
