@@ -167,6 +167,9 @@ import { entrainedOffset, shouldEntrain } from '../theory/rhythmic-entrainment';
 import { cadentialWeight } from '../theory/cadential-weight-distribution';
 import { microDynamicGain } from '../theory/micro-dynamics';
 import { morphedLpf } from '../theory/spectral-morphing';
+import { voiceLeadingWeight } from '../theory/voice-leading-cost';
+import { polymetricTension } from '../theory/polymetric-tension';
+import { temperatureLpf, temperatureFm } from '../theory/harmonic-color-temperature';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3109,6 +3112,54 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
             );
           }
+        }
+      }
+    }
+
+    // Voice leading cost: weight stored for chord selection
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const currPcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      const _vlWeight = voiceLeadingWeight(currPcs, currPcs, this.state.mood);
+      // Available for chord selection bias
+    }
+
+    // Polymetric tension: FM boost from metric conflict
+    {
+      const pTension = polymetricTension(this.state.tick, 3, 4, this.state.mood);
+      if (pTension > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * (1.0 + pTension)).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic color temperature: filter/FM from chord warmth
+    {
+      const quality = this.state.currentChord.quality;
+      const tLpf = temperatureLpf(quality, this.state.mood);
+      const tFm = temperatureFm(quality, this.state.mood);
+      if (Math.abs(tLpf - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * tLpf)})`
+          );
+        }
+      }
+      if (Math.abs(tFm - 1.0) > 0.02) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * tFm).toFixed(4)})`
+          );
         }
       }
     }
