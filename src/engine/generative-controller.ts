@@ -342,6 +342,9 @@ import { claveAlignmentGain } from '../theory/rhythmic-clave-alignment';
 import { voiceCrossingAvoidanceGain } from '../theory/harmonic-voice-crossing-avoidance';
 import { intervallicTensionCurveFm } from '../theory/melodic-intervallic-tension-curve';
 import { tresilloAccentGain } from '../theory/rhythmic-tresillo-accent';
+import { planingColorLpf } from '../theory/harmonic-planing-color';
+import { cambiataFigureGain } from '../theory/melodic-cambiata-figure';
+import { secundalPulseGain } from '../theory/rhythmic-secundal-pulse';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6746,6 +6749,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * taGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic planing color: soften parallel chord motion
+    {
+      const prevQuality = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2].quality
+        : '';
+      const pcLpf = planingColorLpf(prevQuality, this.state.currentChord.quality, this.state.mood, this.state.section);
+      if (pcLpf < 0.999) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'atmosphere') {
+            result.code = result.code.replace(
+              /\.lpf\(([0-9.]+)\)/,
+              (_, val) => `.lpf(${(parseFloat(val) * pcLpf).toFixed(1)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic cambiata figure: boost elegant ornamental turns
+    {
+      const p = this.state.sectionProgress;
+      const i1 = Math.round(Math.sin(p * Math.PI * 3) * 2);
+      const i2 = Math.round(Math.sin(p * Math.PI * 3 + 0.5) * 3.5);
+      const i3 = Math.round(Math.sin(p * Math.PI * 3 + 1.0) * -1.5);
+      const cfGain = cambiataFigureGain(i1, i2, i3, this.state.mood, this.state.section);
+      if (cfGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * cfGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic secundal pulse: secondary pulse layer accents
+    {
+      const beatPos = this.state.tick % 16;
+      const spGain = secundalPulseGain(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (spGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'texture') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * spGain).toFixed(4)})`
             );
           }
         }
