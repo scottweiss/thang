@@ -366,6 +366,9 @@ import { microAccelOffset } from '../theory/rhythmic-micro-acceleration';
 import { pedalReleaseGain } from '../theory/harmonic-pedal-tone-release';
 import { intervalVarietyGain as intervalDiversityGain } from '../theory/melodic-interval-variety';
 import { anticipationGain } from '../theory/rhythmic-displacement-anticipation';
+import { luminanceFm } from '../theory/harmonic-luminance';
+import { backbeatGain } from '../theory/rhythmic-backbeat-emphasis';
+import { cadentialApproachGain } from '../theory/melodic-cadential-approach';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -1115,7 +1118,7 @@ export class GenerativeController {
           const boost = transferBoost(result.name, current, target, released, this.state.mood);
           if (boost > 1.01) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
@@ -1160,7 +1163,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           // Scale gain proportionally to density change (thinner = quieter)
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * densityMult).toFixed(4)})`;
@@ -1187,7 +1190,7 @@ export class GenerativeController {
           for (const result of layerResults) {
             if (result.name === 'drone' || result.name === 'atmosphere') continue;
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * densityCorr).toFixed(4)})`;
@@ -1215,7 +1218,7 @@ export class GenerativeController {
         );
         if (hMult < 0.97) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * hMult).toFixed(4)})`;
@@ -1235,7 +1238,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           if (result.name === 'drone') continue;
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * dimMult).toFixed(4)})`;
@@ -1249,7 +1252,7 @@ export class GenerativeController {
         if (boost > 1.01) {
           for (const result of layerResults) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
@@ -1300,7 +1303,7 @@ export class GenerativeController {
       if (silenceMult < 1.0) {
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (match, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * silenceMult).toFixed(4)})`;
@@ -1316,7 +1319,7 @@ export class GenerativeController {
       const gpMult = 0.01; // near-silent, not completely zero (avoids audio glitch)
       for (const result of layerResults) {
         result.code = result.code.replace(
-          /\.gain\(([^)]+)\)/,
+          /\.gain\(([0-9.]+)\)/,
           (_, expr) => {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * gpMult).toFixed(4)})`;
@@ -1354,7 +1357,7 @@ export class GenerativeController {
     if (Math.abs(trajGain - 1.0) > 0.02) {
       for (const result of layerResults) {
         result.code = result.code.replace(
-          /\.gain\(([^)]+)\)/,
+          /\.gain\(([0-9.]+)\)/,
           (_, expr) => {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * trajGain).toFixed(4)})`;
@@ -1369,7 +1372,7 @@ export class GenerativeController {
       const hrScalar = headroomScalar(layerResults.length);
       for (const result of layerResults) {
         result.code = result.code.replace(
-          /\.gain\(([^)]+)\)/,
+          /\.gain\(([0-9.]+)\)/,
           (_, expr) => {
             const num = parseFloat(expr);
             if (!isNaN(num)) return `.gain(${(num * hrScalar).toFixed(4)})`;
@@ -1391,7 +1394,7 @@ export class GenerativeController {
       if (Math.abs(macroMult - 1.0) > 0.01) {
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * macroMult).toFixed(4)})`;
@@ -1491,7 +1494,7 @@ export class GenerativeController {
           const gainMult = punchGainMultiplier(this.state.mood, this.state.section, true);
           if (gainMult > 1.01) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
@@ -1535,7 +1538,7 @@ export class GenerativeController {
             : backgroundGainReduction(maxSalience, this.state.mood);
           if (Math.abs(mult - 1.0) > 0.01) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
@@ -1553,7 +1556,7 @@ export class GenerativeController {
       if (boost > 1.01) {
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
@@ -1576,7 +1579,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           if (gBoost > 1.01) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
@@ -1604,7 +1607,7 @@ export class GenerativeController {
         if (boost > 1.01) {
           for (const result of layerResults) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
@@ -1635,7 +1638,7 @@ export class GenerativeController {
           }
           if (gainMult > 1.01) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
@@ -1702,7 +1705,7 @@ export class GenerativeController {
         const gainBoost = 1.0 + resBonus * 0.3;
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
@@ -1747,7 +1750,7 @@ export class GenerativeController {
         const boost = arrivalGainBoost(result.name);
         if (boost > 1.0) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
@@ -1795,7 +1798,7 @@ export class GenerativeController {
         for (const result of layerResults) {
           if (isPocketLayer(result.name)) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * pocketMult).toFixed(4)})`;
@@ -1819,7 +1822,7 @@ export class GenerativeController {
             const followMult = accompanimentGainResponse(melodyAct, this.state.mood, this.state.section);
             if (Math.abs(followMult - 1.0) > 0.02) {
               result.code = result.code.replace(
-                /\.gain\(([^)]+)\)/,
+                /\.gain\(([0-9.]+)\)/,
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * followMult).toFixed(4)})`;
@@ -1844,7 +1847,7 @@ export class GenerativeController {
             const boost = overlapGainBoost(this.state.mood, this.state.section, true);
             if (boost > 1.01) {
               result.code = result.code.replace(
-                /\.gain\(([^)]+)\)/,
+                /\.gain\(([0-9.]+)\)/,
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
@@ -1923,7 +1926,7 @@ export class GenerativeController {
         const convMult = conversationGainMultiplier(result.name, speaker, this.state.mood);
         if (Math.abs(convMult - 1.0) > 0.01) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * convMult).toFixed(4)})`;
@@ -1961,7 +1964,7 @@ export class GenerativeController {
         const drumBoost = harmonyToDrumGain(harmNotes, this.state.mood);
         if (drumBoost > 1.01) {
           textureResult.code = textureResult.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * drumBoost).toFixed(4)})`;
@@ -2009,7 +2012,7 @@ export class GenerativeController {
         const gBoost = clarityGainBoost(result.name, dominant, this.state.mood);
         if (gBoost > 1.01) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
@@ -2057,7 +2060,7 @@ export class GenerativeController {
       if (Math.abs(eGainMult - 1.0) > 0.02) {
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * eGainMult).toFixed(4)})`;
@@ -2075,7 +2078,7 @@ export class GenerativeController {
       if (Math.abs(dwMult - 1.0) > 0.02) {
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * dwMult).toFixed(4)})`;
@@ -2198,7 +2201,7 @@ export class GenerativeController {
       if (Math.abs(swell - 1.0) > 0.01) {
         for (const result of layerResults) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * swell).toFixed(4)})`;
@@ -2244,7 +2247,7 @@ export class GenerativeController {
           const gCorr = bassGainCorrection(bassCount, this.state.mood, isMain);
           if (gCorr < 0.97) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gCorr).toFixed(4)})`;
@@ -2264,7 +2267,7 @@ export class GenerativeController {
         const mult = independenceDensityMult(melodyPattern, 0, this.state.mood, this.state.section);
         if (mult < 0.97) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
@@ -2284,7 +2287,7 @@ export class GenerativeController {
         if (gainCorr < 0.97) {
           for (const result of layerResults) {
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainCorr).toFixed(4)})`;
@@ -2535,7 +2538,7 @@ export class GenerativeController {
           for (const result of layerResults) {
             if (result.name === 'drone') continue; // drone is foundational
             result.code = result.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
@@ -2581,7 +2584,7 @@ export class GenerativeController {
           const gainBoost = subsonicGainBoost(drumActivity, this.state.mood, this.state.section);
           if (gainBoost > 1.01) {
             droneResult.code = droneResult.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
@@ -2635,7 +2638,7 @@ export class GenerativeController {
             const gainMult = collisionGainReduction(severity, this.state.mood, false);
             if (gainMult < 0.99) {
               secResult.code = secResult.code.replace(
-                /\.gain\(([^)]+)\)/,
+                /\.gain\(([0-9.]+)\)/,
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
@@ -2663,7 +2666,7 @@ export class GenerativeController {
         const fusionBoost = fusionGainBalance(gapMs, this.state.mood);
         if (fusionBoost > 1.01) {
           arpResult.code = arpResult.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * fusionBoost).toFixed(4)})`;
@@ -2688,7 +2691,7 @@ export class GenerativeController {
           if (Math.abs(drMult - 1.0) > 0.02) {
             for (const result of layerResults) {
               result.code = result.code.replace(
-                /\.gain\(([^)]+)\)/,
+                /\.gain\(([0-9.]+)\)/,
                 (_, expr) => {
                   const num = parseFloat(expr);
                   if (!isNaN(num)) return `.gain(${(num * drMult).toFixed(4)})`;
@@ -2782,7 +2785,7 @@ export class GenerativeController {
           const mult = tensionGainMultiplier(avgTension, this.state.mood);
           if (Math.abs(mult - 1.0) > 0.01) {
             melodyResult.code = melodyResult.code.replace(
-              /\.gain\(([^)]+)\)/,
+              /\.gain\(([0-9.]+)\)/,
               (_, expr) => {
                 const num = parseFloat(expr);
                 if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
@@ -2801,7 +2804,7 @@ export class GenerativeController {
         const gJit = gainJitter(this.state.tick, i, this.state.mood, this.state.section);
         if (Math.abs(gJit - 1.0) > 0.005) {
           result.code = result.code.replace(
-            /\.gain\(([^)]+)\)/,
+            /\.gain\(([0-9.]+)\)/,
             (_, expr) => {
               const num = parseFloat(expr);
               if (!isNaN(num)) return `.gain(${(num * gJit).toFixed(4)})`;
@@ -7243,6 +7246,65 @@ export class GenerativeController {
               layerResults[i].code = layerResults[i].code.replace(
                 /\.late\(([0-9.]+)\)/,
                 () => `.late(${newDelay.toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Harmonic luminance: modulate FM based on chord brightness
+    {
+      const chordNotes = (this.state.currentChord?.notes || []).map((n: string) => safeP(n, 60));
+      const lumFm = luminanceFm(chordNotes, this.state.mood, this.state.section);
+      if (Math.abs(lumFm - 1) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            const fmiMatch = result.code.match(/\.fmi\(([0-9.]+)\)/);
+            if (fmiMatch) {
+              const fmi = parseFloat(fmiMatch[1]);
+              if (!isNaN(fmi)) {
+                result.code = result.code.replace(
+                  /\.fmi\(([0-9.]+)\)/,
+                  () => `.fmi(${(fmi * lumFm).toFixed(4)})`
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic backbeat emphasis: boost gain on beats 2 and 4
+    {
+      const beatPos = (this.state.tick ?? 0) % 4;
+      const bbGain = backbeatGain(beatPos, this.state.mood, this.state.section);
+      if (Math.abs(bbGain - 1) > 0.001) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, bbGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic cadential approach: boost approach tones near phrase endings
+    {
+      const tonic = safeP(String(this.state.currentChord?.root ?? '60'), 60);
+      const motifNotes = this.state.activeMotif?.map((n: string) => safeP(n, 60)) ?? [];
+      const phraseProgress = this.state.sectionProgress ?? 0.5;
+      if (motifNotes.length > 0) {
+        const lastNote = motifNotes[motifNotes.length - 1];
+        const caGain = cadentialApproachGain(lastNote, tonic, phraseProgress, this.state.mood, this.state.section);
+        if (caGain > 1.001) {
+          for (const result of layerResults) {
+            if (result.name === 'melody') {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${safeMul(val, caGain, 4)})`
               );
             }
           }
