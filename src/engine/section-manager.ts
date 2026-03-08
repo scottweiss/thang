@@ -195,6 +195,11 @@ export class SectionManager {
     return SECTION_CONFIGS[mood].intro.activeLayers;
   }
 
+  /** Returns how far through the current section we are (0-1) */
+  getSectionProgress(): number {
+    return Math.min(1, this.sectionElapsed / this.sectionDuration);
+  }
+
   private randomBetween(min: number, max: number): number {
     return min + Math.random() * (max - min);
   }

@@ -4,6 +4,7 @@ import { buildScaleState, getRelatedScales } from '../theory/scales';
 import { ProgressionGenerator } from '../theory/progressions';
 import { smoothVoicing } from '../theory/voice-leading';
 import { computeTension } from './tension';
+import { getCadentialTarget, cadenceUrgency } from '../theory/cadence';
 import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
 import { randomChoice } from './random';
@@ -200,7 +201,19 @@ export class GenerativeController {
 
   private advanceChord(): void {
     const prevNotes = this.state.currentChord.notes;
-    const nextChord = this.progression.next();
+
+    // Check for cadential steering near section boundaries
+    const sectionProgress = this.sections.getSectionProgress();
+    const urgency = cadenceUrgency(sectionProgress);
+    const cadentialTarget = getCadentialTarget(
+      this.progression.getCurrentDegree(), urgency
+    );
+
+    // Either force a cadential target or let Markov decide
+    const nextChord = cadentialTarget !== null
+      ? this.progression.forceToDegree(cadentialTarget)
+      : this.progression.next();
+
     nextChord.notes = smoothVoicing(prevNotes, nextChord.notes);
 
     this.state.chordHistory.push(this.state.currentChord);

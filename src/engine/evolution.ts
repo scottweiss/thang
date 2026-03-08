@@ -55,7 +55,7 @@ export class EvolutionManager {
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
       state.lastChordChange = state.elapsed;
-      const timing = this.getEffectiveChordTiming(state.mood, state.section);
+      const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall);
       this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     }
 
@@ -82,10 +82,11 @@ export class EvolutionManager {
   }
 
   /**
-   * Section-sensitive harmonic rhythm.
+   * Section-sensitive harmonic rhythm with tension modulation.
    * Chord changes accelerate during builds/peaks, slow during breakdowns.
+   * High harmonic tension also speeds up changes (creates momentum).
    */
-  private getEffectiveChordTiming(mood: Mood, section: Section): [number, number] {
+  private getEffectiveChordTiming(mood: Mood, section: Section, tension?: number): [number, number] {
     const base = CHORD_TIMING[mood];
     const multiplier: Record<Section, number> = {
       intro: 1.5,      // slow changes, establish tonality
@@ -95,7 +96,9 @@ export class EvolutionManager {
       groove: 0.8,     // moderately fast, keep interest
     };
     const m = multiplier[section];
-    return [base[0] * m, base[1] * m];
+    // Tension speeds up harmonic rhythm: high tension = 0.8x, low = 1.1x
+    const tensionMod = tension !== undefined ? (1.1 - tension * 0.3) : 1.0;
+    return [base[0] * m * tensionMod, base[1] * m * tensionMod];
   }
 
   private randomBetween(min: number, max: number): number {

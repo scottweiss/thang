@@ -177,4 +177,10 @@ export class ProgressionGenerator {
   getCurrentDegree(): number {
     return this.currentDegree;
   }
+
+  /** Force progression to a specific degree (for cadential steering) */
+  forceToDegree(degree: number): ChordState {
+    this.currentDegree = degree % this.chords.length;
+    return this.chords[this.currentDegree];
+  }
 }
