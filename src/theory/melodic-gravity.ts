@@ -21,6 +21,7 @@
  */
 
 import { consonanceWeights } from './intervallic-consonance';
+import { tendencyWeights } from './tendency-tones';
 
 /**
  * Context for computing note weights.
@@ -38,6 +39,10 @@ export interface MelodicContext {
   ladderPitches?: number[];
   /** Optional: MIDI-like pitch for each chord tone (enables consonance weighting) */
   chordPitches?: number[];
+  /** Optional: scale degree (0-6) for each ladder position (enables tendency tone weighting) */
+  scaleDegrees?: (number | null)[];
+  /** Optional: mood for tendency tone strength scaling */
+  mood?: import('../types').Mood;
 }
 
 /**
@@ -112,6 +117,16 @@ export function melodicWeights(
     const distFromCenter = Math.abs(i - center);
     const centerPenalty = distFromCenter / ladderSize;
     weights[i] *= 1.0 - centerPenalty * 0.3;
+  }
+
+  // 5. Tendency tones (scale-degree pull toward resolution targets)
+  if (ctx.scaleDegrees && ctx.scaleDegrees.length === ladderSize) {
+    const tWeights = tendencyWeights(
+      ladderSize, ctx.scaleDegrees, ctx.tension, ctx.mood ?? 'lofi'
+    );
+    for (let i = 0; i < ladderSize; i++) {
+      weights[i] *= tWeights[i];
+    }
   }
 
   return weights;

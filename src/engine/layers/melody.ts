@@ -18,6 +18,7 @@ import { selectMelodicNote, inferDirection as inferMelodicDirection } from '../.
 import type { MelodicContext } from '../../theory/melodic-gravity';
 import { noteToPitch } from '../../theory/intervallic-consonance';
 import { RhythmicMemory } from '../../theory/rhythmic-memory';
+import { ladderToScaleDegrees } from '../../theory/tendency-tones';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -383,6 +384,7 @@ export class MelodyLayer extends CachingLayer {
     // Pitch arrays for consonance-aware selection
     const ladderPitches = ladder.map(noteToPitch);
     const chordPitches = state.currentChord.notes.map(noteToPitch);
+    const scaleDegrees = ladderToScaleDegrees(ladder, state.scale.notes);
 
     const elements: string[] = [];
     // Phrase continuity: start from where we left off
@@ -396,6 +398,8 @@ export class MelodyLayer extends CachingLayer {
           tension,
           ladderPitches,
           chordPitches,
+          scaleDegrees,
+          mood: state.mood,
         };
         const idx = selectMelodicNote(ladder.length, ctx);
         elements.push(ladder[idx]);
@@ -409,7 +413,7 @@ export class MelodyLayer extends CachingLayer {
       const pos = Math.floor(Math.random() * 16);
       const idx = selectMelodicNote(ladder.length, {
         prevIndex: -1, chordIndices, direction: 0, tension,
-        ladderPitches, chordPitches,
+        ladderPitches, chordPitches, scaleDegrees, mood: state.mood,
       });
       elements[pos] = ladder[idx];
     }
@@ -440,6 +444,7 @@ export class MelodyLayer extends CachingLayer {
     // Pitch arrays for consonance-aware gravity
     const ladderPitches = ladder.map(noteToPitch);
     const chordPitches = state.currentChord.notes.map(noteToPitch);
+    const scaleDegrees = ladderToScaleDegrees(ladder, state.scale.notes);
 
     // Phrase continuity: prefer starting near where we left off
     // Find nearest chord tone to the previous note for smooth connection
@@ -577,6 +582,8 @@ export class MelodyLayer extends CachingLayer {
           tension,
           ladderPitches,
           chordPitches,
+          scaleDegrees,
+          mood: state.mood,
         };
         const selectedIdx = selectMelodicNote(ladder.length, ctx);
         elements[i] = ladder[selectedIdx];
