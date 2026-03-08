@@ -13,6 +13,7 @@ import { SectionManager } from './section-manager';
 import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
 import { rubatoMultiplier } from '../theory/rubato';
 import { shouldInsertSilence, silenceGainMultiplier } from '../theory/strategic-silence';
+import { TensionMemory } from '../theory/tension-memory';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -49,6 +50,7 @@ export class GenerativeController {
   private prevSection: 'intro' | 'build' | 'peak' | 'breakdown' | 'groove' = 'intro';
   private silenceActive = false;
   private ticksSinceSilence = 0;
+  private tensionMemory = new TensionMemory();
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -123,6 +125,7 @@ export class GenerativeController {
     this.progression.setMood(mood);
     this.evolution.resetTimings(mood);
     this.sections.reset(mood);
+    this.tensionMemory.clear();
     this.state.section = 'intro';
     this.state.sectionChanged = true;
     // Reset gain multipliers to intro state
@@ -211,6 +214,13 @@ export class GenerativeController {
       this.state.params.brightness,
       harmonicDistance,
     );
+
+    // Tension memory: longer-form arcs — nudge tension to avoid plateaus
+    this.tensionMemory.record(this.state.tension.overall);
+    const tensionMod = this.tensionMemory.suggestModification();
+    if (tensionMod !== 0) {
+      this.state.tension.overall = Math.max(0, Math.min(1, this.state.tension.overall + tensionMod));
+    }
 
     this.state.ticksSinceChordChange++;
     this.state.tick++;
