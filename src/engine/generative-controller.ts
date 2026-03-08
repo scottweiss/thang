@@ -89,6 +89,9 @@ import { fusionGainBalance, shouldApplyFusion } from '../theory/auditory-stream-
 import { totalRoughness, roughnessGainReduction, shouldSmoothRoughness } from '../theory/roughness-smoothing';
 import { precedenceReverbReduction, shouldApplyPrecedence } from '../theory/spatial-precedence';
 import { bassLayerCount, bassHpfCorrection, bassGainCorrection } from '../theory/bass-weight';
+import { subsonicGainBoost, subsonicRoomBoost, shouldApplySubsonicPulse } from '../theory/subsonic-pulse';
+import { beatWarpMultiplier, shouldApplyBeatWarp } from '../theory/beat-elastic-warp';
+import { registerCollision, suggestOctaveShift, collisionGainReduction, shouldAvoidCollisions } from '../theory/register-collision-avoidance';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -1957,6 +1960,89 @@ export class GenerativeController {
       }
     }
 
+    // Subsonic pulse: kick-triggered sub-bass enhancement on drone layer
+    {
+      const drumResult = layerResults.find(r => r.name === 'texture');
+      const droneResult = layerResults.find(r => r.name === 'drone');
+      if (drumResult && droneResult) {
+        // Estimate drum activity from note density (non-rest ratio)
+        const drumNotes = drumResult.code.match(/note\("([^"]+)"\)/);
+        let drumActivity = 0;
+        if (drumNotes) {
+          const parts = drumNotes[1].split(/\s+/);
+          drumActivity = parts.filter((n: string) => n !== '~').length / parts.length;
+        }
+        if (shouldApplySubsonicPulse(this.state.mood, this.state.section, drumActivity > 0.1)) {
+          const gainBoost = subsonicGainBoost(drumActivity, this.state.mood, this.state.section);
+          if (gainBoost > 1.01) {
+            droneResult.code = droneResult.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
+                return `.gain((${expr}) * ${gainBoost.toFixed(4)})`;
+              }
+            );
+          }
+          const roomBoost = subsonicRoomBoost(drumActivity, this.state.mood, this.state.section);
+          if (roomBoost > 1.01) {
+            droneResult.code = droneResult.code.replace(
+              /\.room\(([0-9.]+)\)/,
+              (_, val) => `.room(${(parseFloat(val) * roomBoost).toFixed(2)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Register collision avoidance: reduce gain when melody/harmony/arp overlap in register
+    if (shouldAvoidCollisions(this.state.mood, layerResults.length)) {
+      const NOTE_MIDI_RC: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      // Extract center MIDI pitch per layer
+      const layerCenters: Record<string, number> = {};
+      for (const result of layerResults) {
+        if (result.name === 'drone' || result.name === 'atmosphere' || result.name === 'texture') continue;
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const notes = noteMatch[1].split(/\s+/).filter((n: string) => n !== '~');
+        if (notes.length === 0) continue;
+        let midiSum = 0;
+        for (const n of notes) {
+          const name = n.replace(/\d+$/, '');
+          const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+          midiSum += (NOTE_MIDI_RC[name] ?? 0) + oct * 12;
+        }
+        layerCenters[result.name] = midiSum / notes.length;
+      }
+      // Check melody↔harmony, melody↔arp, harmony↔arp collisions
+      const pairs: [string, string][] = [['melody', 'harmony'], ['melody', 'arp'], ['harmony', 'arp']];
+      for (const [a, b] of pairs) {
+        const severity = registerCollision(layerCenters, a, b);
+        if (severity > 0.1) {
+          // Reduce gain on the secondary layer (arp < harmony < melody priority)
+          const secondary = b; // b is always lower priority in our ordering
+          const secResult = layerResults.find(r => r.name === secondary);
+          if (secResult) {
+            const gainMult = collisionGainReduction(severity, this.state.mood, false);
+            if (gainMult < 0.99) {
+              secResult.code = secResult.code.replace(
+                /\.gain\(([^)]+)\)/,
+                (_, expr) => {
+                  const num = parseFloat(expr);
+                  if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
+                  return `.gain((${expr}) * ${gainMult.toFixed(4)})`;
+                }
+              );
+            }
+          }
+        }
+      }
+    }
+
     // Auditory stream fusion: boost secondary layer gain when fused with primary
     if (shouldApplyFusion(this.state.mood, this.state.section)) {
       const melodyResult = layerResults.find(r => r.name === 'melody');
@@ -2122,7 +2208,11 @@ export class GenerativeController {
           this.state.section
         )
       : 1.0;
-    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic * cadAccel;
+    // Beat-elastic warp: section-progressive time stretching (builds rush, breakdowns stretch)
+    const beatWarp = shouldApplyBeatWarp(this.state.mood)
+      ? beatWarpMultiplier(this.state.sectionProgress ?? 0, this.state.mood, this.state.section)
+      : 1.0;
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato * tempoTraj * tempoFeel * metricMod * elastic * cadAccel * beatWarp;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
