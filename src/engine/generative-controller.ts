@@ -82,6 +82,7 @@ export class GenerativeController {
       tension: { structural: 0.15, harmonic: 0, rhythmic: 0.5, overall: 0.2 },
       layerCenterPitches: {},
       ticksSinceChordChange: 0,
+      layerPhraseDensity: {},
     };
 
     this.layers = [

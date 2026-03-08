@@ -5,6 +5,8 @@ import { euclideanFillPositions } from '../../theory/euclidean';
 import { velocityCurve, VelocityPattern } from '../../theory/groove';
 import { getAdjustedOctaveRange } from '../../theory/register';
 import { displaceSteps, syncopate, moodDisplacement } from '../../theory/rhythmic-displacement';
+import { sectionArticulation, articulationToStrudel } from '../../theory/articulation';
+import { complementaryDensity, callResponseAmount } from '../../theory/call-response';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -51,10 +53,15 @@ export class ArpLayer extends CachingLayer {
     const mood = state.mood;
     const tension = state.tension?.overall ?? 0.5;
     // Tension increases arp activity and brightness, dries out reverb
-    const density = state.params.density * (0.9 + tension * 0.2);
+    const rawDensity = state.params.density * (0.9 + tension * 0.2);
+    // Call-and-response: thin out when melody is busy
+    const crAmount = callResponseAmount(mood);
+    const melodyDensity = state.layerPhraseDensity?.melody ?? 0.5;
+    const density = complementaryDensity(melodyDensity, rawDensity, crAmount);
     const brightness = state.params.brightness * (0.85 + tension * 0.3);
     const room = (0.4 + state.params.spaciousness * 0.4) * (1.1 - tension * 0.2);
     const sectionMult = SECTION_DENSITY[state.section];
+    const section = state.section;
 
     // Build arp notes from chord tones across octaves
     const baseNotes = chord.notes;
@@ -100,10 +107,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(0.5)
           .fmenv("exp")
           .fmdecay(0.04)
-          .attack(0.001)
-          .decay(0.1)
-          .sustain(0.01)
-          .release(0.06)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(3)
           .gain(${(0.16 * (0.5 + density * 0.5)).toFixed(3)})
           .hpf(400)
@@ -128,10 +132,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(3)
           .fmenv("exp")
           .fmdecay(0.04)
-          .attack(0.001)
-          .decay(0.08)
-          .sustain(0.01)
-          .release(0.05)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(2)
           .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
           .hpf(450)
@@ -158,10 +159,7 @@ export class ArpLayer extends CachingLayer {
         const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood);
         return `note("${steps.join(' ')}")
           .sound("sawtooth")
-          .attack(0.001)
-          .decay(0.12)
-          .sustain(0.02)
-          .release(0.05)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(1)
           .gain("${tranceVelGain}")
           .hpf(250)
@@ -186,10 +184,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(0.5)
           .fmenv("exp")
           .fmdecay(0.04)
-          .attack(0.001)
-          .decay(0.12)
-          .sustain(0.01)
-          .release(0.08)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(5)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
           .hpf(300)
@@ -213,10 +208,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(3)
           .fmenv("exp")
           .fmdecay(0.05)
-          .attack(0.001)
-          .decay(0.15)
-          .sustain(0.01)
-          .release(0.1)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.15))}
           .slow(6)
           .gain(${(0.1 * (0.3 + density * 0.3)).toFixed(3)})
           .hpf(300)
@@ -245,10 +237,7 @@ export class ArpLayer extends CachingLayer {
         const syroVelGain = this.getVelocityGain(syroGain, 16, mood);
         return `note("${steps.join(' ')}")
           .sound("sawtooth")
-          .attack(0.001)
-          .decay(0.08)
-          .sustain(0.02)
-          .release(0.03)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(1)
           .gain("${syroVelGain}")
           .hpf(400)
@@ -277,10 +266,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(4)
           .fmenv("exp")
           .fmdecay(0.04)
-          .attack(0.001)
-          .decay(0.1)
-          .sustain(0.01)
-          .release(0.06)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(2)
           .gain("${bhVelGain}")
           .hpf(350)
@@ -305,10 +291,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(3)
           .fmenv("exp")
           .fmdecay(0.03)
-          .attack(0.001)
-          .decay(0.08)
-          .sustain(0.01)
-          .release(0.05)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(5)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
           .hpf(400)
@@ -340,10 +323,7 @@ export class ArpLayer extends CachingLayer {
           .fmh(4)
           .fmenv("exp")
           .fmdecay(0.04)
-          .attack(0.001)
-          .decay(0.1)
-          .sustain(0.02)
-          .release(0.05)
+          ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(1)
           .gain("${velGain}")
           .hpf(500)

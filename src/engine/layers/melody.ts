@@ -61,6 +61,9 @@ export class MelodyLayer extends CachingLayer {
       ? this.buildAmbientPhrase(state, density)
       : this.buildStructuredPhrase(state, density);
 
+    // Report phrase density for call-and-response coordination with arp
+    state.layerPhraseDensity[this.name] = elements.filter(e => e !== '~').length / Math.max(1, elements.length);
+
     // Per-note velocity dynamics — metric accent, contour accent, phrase taper
     const dynamicGain = applyMelodicDynamics(gain, elements);
 

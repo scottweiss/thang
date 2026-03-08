@@ -80,4 +80,5 @@ export interface GenerativeState {
   layerCenterPitches: Record<string, number>;
   ticksSinceChordChange: number;
   nextChordHint?: ChordState;  // probable next chord for anticipation
+  layerPhraseDensity: Record<string, number>;  // per-layer note density (0-1) for call-and-response
 }
