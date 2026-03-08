@@ -18,6 +18,7 @@ import { densityContour, shouldApplyDensityContour } from '../../theory/density-
 import { smoothArpStart } from '../../theory/arp-voice-leading';
 import { shouldApplyHemiola, applyHemiolaToGain } from '../../theory/hemiola';
 import { applyGrooveLock } from '../../theory/groove-lock';
+import { addPassingTones, shouldAddPassingTones } from '../../theory/arp-passing-tones';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -437,6 +438,10 @@ export class ArpLayer extends CachingLayer {
       );
     }
     let spread = this.spreadOctaves(notes, lowOct, highOct);
+    // Add scale-tone passing tones for melodic arp lines
+    if (shouldAddPassingTones(state.mood, state.section)) {
+      spread = addPassingTones(spread, state.scale.notes, state.mood);
+    }
     // Smooth voice leading: start from the note nearest to last played
     if (this.lastPlayedNote && state.chordChanged) {
       spread = smoothArpStart(spread, this.lastPlayedNote);
