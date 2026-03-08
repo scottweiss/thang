@@ -22,6 +22,7 @@ import type { TrajectoryState } from '../theory/form-trajectory';
 import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
 import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theory/tritone-sub';
 import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from '../theory/chromatic-approach';
+import { selectInversion, applyInversion, extractBassNote } from '../theory/chord-inversion';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -66,6 +67,7 @@ export class GenerativeController {
   private ticksSinceSilence = 0;
   private tensionMemory = new TensionMemory();
   private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
+  private prevBassNote: import('../types').NoteName | null = null;
   private ticksSinceLastSurprise = 20; // start with cooldown expired
   private arrivalActive = false;
   private tonalGravity = new TonalGravity('C', 'minor');
@@ -395,6 +397,20 @@ export class GenerativeController {
     }
 
     nextChord.notes = smoothVoicing(prevNotes, nextChord.notes);
+
+    // Chord inversion: select inversion for smooth bass motion
+    const chordNoteNames = nextChord.notes.map(
+      n => n.replace(/\d+$/, '')
+    ) as import('../types').NoteName[];
+    const sectionProg2 = this.sections.getSectionProgress();
+    const inversion = selectInversion(
+      chordNoteNames, this.prevBassNote,
+      nextChord.degree, this.state.mood, this.state.section, sectionProg2
+    );
+    if (inversion !== 0) {
+      nextChord.notes = applyInversion(nextChord.notes, inversion);
+    }
+    this.prevBassNote = extractBassNote(nextChord.notes);
 
     this.state.chordHistory.push(this.state.currentChord);
     if (this.state.chordHistory.length > 16) {
