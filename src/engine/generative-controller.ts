@@ -288,6 +288,9 @@ import { temporalDensityWaveGain } from '../theory/temporal-density-wave';
 import { attackBrightnessFm } from '../theory/attack-brightness-coupling';
 import { voiceBalanceGain } from '../theory/harmonic-voice-balance';
 import { regularityRewardGain } from '../theory/rhythmic-regularity-reward';
+import { gapFillingGain } from '../theory/spectral-gap-filling';
+import { harmonicInertiaGain } from '../theory/harmonic-rhythm-inertia';
+import { intervalVarietyGain } from '../theory/melodic-interval-variety-tracking';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5414,6 +5417,69 @@ export class GenerativeController {
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
             );
+          }
+        }
+      }
+    }
+
+    // Spectral gap filling: boost layers filling frequency gaps
+    {
+      const centers = this.state.layerCenterPitches ?? {};
+      for (const result of layerResults) {
+        const myCenter = centers[result.name] ?? 64;
+        const otherCenters = layerResults
+          .filter(r => r.name !== result.name)
+          .map(r => centers[r.name] ?? 64);
+        const gfGain = gapFillingGain(myCenter, otherCenters, this.state.mood);
+        if (Math.abs(gfGain - 1.0) > 0.005) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * gfGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Harmonic rhythm inertia: consonant sustained chords glow
+    {
+      const hiGain = harmonicInertiaGain(
+        this.state.currentChord.quality,
+        this.state.ticksSinceChordChange,
+        this.state.mood,
+      );
+      if (Math.abs(hiGain - 1.0) > 0.005) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * hiGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic interval variety: reward fresh intervals
+    {
+      if (this.state.activeMotif && this.state.activeMotif.length >= 4) {
+        const noteToMidi: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+        const motif = this.state.activeMotif;
+        const intervals: number[] = [];
+        for (let i = 1; i < motif.length; i++) {
+          const m0 = noteToMidi[motif[i - 1]] ?? 60;
+          const m1 = noteToMidi[motif[i]] ?? 60;
+          intervals.push(Math.abs(m1 - m0));
+        }
+        if (intervals.length >= 3) {
+          const lastInterval = intervals[intervals.length - 1];
+          const ivGain = intervalVarietyGain(intervals.slice(0, -1), lastInterval, this.state.mood);
+          if (Math.abs(ivGain - 1.0) > 0.005) {
+            const melodyResult = layerResults.find(r => r.name === 'melody');
+            if (melodyResult) {
+              melodyResult.code = melodyResult.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${(parseFloat(val) * ivGain).toFixed(4)})`
+              );
+            }
           }
         }
       }
