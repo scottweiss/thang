@@ -26,6 +26,8 @@ import { selectInversion, applyInversion, extractBassNote } from '../theory/chor
 import { shouldApplyRelativeSub, relativeSubChord } from '../theory/relative-sub';
 import { reharmCooldown } from '../theory/reharm-density';
 import { functionalBias } from '../theory/functional-harmony';
+import { shouldStartCadentialSequence, createCadentialPlan, nextCadentialDegree, advanceCadentialPlan, isCadentialPlanActive } from '../theory/cadential-sequence';
+import type { CadentialPlan } from '../theory/cadential-sequence';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -72,6 +74,7 @@ export class GenerativeController {
   private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
   private prevBassNote: import('../types').NoteName | null = null;
   private recentReharmCount = 0;
+  private cadentialPlan: CadentialPlan | null = null;
   private ticksSinceLastSurprise = 20; // start with cooldown expired
   private arrivalActive = false;
   private tonalGravity = new TonalGravity('C', 'minor');
@@ -221,6 +224,7 @@ export class GenerativeController {
     // Strategic silence: brief drop before climactic sections
     // Structural arrival: coordinated convergence at section landmarks
     if (this.state.sectionChanged) {
+      this.cadentialPlan = null; // reset cadential plan for new section
       if (shouldInsertSilence(this.state.section, true, this.prevSection)) {
         this.silenceActive = true;
         this.ticksSinceSilence = 0;
@@ -319,16 +323,30 @@ export class GenerativeController {
 
     // Check for cadential steering near section boundaries
     const sectionProgress = this.sections.getSectionProgress();
-    const urgency = cadenceUrgency(sectionProgress);
-    const cadentialTarget = getCadentialTarget(
-      this.progression.getCurrentDegree(), urgency
-    );
+    const currentDegree = this.progression.getCurrentDegree();
+
+    // Cadential sequence planning: multi-chord cadential patterns near section boundaries
+    // Takes priority over single-chord urgency-based steering
+    let cadentialTarget: number | null = null;
+    if (isCadentialPlanActive(this.cadentialPlan)) {
+      cadentialTarget = nextCadentialDegree(this.cadentialPlan!);
+      advanceCadentialPlan(this.cadentialPlan!);
+    } else if (shouldStartCadentialSequence(sectionProgress, this.state.section, this.cadentialPlan)) {
+      this.cadentialPlan = createCadentialPlan(this.state.mood, currentDegree);
+      if (isCadentialPlanActive(this.cadentialPlan)) {
+        cadentialTarget = nextCadentialDegree(this.cadentialPlan!);
+        advanceCadentialPlan(this.cadentialPlan!);
+      }
+    } else {
+      // Fall back to single-chord urgency steering
+      const urgency = cadenceUrgency(sectionProgress);
+      cadentialTarget = getCadentialTarget(currentDegree, urgency);
+    }
 
     // Either force a cadential target or let Markov decide
     // Phrase-level bias steers toward half cadences (antecedent) or tonic (consequent)
     const phraseBias = phraseCadenceBias(this.state.tick, this.state.mood, this.state.section);
     // Functional harmony: bias toward functionally strong progressions (T→S→D→T)
-    const currentDegree = this.progression.getCurrentDegree();
     const currentQuality = this.state.currentChord.quality;
     const combinedBias = phraseBias.map((pb, degree) =>
       pb * functionalBias(currentDegree, currentQuality, degree, this.state.mood)
