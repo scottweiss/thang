@@ -1,6 +1,6 @@
 import { GenerativeState, Mood, Section } from '../types';
-import { randomWalk } from './random';
 import { densityEnvelope } from '../theory/density-envelope';
+import { harmonicMomentumMultiplier } from '../theory/harmonic-momentum';
 
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
 const CHORD_TIMING: Record<Mood, [number, number]> = {
@@ -44,8 +44,8 @@ export class EvolutionManager {
   evolve(state: GenerativeState, dt: number): { chordChange: boolean; scaleChange: boolean } {
     state.elapsed += dt;
 
-    // Gentle spaciousness drift only — density and brightness are steered by section manager
-    state.params.spaciousness = randomWalk(state.params.spaciousness, 0.01, 0.3, 1.0);
+    // Spaciousness is now steered by section manager toward section targets.
+    // No random drift here — it would fight against section targeting.
 
     // Apply density breathing envelope — modulates density on multiple timescales
     const densityMod = densityEnvelope(state.elapsed, state.lastChordChange, state.params.tempo);
@@ -60,7 +60,7 @@ export class EvolutionManager {
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
       state.lastChordChange = state.elapsed;
-      const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall);
+      const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall, state.sectionProgress ?? 0);
       this.nextChordChange = this.randomBetween(timing[0], timing[1]);
     }
 
@@ -91,7 +91,7 @@ export class EvolutionManager {
    * Chord changes accelerate during builds/peaks, slow during breakdowns.
    * High harmonic tension also speeds up changes (creates momentum).
    */
-  private getEffectiveChordTiming(mood: Mood, section: Section, tension?: number): [number, number] {
+  private getEffectiveChordTiming(mood: Mood, section: Section, tension?: number, sectionProgress?: number): [number, number] {
     const base = CHORD_TIMING[mood];
     const multiplier: Record<Section, number> = {
       intro: 1.5,      // slow changes, establish tonality
@@ -103,7 +103,9 @@ export class EvolutionManager {
     const m = multiplier[section];
     // Tension speeds up harmonic rhythm: high tension = 0.8x, low = 1.1x
     const tensionMod = tension !== undefined ? (1.1 - tension * 0.3) : 1.0;
-    return [base[0] * m * tensionMod, base[1] * m * tensionMod];
+    // Harmonic momentum: section progress shapes chord change rate
+    const momentumMod = harmonicMomentumMultiplier(section, sectionProgress ?? 0);
+    return [base[0] * m * tensionMod * momentumMod, base[1] * m * tensionMod * momentumMod];
   }
 
   private randomBetween(min: number, max: number): number {
