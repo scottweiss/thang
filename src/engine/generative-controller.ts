@@ -69,6 +69,9 @@ import { chordTimingOffset, shouldApplyChordTiming } from '../theory/chord-antic
 import { registerLpfMultiplier, registerFmMultiplier, shouldApplyRegisterWarmth } from '../theory/register-warmth';
 import { tensionFmColor, tensionDecayColor, shouldApplyTensionColor } from '../theory/harmonic-tension-color';
 import { echoDensityFeedback, shouldApplyEchoDensity } from '../theory/echo-density';
+import { independenceDensityMult, shouldApplyIndependence } from '../theory/voice-independence';
+import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
+import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1400,6 +1403,67 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
             );
           }
+        }
+      }
+    }
+
+    // Voice independence: supporting layers thin when melody is active
+    if (shouldApplyIndependence(this.state.mood) && this.state.layerStepPattern?.['melody']) {
+      const melodyPattern = this.state.layerStepPattern['melody'];
+      for (const result of layerResults) {
+        if (result.name === 'melody' || result.name === 'drone' || result.name === 'atmosphere') continue;
+        const mult = independenceDensityMult(melodyPattern, 0, this.state.mood, this.state.section);
+        if (mult < 0.97) {
+          result.code = result.code.replace(
+            /\.gain\(([^)]+)\)/,
+            (_, expr) => {
+              const num = parseFloat(expr);
+              if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
+              return `.gain((${expr}) * ${mult.toFixed(4)})`;
+            }
+          );
+        }
+      }
+    }
+
+    // Textural density balance: gain/LPF correction for high total density
+    if (shouldApplyTexturalBalance(this.state.mood) && this.state.layerPhraseDensity) {
+      const total = totalDensity(this.state.layerPhraseDensity);
+      if (total > 3.0) {
+        const gainCorr = densityGainCorrection(total, this.state.mood, this.state.section);
+        const lpfCorr = densityLpfCorrection(total, this.state.mood);
+        if (gainCorr < 0.97) {
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * gainCorr).toFixed(4)})`;
+                return `.gain((${expr}) * ${gainCorr.toFixed(4)})`;
+              }
+            );
+          }
+        }
+        if (lpfCorr < 0.97) {
+          for (const result of layerResults) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfCorr)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Chord sustain shape: decay varies by chord quality
+    if (shouldApplySustainShape(this.state.mood)) {
+      const decMult = qualityDecayMultiplier(this.state.currentChord.quality, this.state.mood);
+      if (Math.abs(decMult - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.decay\(([0-9.]+)\)/,
+            (_, val) => `.decay(${(parseFloat(val) * decMult).toFixed(4)})`
+          );
         }
       }
     }
