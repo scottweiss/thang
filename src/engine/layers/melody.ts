@@ -5,6 +5,7 @@ import { randomChoice, weightedChoice } from '../random';
 import { noteIndex } from '../../theory/scales';
 import { buildNarmourPhrase, applyChordToneGravity } from '../../theory/narmour';
 import { phraseDensityMask } from '../../theory/phrase';
+import { MotifMemory } from '../../theory/motif-memory';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -25,10 +26,14 @@ const SECTION_MELODY: Record<Section, {
 export class MelodyLayer extends CachingLayer {
   name = 'melody';
   orbit = 2;
+  private motifMemory = new MotifMemory();
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
-    if (this.moodChanged(state)) return true;
+    if (this.moodChanged(state)) {
+      this.motifMemory.clear(); // fresh motifs for new mood
+      return true;
+    }
     if (state.chordChanged) return true;
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
@@ -345,7 +350,22 @@ export class MelodyLayer extends CachingLayer {
       [section.motifLen[0], section.motifLen[1]],
       [3, 2]
     );
-    const rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour);
+    // Motivic development: 40% chance to develop a stored motif, 60% new
+    let rawMotif: string[];
+    const recalled = this.motifMemory.count > 0 && Math.random() < 0.4
+      ? this.motifMemory.recall(state.tick)
+      : null;
+
+    if (recalled) {
+      // Develop an existing motif (transpose, invert, fragment, etc.)
+      rawMotif = this.motifMemory.develop(recalled, ladder);
+    } else {
+      // Create a new motif via Narmour I-R model
+      rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour);
+      // Store it for future development
+      this.motifMemory.store(rawMotif, state.tick);
+    }
+
     // Apply chord-tone gravity: pull ending notes toward chord tones for resolution
     const motif = chordIndices.length > 0
       ? applyChordToneGravity(
