@@ -12,7 +12,7 @@ import { getChordNotesWithOctave, getChordSymbol } from '../theory/chords';
 import { EvolutionManager } from './evolution';
 import { SectionManager } from './section-manager';
 import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
-import { rubatoMultiplier } from '../theory/rubato';
+import { rubatoMultiplier, cadentialRubato } from '../theory/rubato';
 import { shouldInsertSilence, silenceGainMultiplier } from '../theory/strategic-silence';
 import { TensionMemory } from '../theory/tension-memory';
 import { randomChoice } from './random';
@@ -367,7 +367,20 @@ export class GenerativeController {
     const layerCodes = layerResults.map(r => r.code);
     // Apply rubato: subtle tempo variation based on section and tension
     const rubato = rubatoMultiplier(this.state.mood, this.state.section, this.state.tension?.overall ?? 0.5);
-    const effectiveTempo = this.state.params.tempo * rubato;
+    // Cadential rubato: brief tempo dip at resolution points (V→I, etc.)
+    const prevChord = this.state.chordHistory.length >= 2
+      ? this.state.chordHistory[this.state.chordHistory.length - 2]
+      : null;
+    const cadRubato = prevChord
+      ? cadentialRubato(
+          this.state.currentChord.degree,
+          prevChord.degree,
+          prevChord.quality,
+          this.state.ticksSinceChordChange,
+          this.state.mood
+        )
+      : 1.0;
+    const effectiveTempo = this.state.params.tempo * rubato * cadRubato;
     const fullCode = `setCps(${effectiveTempo.toFixed(4)})\nstack(\n${layerCodes.join(',\n')}\n)`;
 
     try {
