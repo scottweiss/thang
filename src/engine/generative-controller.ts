@@ -291,6 +291,9 @@ import { regularityRewardGain } from '../theory/rhythmic-regularity-reward';
 import { gapFillingGain } from '../theory/spectral-gap-filling';
 import { harmonicInertiaGain } from '../theory/harmonic-rhythm-inertia';
 import { intervalVarietyGain } from '../theory/melodic-interval-variety-tracking';
+import { sustainTrackingDecay } from '../theory/dynamic-sustain-tracking';
+import { progressionFlowRoom } from '../theory/harmonic-progression-flow';
+import { accentVarietyGain } from '../theory/rhythmic-accent-variety';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -5416,6 +5419,62 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * ctGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Dynamic sustain tracking: many sustaining layers → shorter decay
+    {
+      const sustainCount = layerResults.filter(r =>
+        r.name === 'drone' || r.name === 'harmony' || r.name === 'atmosphere'
+      ).length;
+      const stDecay = sustainTrackingDecay(sustainCount + (layerResults.length > 4 ? 2 : 0), this.state.mood);
+      if (Math.abs(stDecay - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.decay\(([0-9.]+)\)/,
+              (_, val) => `.decay(${(parseFloat(val) * stDecay).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic progression flow: smooth motion → more reverb
+    {
+      if (this.state.chordChanged && this.state.chordHistory.length >= 2) {
+        const prevRoot = this.state.chordHistory[this.state.chordHistory.length - 2]?.root ?? this.state.currentChord.root;
+        const pfRoom = progressionFlowRoom(prevRoot, this.state.currentChord.root, this.state.mood);
+        if (Math.abs(pfRoom - 1.0) > 0.01) {
+          for (const result of layerResults) {
+            if (result.name === 'harmony' || result.name === 'drone') {
+              result.code = result.code.replace(
+                /\.room\(([0-9.]+)\)/,
+                (_, val) => `.room(${Math.min(0.95, parseFloat(val) * pfRoom).toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic accent variety: reward underaccented positions
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      // Use recent beat positions as a proxy (last 8 ticks mod 16)
+      const recentAccents = Array.from({ length: 8 }, (_, i) =>
+        Math.floor(((this.state.sectionProgress ?? 0) - i * 0.02) * 16) % 16
+      ).filter(a => a >= 0);
+      const avGain = accentVarietyGain(beatPos, recentAccents, this.state.mood);
+      if (Math.abs(avGain - 1.0) > 0.005) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * avGain).toFixed(4)})`
             );
           }
         }
