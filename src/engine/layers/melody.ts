@@ -3,6 +3,7 @@ import { GenerativeState, Section } from '../../types';
 import { getPentatonicSubset } from '../../theory/scales';
 import { randomChoice, weightedChoice } from '../random';
 import { noteIndex } from '../../theory/scales';
+import { buildNarmourPhrase } from '../../theory/narmour';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -400,39 +401,11 @@ export class MelodyLayer extends CachingLayer {
     return result;
   }
 
-  // Build a motif by walking through the ladder with a contour shape
-  private buildMotif(ladder: string[], startIdx: number, length: number, contour: Contour): string[] {
-    const notes: string[] = [];
-    let idx = Math.max(0, Math.min(startIdx, ladder.length - 1));
-
-    for (let i = 0; i < length; i++) {
-      notes.push(ladder[idx]);
-
-      // Determine step direction based on contour and position
-      const progress = i / (length - 1);
-      let direction: number;
-
-      switch (contour) {
-        case 'ascending':
-          direction = 1;
-          break;
-        case 'descending':
-          direction = -1;
-          break;
-        case 'arch':
-          direction = progress < 0.5 ? 1 : -1;
-          break;
-        case 'valley':
-          direction = progress < 0.5 ? -1 : 1;
-          break;
-      }
-
-      // Mostly stepwise (1), occasionally a leap (2)
-      const step = Math.random() < 0.75 ? 1 : 2;
-      idx = Math.max(0, Math.min(ladder.length - 1, idx + direction * step));
-    }
-
-    return notes;
+  // Build a motif using Narmour implication-realization model
+  // Small steps continue naturally, leaps resolve — cognitive melody theory
+  private buildMotif(ladder: string[], startIdx: number, length: number, _contour: Contour): string[] {
+    const indices = buildNarmourPhrase(ladder.length, startIdx, length);
+    return indices.map(i => ladder[i]);
   }
 
   // Create a variation of a motif (transpose, invert, or reorder)
