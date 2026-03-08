@@ -25,6 +25,7 @@ import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMulti
 import type { SurpriseType } from '../theory/surprise-events';
 import { headroomScalar, shouldApplyHeadroom } from '../theory/headroom';
 import { shouldFireArrival, arrivalGainBoost, shouldForceRoot } from '../theory/arrival-moment';
+import { pocketGainMultiplier, isPocketLayer, shouldApplyPocket } from '../theory/harmonic-pocket';
 import { TonalGravity } from '../theory/tonal-gravity';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -498,6 +499,27 @@ export class GenerativeController {
     if (surprise !== 'none') {
       this.ticksSinceLastSurprise = 0;
       this.applySurprise(surprise, layerResults);
+    }
+
+    // Harmonic pocket: briefly thin non-essential layers on chord changes
+    if (shouldApplyPocket(this.state.mood, this.state.section)) {
+      const pocketMult = pocketGainMultiplier(
+        this.state.ticksSinceChordChange, this.state.mood, this.state.section
+      );
+      if (pocketMult < 0.98) {
+        for (const result of layerResults) {
+          if (isPocketLayer(result.name)) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * pocketMult).toFixed(4)})`;
+                return `.gain((${expr}) * ${pocketMult.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
     }
 
     const layerCodes = layerResults.map(r => r.code);
