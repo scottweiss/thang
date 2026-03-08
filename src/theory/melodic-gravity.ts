@@ -12,9 +12,15 @@
  * 5. **Register centering**: Notes near the center of the range are preferred
  *    (prevents melodies from drifting to extremes)
  *
+ * 6. **Intervallic consonance**: Notes are weighted by their harmonic
+ *    relationship to ALL chord tones (not just binary chord/non-chord).
+ *    A perfect 5th against a chord tone is better than a minor 2nd.
+ *
  * The result is melodies that feel intentional — each note connects logically
  * to the previous one while following the harmonic and emotional arc.
  */
+
+import { consonanceWeights } from './intervallic-consonance';
 
 /**
  * Context for computing note weights.
@@ -28,6 +34,10 @@ export interface MelodicContext {
   direction: number;
   /** Overall tension 0-1 (higher = larger leaps allowed) */
   tension: number;
+  /** Optional: MIDI-like pitch for each ladder position (enables consonance weighting) */
+  ladderPitches?: number[];
+  /** Optional: MIDI-like pitch for each chord tone (enables consonance weighting) */
+  chordPitches?: number[];
 }
 
 /**
@@ -66,13 +76,23 @@ export function melodicWeights(
       }
     }
 
-    // 2. Chord tone attraction
-    if (ctx.chordIndices.includes(i)) {
-      weights[i] *= 2.0;
-    }
-    // Non-chord tones adjacent to chord tones get a smaller boost (passing tones)
-    if (ctx.chordIndices.some(ci => Math.abs(ci - i) === 1)) {
-      weights[i] *= 1.3;
+    // 2. Harmonic attraction (consonance-aware when pitch data available)
+    if (ctx.ladderPitches && ctx.chordPitches && ctx.chordPitches.length > 0) {
+      // Nuanced: weight by intervallic consonance with all chord tones
+      const cWeights = consonanceWeights(
+        ladderSize, ctx.ladderPitches, ctx.chordPitches, ctx.tension
+      );
+      // Scale consonance to a 0.5–2.5 multiplier range
+      weights[i] *= 0.5 + cWeights[i] * 2.0;
+    } else {
+      // Fallback: binary chord-tone matching
+      if (ctx.chordIndices.includes(i)) {
+        weights[i] *= 2.0;
+      }
+      // Non-chord tones adjacent to chord tones get a smaller boost (passing tones)
+      if (ctx.chordIndices.some(ci => Math.abs(ci - i) === 1)) {
+        weights[i] *= 1.3;
+      }
     }
 
     // 3. Contour momentum (favor notes in the current direction)

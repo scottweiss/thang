@@ -16,6 +16,7 @@ import { sectionContour, contourOffset, contourTargetIndex, contourPull } from '
 import { detectDirection } from '../../theory/contrapuntal-motion';
 import { selectMelodicNote, inferDirection as inferMelodicDirection } from '../../theory/melodic-gravity';
 import type { MelodicContext } from '../../theory/melodic-gravity';
+import { noteToPitch } from '../../theory/intervallic-consonance';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -365,6 +366,10 @@ export class MelodyLayer extends CachingLayer {
       .filter(x => chordNames.includes(x.n))
       .map(x => x.i);
 
+    // Pitch arrays for consonance-aware selection
+    const ladderPitches = ladder.map(noteToPitch);
+    const chordPitches = state.currentChord.notes.map(noteToPitch);
+
     const elements: string[] = [];
     let prevIdx = -1;
     for (let i = 0; i < 16; i++) {
@@ -374,6 +379,8 @@ export class MelodyLayer extends CachingLayer {
           chordIndices,
           direction: 0, // ambient has no strong direction
           tension,
+          ladderPitches,
+          chordPitches,
         };
         const idx = selectMelodicNote(ladder.length, ctx);
         elements.push(ladder[idx]);
@@ -387,6 +394,7 @@ export class MelodyLayer extends CachingLayer {
       const pos = Math.floor(Math.random() * 16);
       const idx = selectMelodicNote(ladder.length, {
         prevIndex: -1, chordIndices, direction: 0, tension,
+        ladderPitches, chordPitches,
       });
       elements[pos] = ladder[idx];
     }
@@ -413,6 +421,11 @@ export class MelodyLayer extends CachingLayer {
       .map((n, i) => ({ n: n.replace(/\d+$/, ''), i }))
       .filter(x => chordNotes.includes(x.n))
       .map(x => x.i);
+
+    // Pitch arrays for consonance-aware gravity
+    const ladderPitches = ladder.map(noteToPitch);
+    const chordPitches = state.currentChord.notes.map(noteToPitch);
+
     const anchorIdx = chordIndices.length > 0
       ? randomChoice(chordIndices)
       : Math.floor(ladder.length / 2);
@@ -519,6 +532,8 @@ export class MelodyLayer extends CachingLayer {
           chordIndices: chordIndices,
           direction: dir,
           tension,
+          ladderPitches,
+          chordPitches,
         };
         const selectedIdx = selectMelodicNote(ladder.length, ctx);
         elements[i] = ladder[selectedIdx];
