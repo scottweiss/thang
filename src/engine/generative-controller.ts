@@ -339,6 +339,9 @@ import { metricModulationFeelGain } from '../theory/rhythmic-metric-modulation-f
 import { tritonePullGain } from '../theory/harmonic-tritone-pull';
 import { passingToneSmoothingGain } from '../theory/melodic-passing-tone-smoothing';
 import { claveAlignmentGain } from '../theory/rhythmic-clave-alignment';
+import { voiceCrossingAvoidanceGain } from '../theory/harmonic-voice-crossing-avoidance';
+import { intervallicTensionCurveFm } from '../theory/melodic-intervallic-tension-curve';
+import { tresilloAccentGain } from '../theory/rhythmic-tresillo-accent';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6692,6 +6695,57 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * caGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic voice crossing avoidance: reduce gain on crossing voices
+    {
+      const centers = this.state.layerCenterPitches || {};
+      const melodyPitch = centers['melody'] || 67;
+      const harmonyPitch = centers['harmony'] || 60;
+      const vcMelody = voiceCrossingAvoidanceGain(melodyPitch, harmonyPitch, true, this.state.mood, this.state.section);
+      const vcHarmony = voiceCrossingAvoidanceGain(harmonyPitch, melodyPitch, false, this.state.mood, this.state.section);
+      for (const result of layerResults) {
+        const mult = result.name === 'melody' ? vcMelody : result.name === 'harmony' ? vcHarmony : 1.0;
+        if (mult < 0.999) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * mult).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Melodic intervallic tension curve: FM coloring by interval tension
+    {
+      // Approximate current melodic interval from section dynamics
+      const interval = Math.round(Math.abs(Math.sin(this.state.sectionProgress * Math.PI * 4) * 7));
+      const itFm = intervallicTensionCurveFm(interval, this.state.mood, this.state.section);
+      if (itFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * itFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic tresillo accent: 3+3+2 accent pattern
+    {
+      const beatPos = this.state.tick % 16;
+      const taGain = tresilloAccentGain(beatPos, this.state.mood, this.state.section);
+      if (taGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * taGain).toFixed(4)})`
             );
           }
         }
