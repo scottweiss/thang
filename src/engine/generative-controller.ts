@@ -315,6 +315,9 @@ import { downbeatAnchorGain } from '../theory/rhythmic-downbeat-anchor';
 import { stabilityDecayFm } from '../theory/tonal-stability-decay';
 import { leapPreparationGain } from '../theory/melodic-leap-preparation';
 import { patternRotationGain } from '../theory/rhythmic-pattern-rotation';
+import { cadenceWeightGain } from '../theory/harmonic-cadence-weight';
+import { intervalSequenceRewardGain } from '../theory/melodic-interval-sequence-reward';
+import { displacementShiftOffset, displacementEmphasisGain } from '../theory/rhythmic-displacement-shift';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6246,6 +6249,57 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.fm\(([0-9.]+)\)/,
               (_, val) => `.fm(${(parseFloat(val) * tdFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic cadence weight: boost gain on cadential patterns
+    {
+      const prevDeg = this.state.chordHistory.length >= 2 ? this.state.chordHistory[this.state.chordHistory.length - 2].degree : 0;
+      const curDeg = this.state.currentChord.degree;
+      const cwGain = cadenceWeightGain(curDeg, prevDeg, this.state.mood, this.state.section);
+      if (cwGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * cwGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic interval sequence reward: boost gain on sequential melodic patterns
+    {
+      // Approximate similarity from melody direction consistency
+      const similarity = this.state.melodyDirection === 'ascending' || this.state.melodyDirection === 'descending' ? 0.6 : 0.2;
+      const sdGain = intervalSequenceRewardGain(similarity, this.state.mood, this.state.section);
+      if (sdGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * sdGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic displacement shift: subtle timing offsets for push/pull feel
+    {
+      const beatPos = this.state.tick % 16;
+      const dsOffset = displacementShiftOffset(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (Math.abs(dsOffset) > 0.001) {
+        const dsGain = displacementEmphasisGain(dsOffset, this.state.mood);
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * dsGain).toFixed(4)})`
             );
           }
         }
