@@ -36,6 +36,7 @@ import { anchorBias, melodicAnchorStrength } from '../../theory/melodic-anchor';
 import { gravityPlacementWeights, rhythmicGravityStrength } from '../../theory/rhythmic-gravity';
 import { elisionTendency } from '../../theory/phrase-elision';
 import { anticipationProbability, anticipationTones, anticipationBias, shouldAnticipate } from '../../theory/harmonic-anticipation';
+import { gestureDensityMult, gesturePitchBias } from '../../theory/gestural-archetype';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -548,7 +549,19 @@ export class MelodyLayer extends CachingLayer {
       : Math.floor(ladder.length / 2);
 
     // Section shapes motif: length and contour bias
-    const contour = randomChoice(section.contourBias);
+    // Gestural archetype biases contour toward rising or falling shapes
+    const pitchBias = gesturePitchBias(state.section, mood, state.tension?.overall ?? 0.5, state.tick);
+    let contourPool = section.contourBias;
+    if (pitchBias > 0.3) {
+      // Favor ascending shapes
+      contourPool = contourPool.filter(c => c === 'ascending' || c === 'arch');
+      if (contourPool.length === 0) contourPool = ['ascending', 'arch'];
+    } else if (pitchBias < -0.3) {
+      // Favor descending shapes
+      contourPool = contourPool.filter(c => c === 'descending' || c === 'valley');
+      if (contourPool.length === 0) contourPool = ['descending', 'valley'];
+    }
+    const contour = randomChoice(contourPool);
     const motifLen = weightedChoice(
       [section.motifLen[0], section.motifLen[1]],
       [3, 2]
@@ -667,7 +680,9 @@ export class MelodyLayer extends CachingLayer {
     const inverseMult = shouldApplyInverseDensity(mood)
       ? inverseDensityMultiplier(state.ticksSinceChordChange, mood)
       : 1.0;
-    const effectiveDensity = density * sectionDensity * inverseMult;
+    // Gestural archetype: modulate density based on emotional gesture
+    const gestureDMult = gestureDensityMult(state.section, mood, state.tension?.overall ?? 0.5, state.tick);
+    const effectiveDensity = density * sectionDensity * inverseMult * gestureDMult;
     const noteProbability = {
       ambient: effectiveDensity * 0.3,
       downtempo: effectiveDensity * 0.3,

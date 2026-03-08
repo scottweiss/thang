@@ -31,6 +31,7 @@ import type { CadentialPlan } from '../theory/cadential-sequence';
 import { targetKeyArea, journeyBias, shouldModulate } from '../theory/harmonic-journey';
 import { tempoFeelMultiplier, shouldApplyTempoFeel } from '../theory/tempo-feel';
 import { EmotionalMemoryBank, isEmotionalLandmark } from '../theory/emotional-memory';
+import { shouldApplyNegativeHarmony, negativeRoot } from '../theory/negative-harmony';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -455,6 +456,29 @@ export class GenerativeController {
         notes: secondaryDominantNotes(nextChord.root, 3),
         degree: nextChord.degree, // keep target degree for resolution tracking
       };
+    }
+
+    // Negative harmony: mirror the chord root around the tonal axis
+    // for an emotionally "inverted" substitution (bright → dark, tense → relaxed)
+    if (cadentialTarget === null &&
+        shouldApplyNegativeHarmony(this.state.tick, this.state.mood, this.state.section) &&
+        Math.random() < reharmGate) {
+      const mirroredRoot = negativeRoot(nextChord.root, this.state.scale.root);
+      if (mirroredRoot !== nextChord.root) {
+        // Mirror quality: major → minor, minor → major
+        const mirroredQuality = nextChord.quality === 'maj' ? 'min'
+          : nextChord.quality === 'min' ? 'maj'
+          : nextChord.quality === 'maj7' ? 'min7'
+          : nextChord.quality === 'min7' ? 'maj7'
+          : nextChord.quality; // keep dom7/sus/dim as-is
+        nextChord = {
+          symbol: getChordSymbol(mirroredRoot, mirroredQuality),
+          root: mirroredRoot,
+          quality: mirroredQuality,
+          notes: getChordNotesWithOctave(mirroredRoot, mirroredQuality, 3),
+          degree: nextChord.degree,
+        };
+      }
     }
 
     // Tritone substitution: replace dominant chords with ♭II7 for
