@@ -354,6 +354,9 @@ import { impliedTempoLayerGain } from '../theory/rhythmic-implied-tempo-layer';
 import { chromaticMediantFm } from '../theory/harmonic-chromatic-mediant';
 import { sequenceTranspositionGain } from '../theory/melodic-sequence-transposition';
 import { tupletFeelGain } from '../theory/rhythmic-tuplet-feel';
+import { commonTonePreservationGain } from '../theory/harmonic-common-tone-preservation';
+import { registralReturnGain } from '../theory/melodic-registral-return';
+import { agogicAccentGain } from '../theory/rhythmic-agogic-accent';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6993,6 +6996,65 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${safeMul(val, tfGain, 4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic common-tone preservation: smoother voice leading boost
+    if (this.state.chordChanged && this.state.chordHistory.length >= 2) {
+      const prev = this.state.chordHistory[this.state.chordHistory.length - 2];
+      const curr = this.state.currentChord;
+      const prevPCs = (prev.notes || []).map((n: string) => safeP(n, 0) % 12);
+      const currPCs = (curr.notes || []).map((n: string) => safeP(n, 0) % 12);
+      if (prevPCs.length > 0 && currPCs.length > 0) {
+        const ctGain = commonTonePreservationGain(prevPCs, currPCs, this.state.mood, this.state.section);
+        if (ctGain > 1.001) {
+          for (const result of layerResults) {
+            if (result.name === 'harmony' || result.name === 'drone') {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Melodic registral return: reward arc closure near phrase start
+    {
+      const melodyCenter = this.state.layerCenterPitches?.melody ?? 0;
+      const homePitch = this.state.activeMotif?.[0] ? safeP(this.state.activeMotif[0], 60) : 60;
+      if (melodyCenter > 0) {
+        const rrGain = registralReturnGain(homePitch, melodyCenter, this.state.sectionProgress, this.state.mood, this.state.section);
+        if (rrGain > 1.001) {
+          for (const result of layerResults) {
+            if (result.name === 'melody') {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${safeMul(val, rrGain, 4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Rhythmic agogic accent: longer notes get natural emphasis
+    {
+      // Use slow multiplier as proxy for note duration (higher slow = longer notes)
+      const slowMatch = layerResults.find(r => r.name === 'melody')?.code?.match(/\.slow\(([0-9.]+)\)/);
+      const noteDur = slowMatch ? safeP(slowMatch[1], 1) : 1;
+      const avgDur = 1.0; // baseline quarter note
+      const aaGain = agogicAccentGain(noteDur, avgDur, this.state.mood, this.state.section);
+      if (aaGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${safeMul(val, aaGain, 4)})`
             );
           }
         }
