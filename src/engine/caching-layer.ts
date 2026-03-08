@@ -36,6 +36,7 @@ import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from 
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../theory/tension-articulation';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../theory/ensemble-breath';
 import { tensionDisplacementPattern, shouldApplyTensionRhythm } from '../theory/tension-rhythm';
+import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../theory/tension-register';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -77,6 +78,9 @@ export abstract class CachingLayer implements Layer {
 
     // Tension brightness: LPF tracks real-time tension (stacks on filter envelope)
     result = this.applyTensionBrightness(result, state);
+
+    // Tension register: shift note octaves and LPF brightness based on tension
+    result = this.applyTensionRegister(result, state);
 
     // Resolution glow: brief brightness surge on harmonic resolutions (V→I, etc.)
     if (state.chordHistory.length >= 1) {
@@ -971,6 +975,42 @@ export abstract class CachingLayer implements Layer {
     }
 
     return result;
+  }
+
+  /**
+   * Shift note octaves and LPF brightness based on real-time tension.
+   * High tension pushes notes up (brighter register), low tension pushes down (warmer).
+   * The fractional part of the shift modulates LPF as a timbral brightness effect.
+   */
+  private applyTensionRegister(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTensionRegister(state.mood)) return pattern;
+
+    const tension = state.tension?.overall ?? 0.5;
+    const shift = tensionRegisterShift(tension, state.mood, this.name);
+
+    // Apply octave shift to notes in the pattern
+    const intShift = Math.round(shift);
+    if (intShift !== 0) {
+      pattern = pattern.replace(
+        /note\("([^"]+)"\)/,
+        (_, noteStr) => {
+          const notes = noteStr.split(' ');
+          const shifted = applyRegisterShift(notes, intShift);
+          return `note("${shifted.join(' ')}")`;
+        }
+      );
+    }
+
+    // Apply brightness factor from fractional shift to LPF
+    const brightnessMult = registerBrightnessFactor(shift);
+    if (Math.abs(brightnessMult - 1.0) > 0.01) {
+      pattern = pattern.replace(
+        /\.lpf\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.lpf(${Math.round(parseFloat(val) * brightnessMult)})`
+      );
+    }
+
+    return pattern;
   }
 
   protected moodChanged(state: GenerativeState): boolean {

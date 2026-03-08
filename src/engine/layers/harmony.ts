@@ -39,6 +39,7 @@ import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from 
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../../theory/tension-articulation';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 import { planGuideTonePath, guideToneSmoothnessScore, guideToneWeight } from '../../theory/guide-tone-plan';
+import { tensionRegisterShift, applyRegisterShift, registerBrightnessFactor, shouldApplyTensionRegister } from '../../theory/tension-register';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -107,6 +108,18 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.lpf(${Math.round(parseFloat(val) * tbMult)})`
+        );
+      }
+    }
+
+    // Tension register brightness: fractional register shift modulates LPF
+    if (shouldApplyTensionRegister(state.mood)) {
+      const regShift = tensionRegisterShift(state.tension?.overall ?? 0.5, state.mood, this.name);
+      const brightMult = registerBrightnessFactor(regShift);
+      if (Math.abs(brightMult - 1.0) > 0.01) {
+        result = result.replace(
+          /\.lpf\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
         );
       }
     }
@@ -624,6 +637,12 @@ export class HarmonyLayer implements Layer {
       chordNotes = applyDrop2(chordNotes);
     } else if (dropType === 'drop3') {
       chordNotes = applyDrop3(chordNotes);
+    }
+
+    // Tension register: shift voicing octave based on real-time tension
+    if (shouldApplyTensionRegister(mood)) {
+      const regShift = tensionRegisterShift(tension, mood, this.name);
+      chordNotes = applyRegisterShift(chordNotes, regShift);
     }
 
     // Store voicing for future planing
