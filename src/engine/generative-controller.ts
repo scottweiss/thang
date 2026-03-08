@@ -36,6 +36,7 @@ import { shouldModulate as shouldMetricModulate, modulationRatio, modulationEnve
 import { bestPivotChord, shouldUsePivot } from '../theory/pivot-modulation';
 import { macroDynamicGain, transitionDynamicAccent, shouldApplyMacroDynamics } from '../theory/macro-dynamics';
 import { shouldApplyNR, suggestNRMove } from '../theory/neo-riemannian';
+import { shouldGrandPause, gpDuration } from '../theory/grand-pause';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -93,6 +94,9 @@ export class GenerativeController {
   private modulationTicksRemaining = 0;
   private modulationTotalTicks = 0;
   private modulationRatioStr: import('../theory/metric-modulation').ModulationRatio = '4:3';
+  /** Grand pause state */
+  private gpActive = false;
+  private gpTicksRemaining = 0;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -320,6 +324,18 @@ export class GenerativeController {
 
     this.state.ticksSinceChordChange++;
     this.state.tick++;
+
+    // Grand pause: check for dramatic silence at section boundaries
+    if (this.gpActive) {
+      this.gpTicksRemaining--;
+      if (this.gpTicksRemaining <= 0) this.gpActive = false;
+    } else if (shouldGrandPause(
+      this.state.tick, this.state.mood, this.state.section,
+      this.state.sectionProgress ?? 0
+    )) {
+      this.gpActive = true;
+      this.gpTicksRemaining = gpDuration(this.state.mood);
+    }
 
     await this.rebuildAll();
     this.onStateChange?.(this.state);
@@ -635,6 +651,21 @@ export class GenerativeController {
             }
           );
         }
+      }
+    }
+
+    // Grand pause: near-zero gain across all layers for dramatic silence
+    if (this.gpActive) {
+      const gpMult = 0.01; // near-silent, not completely zero (avoids audio glitch)
+      for (const result of layerResults) {
+        result.code = result.code.replace(
+          /\.gain\(([^)]+)\)/,
+          (_, expr) => {
+            const num = parseFloat(expr);
+            if (!isNaN(num)) return `.gain(${(num * gpMult).toFixed(4)})`;
+            return `.gain((${expr}) * ${gpMult.toFixed(4)})`;
+          }
+        );
       }
     }
 
