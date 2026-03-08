@@ -55,6 +55,7 @@ import { shouldRespace, eliminateCrossings, crossingTolerance } from '../../theo
 import { shouldBassHold, superpositionStrength } from '../../theory/harmonic-rhythm-layer';
 import { shouldAnticipateVoice, anticipationAmount, anticipatedPitch, nearestTarget } from '../../theory/anticipatory-voice';
 import { selectApproachType, approachOffset, shouldApplyApproach } from '../../theory/approach-pattern';
+import { shouldHoldPedal } from '../../theory/harmonic-pedal-tone';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -837,6 +838,13 @@ export class HarmonyLayer implements Layer {
       } else if (state.chordChanged) {
         this.lastBassNote = bassNote;
         this.ticksSinceBassChange = 0;
+      }
+    }
+
+    // Harmonic pedal tone: sustain bass through multiple chord changes
+    if (useRawNotes && chordNotes.length >= 2 && this.lastBassNote && state.chordChanged) {
+      if (shouldHoldPedal(mood, state.section, this.ticksSinceBassChange, state.tick)) {
+        chordNotes[chordNotes.length - 1] = this.lastBassNote;
       }
     }
 

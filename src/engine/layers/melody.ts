@@ -56,6 +56,7 @@ import { selectTargetTone, targetPull, biasTowardTarget, shouldApplyTargeting } 
 import { directionBias, biasInterval, shouldApplyBrightnessBias } from '../../theory/brightness-bias';
 import { generateCell, applyCell, cellAdherence, shouldApplyRhythmicMotif } from '../../theory/rhythmic-motif';
 import { dynamicAccents, shouldApplyDynamicAccent } from '../../theory/dynamic-accent';
+import { isBreathMark, breathMarkGain, shouldApplyBreathMarks } from '../../theory/phrase-breath-mark';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -458,12 +459,17 @@ export class MelodyLayer extends CachingLayer {
     const dynAccent = shouldApplyDynamicAccent(mood)
       ? dynamicAccents(elements, mood)
       : null;
+    // Breath mark: gain dip before phrase entries
+    const breathGain = shouldApplyBreathMarks(mood)
+      ? breathMarkGain(mood, state.section)
+      : 1.0;
     const dynamicGain = rawDynamicGain.split(' ')
       .map((g, i) => {
         let v = parseFloat(g) * (accents[i] ?? 1.0);
         if (contour) v *= contour[i] ?? 1.0;
         v *= tessMap[i] ?? 1.0;
         if (dynAccent) v *= dynAccent[i] ?? 1.0;
+        if (breathGain < 0.99 && isBreathMark(elements, i)) v *= breathGain;
         return v.toFixed(4);
       })
       .join(' ');

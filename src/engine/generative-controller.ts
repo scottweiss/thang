@@ -66,6 +66,7 @@ import { shouldSurpriseTiming, surpriseOffset, shouldApplyTimingSurprise } from 
 import { gravityDurationMultiplier, shouldApplyHarmonicGravity } from '../theory/harmonic-gravity';
 import { closurePressure, tonicBias, shouldApplyClosure } from '../theory/tonal-closure';
 import { chordTimingOffset, shouldApplyChordTiming } from '../theory/chord-anticipation-delay';
+import { registerLpfMultiplier, registerFmMultiplier, shouldApplyRegisterWarmth } from '../theory/register-warmth';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -1397,6 +1398,43 @@ export class GenerativeController {
               (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
             );
           }
+        }
+      }
+    }
+
+    // Register warmth: LPF/FM respond to pitch register (low=warm, high=bright)
+    if (shouldApplyRegisterWarmth(this.state.mood)) {
+      const NOTE_MIDI_RW: Record<string, number> = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+      };
+      for (const result of layerResults) {
+        // Estimate average MIDI from note pattern
+        const noteMatch = result.code.match(/note\("([^"]+)"\)/);
+        if (!noteMatch) continue;
+        const notes = noteMatch[1].split(/\s+/).filter(n => n !== '~');
+        if (notes.length === 0) continue;
+        let midiSum = 0;
+        for (const n of notes) {
+          const name = n.replace(/\d+$/, '');
+          const oct = parseInt(n.match(/\d+$/)?.[0] ?? '4');
+          midiSum += (NOTE_MIDI_RW[name] ?? 0) + oct * 12;
+        }
+        const avgMidi = midiSum / notes.length;
+        const lpfMult = registerLpfMultiplier(avgMidi, this.state.mood);
+        const fmMult = registerFmMultiplier(avgMidi, this.state.mood);
+        if (Math.abs(lpfMult - 1.0) > 0.03) {
+          result.code = result.code.replace(
+            /\.lpf\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
+          );
+        }
+        if (Math.abs(fmMult - 1.0) > 0.03) {
+          result.code = result.code.replace(
+            /\.fm\((\d+(?:\.\d+)?)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(2)})`
+          );
         }
       }
     }
