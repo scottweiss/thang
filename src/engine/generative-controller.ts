@@ -39,6 +39,7 @@ import { shouldApplyNR, suggestNRMove } from '../theory/neo-riemannian';
 import { shouldGrandPause, gpDuration } from '../theory/grand-pause';
 import { shouldApplySymmetric, selectAxisType, suggestSymmetricMove } from '../theory/symmetric-division';
 import { shouldApplyUnison, selectUnisonPattern, unisonAccentMask, unisonIntensity } from '../theory/rhythmic-unison';
+import { shouldApplySaturation, saturationLevel, motifInjectionCount, selectMotifFragment, saturatedLayers } from '../theory/motivic-saturation';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -652,6 +653,39 @@ export class GenerativeController {
     }
 
     if (layerResults.length === 0) return;
+
+    // Motivic saturation: inject motif fragments into non-melody layers as tension builds
+    if (this.state.activeMotif && this.state.activeMotif.length >= 3 &&
+        shouldApplySaturation(this.state.tick, this.state.mood, this.state.section)) {
+      const level = saturationLevel(
+        this.state.mood, this.state.section,
+        this.state.sectionProgress ?? 0, this.state.tension?.overall ?? 0.5
+      );
+      const injCount = motifInjectionCount(level, this.state.activeMotif.length);
+      if (injCount > 0) {
+        const fragment = selectMotifFragment(this.state.activeMotif, injCount, this.state.tick);
+        const targetLayers = saturatedLayers(level);
+        for (const result of layerResults) {
+          if (targetLayers.includes(result.name) && fragment.length > 0) {
+            // Inject motif notes into the layer's note pattern (replace some rests)
+            result.code = result.code.replace(
+              /note\("([^"]+)"\)/,
+              (_, notes) => {
+                const parts = notes.split(' ');
+                let injected = 0;
+                for (let i = 0; i < parts.length && injected < fragment.length; i++) {
+                  if (parts[i] === '~') {
+                    parts[i] = fragment[injected];
+                    injected++;
+                  }
+                }
+                return `note("${parts.join(' ')}")`;
+              }
+            );
+          }
+        }
+      }
+    }
 
     // Strategic silence: apply near-zero gain during drop moments
     if (this.silenceActive) {
