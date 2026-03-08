@@ -1,8 +1,26 @@
 import { CachingLayer } from '../caching-layer';
-import { GenerativeState } from '../../types';
+import { GenerativeState, Section } from '../../types';
 import { randomChoice, shuffle } from '../random';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
+
+// Section density multipliers — how much of the arp is active per section
+const SECTION_DENSITY: Record<Section, number> = {
+  intro: 0.3,
+  build: 0.7,
+  peak: 1.0,
+  breakdown: 0.35,
+  groove: 0.85,
+};
+
+// Rhythmic fill templates — which of 8 or 16 steps get notes
+// These create actual rhythmic patterns instead of random placement
+const FILL_8_SPARSE = [0, 3, 6];           // dotted rhythm
+const FILL_8_MEDIUM = [0, 2, 3, 5, 7];     // syncopated
+const FILL_8_DENSE  = [0, 1, 2, 3, 5, 6, 7]; // near-full
+const FILL_16_SPARSE = [0, 4, 7, 12];       // 4-on-floor feel
+const FILL_16_MEDIUM = [0, 2, 4, 6, 8, 10, 12, 14]; // 8th notes
+const FILL_16_DENSE  = [0, 1, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14]; // rolling 16ths with gaps
 
 export class ArpLayer extends CachingLayer {
   name = 'arp';
@@ -13,6 +31,7 @@ export class ArpLayer extends CachingLayer {
     if (this.moodChanged(state)) return true;
     if (state.chordChanged) return true;
     if (state.scaleChanged) return true;
+    if (state.sectionChanged) return true;
 
     const maxTicks = { downtempo: 10, lofi: 8, trance: 6 }[state.mood] ?? 8;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
@@ -24,15 +43,16 @@ export class ArpLayer extends CachingLayer {
     const density = state.params.density;
     const brightness = state.params.brightness;
     const room = 0.4 + state.params.spaciousness * 0.4;
+    const sectionMult = SECTION_DENSITY[state.section];
 
     // Build arp notes from chord tones across octaves
-    const baseNotes = chord.notes; // e.g. ["C3", "Eb3", "G3", "Bb3"]
+    const baseNotes = chord.notes;
 
     switch (mood) {
       case 'ambient': {
-        // Very sparse — single notes from chord with long gaps
         const notes = this.spreadOctaves(baseNotes, 3, 5);
-        const steps = this.buildArpSteps(notes, 'up', 16, density * 0.12);
+        const fill = this.pickFill16(density * sectionMult * 0.3);
+        const steps = this.buildFromFill(notes, 'up', 16, fill);
         return `note("${steps.join(' ')}")
           .sound("sine")
           .fm(0.5)
@@ -54,10 +74,10 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'downtempo': {
-        // Gentle broken chord — piano-like
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['up', 'updown', 'broken']);
-        const steps = this.buildArpSteps(notes, pattern, 8, density * 0.4);
+        const fill = this.pickFill8(density * sectionMult);
+        const steps = this.buildFromFill(notes, pattern, 8, fill);
         return `note("${steps.join(' ')}")
           .sound("sine")
           .fm(2.5)
@@ -81,10 +101,10 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'lofi': {
-        // Jazzy broken chord — warm, slightly syncopated
         const notes = this.spreadOctaves(baseNotes, 3, 4);
         const pattern = randomChoice<ArpPattern>(['broken', 'updown', 'down']);
-        const steps = this.buildArpSteps(notes, pattern, 8, density * 0.45);
+        const fill = this.pickFill8(density * sectionMult);
+        const steps = this.buildFromFill(notes, pattern, 8, fill);
         return `note("${steps.join(' ')}")
           .sound("sine")
           .fm(3.5)
@@ -108,9 +128,15 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'trance': {
-        // Classic trance arp — fast, bright, 2-3 octave spread
         const notes = this.spreadOctaves(baseNotes, 3, 5);
-        const steps = this.buildArpSteps(notes, 'up', 16, density * 0.7);
+        // Section-aware pattern: build uses updown, peak uses up, breakdown sparse
+        const trancePattern: ArpPattern = state.section === 'peak' || state.section === 'groove'
+          ? randomChoice<ArpPattern>(['up', 'updown'])
+          : state.section === 'build'
+            ? 'updown'
+            : 'broken';
+        const fill = this.pickFill16(density * sectionMult);
+        const steps = this.buildFromFill(notes, trancePattern, 16, fill);
         return `note("${steps.join(' ')}")
           .sound("sawtooth")
           .attack(0.001)
@@ -145,24 +171,35 @@ export class ArpLayer extends CachingLayer {
     return result;
   }
 
-  // Build a sequence of arp steps with rests
-  private buildArpSteps(
-    notes: string[], pattern: ArpPattern, length: number, fillProb: number
+  // Select which 8-step positions get notes based on density
+  private pickFill8(effectiveDensity: number): number[] {
+    if (effectiveDensity < 0.3) return FILL_8_SPARSE;
+    if (effectiveDensity < 0.65) return FILL_8_MEDIUM;
+    return FILL_8_DENSE;
+  }
+
+  // Select which 16-step positions get notes based on density
+  private pickFill16(effectiveDensity: number): number[] {
+    if (effectiveDensity < 0.3) return FILL_16_SPARSE;
+    if (effectiveDensity < 0.65) return FILL_16_MEDIUM;
+    return FILL_16_DENSE;
+  }
+
+  // Build steps using rhythmic fill positions instead of random
+  private buildFromFill(
+    notes: string[], pattern: ArpPattern, length: number, fillPositions: number[]
   ): string[] {
     const sequence = this.getArpSequence(notes, pattern);
-    const steps: string[] = [];
+    const steps: string[] = new Array(length).fill('~');
     let hasNote = false;
 
-    for (let i = 0; i < length; i++) {
-      if (Math.random() < fillProb) {
-        steps.push(sequence[i % sequence.length]);
+    for (const pos of fillPositions) {
+      if (pos < length) {
+        steps[pos] = sequence[pos % sequence.length];
         hasNote = true;
-      } else {
-        steps.push('~');
       }
     }
 
-    // Ensure at least one note
     if (!hasNote) {
       steps[0] = sequence[0];
     }
