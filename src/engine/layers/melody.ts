@@ -28,6 +28,7 @@ import { placePeak, moodPeakPosition, shouldPlacePeak } from '../../theory/phras
 import { inverseDensityMultiplier, shouldApplyInverseDensity } from '../../theory/inverse-density';
 import { applyCadenceGesture } from '../../theory/cadence-gesture';
 import { addOctaveDoublings } from '../../theory/octave-doubling';
+import { constrainRange, shouldConstrainRange } from '../../theory/range-constraint';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -104,6 +105,12 @@ export class MelodyLayer extends CachingLayer {
           return `${match[1]}${newOct}`;
         });
       }
+    }
+
+    // Range constraint: keep melody within singable bounds
+    if (shouldConstrainRange(mood)) {
+      const constrained = constrainRange(elements, mood);
+      for (let ri = 0; ri < elements.length; ri++) elements[ri] = constrained[ri];
     }
 
     // Phrase peak placement: highest note toward golden section for natural arc
