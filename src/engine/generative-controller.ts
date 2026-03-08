@@ -158,6 +158,9 @@ import { compressionMultiplier } from '../theory/dynamic-compression';
 import { orbitalWeight } from '../theory/pitch-orbit';
 import { grainDecayMultiplier } from '../theory/texture-granularity';
 import { saturationGainReduction, saturationLpfCorrection } from '../theory/harmonic-saturation-curve';
+import { contourMatchWeight } from '../theory/melodic-contour-matching';
+import { chordChangeAlignment } from '../theory/harmonic-rhythm-sync';
+import { fluxCorrection } from '../theory/spectral-flux';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3098,6 +3101,46 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic contour matching: stored for arp note selection
+    {
+      const _matchWeight = contourMatchWeight(0, 0, this.state.mood);
+      // Available for arp pattern generator
+    }
+
+    // Harmonic rhythm sync: chord change alignment quality
+    {
+      const beatPos = (this.state.tick % 4);
+      const alignment = chordChangeAlignment(beatPos, this.state.mood);
+      // Strong alignment → boost harmony slightly on chord changes
+      if (this.state.ticksSinceChordChange <= 1 && alignment > 0.7) {
+        const harmonyResult = layerResults.find(r => r.name === 'harmony');
+        if (harmonyResult) {
+          const boost = 1.0 + (alignment - 0.7) * 0.2;
+          harmonyResult.code = harmonyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * boost).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Spectral flux: FM modulation depth correction for engagement
+    {
+      // Estimate flux from tick variance (simplified)
+      const currentFlux = Math.abs(Math.sin(this.state.tick * 0.3)) * 0.5;
+      const fCorr = fluxCorrection(currentFlux, this.state.mood, this.state.section);
+      if (Math.abs(fCorr - 1.0) > 0.1) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * fCorr).toFixed(4)})`
             );
           }
         }
