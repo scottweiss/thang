@@ -13,6 +13,7 @@ import { suggestCounterDirection } from '../../theory/contrapuntal-motion';
 import { shouldUseIsorhythm, moodTalea, isorhythmicPattern, isorhythmToStrudel } from '../../theory/isorhythm';
 import { complementWeights, weightLadder, selectComplement, shouldApplyComplement, complementStrength } from '../../theory/pitch-complement';
 import { applyShuffle, applyHalftime, moodFeel, feelIntensity, shouldApplyFeel } from '../../theory/rhythmic-feel';
+import { applyRegisterSpread, shouldApplyRegisterSpread } from '../../theory/register-spread';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -115,7 +116,7 @@ export class ArpLayer extends CachingLayer {
 
     switch (mood) {
       case 'ambient': {
-        const notes = this.spreadOctaves(baseNotes, 3, 5);
+        const notes = this.spreadWithDynamics(baseNotes, 3, 5, state);
         const fill = this.pickFill16(density * sectionMult * 0.3);
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'up', 16, fill), state);
         return `note("${steps.join(' ')}")
@@ -141,7 +142,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'downtempo': {
         // Square tick — rhythmic clicks distinct from triangle melody
-        const notes = this.spreadOctaves(baseNotes, 3, 4);
+        const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
@@ -167,7 +168,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'lofi': {
         // Triangle pluck — warm tick, distinct from square melody
-        const notes = this.spreadOctaves(baseNotes, 3, 4);
+        const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
@@ -192,7 +193,7 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'trance': {
-        const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
         const trancePattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
@@ -221,7 +222,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'avril': {
         // Square pip — tiny gentle clicks, distinct from triangle melody
-        const notes = this.spreadOctaves(baseNotes, 4, 5);
+        const notes = this.spreadWithDynamics(baseNotes, 4, 5, state);
         const fill = this.pickFill16(density * sectionMult * 0.2);
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
@@ -246,7 +247,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'xtal': {
         // Square chime pips — tiny clicks distinct from triangle melody and sine harmony
-        const notes = this.spreadOctaves(baseNotes, 4, 6);
+        const notes = this.spreadWithDynamics(baseNotes, 4, 6, state);
         const xtalGain = 0.1 * (0.3 + density * 0.3);
 
         // Isorhythmic phasing: talea + color cycle independently for evolving patterns
@@ -288,7 +289,7 @@ export class ArpLayer extends CachingLayer {
       case 'syro': {
         // Dense 16th note arps — acid-style, resonant filter sweep, multiple octaves
         // Syro style: restless, intricate, technical
-        const notes = this.spreadOctaves(baseNotes, Math.max(2, adjLow), Math.min(5, adjHigh));
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(2, adjLow), Math.min(5, adjHigh), state);
         const syroGain = 0.12 * (0.5 + density * 0.5);
 
         // Isorhythmic phasing: IDM-style evolving patterns from phase offset
@@ -327,7 +328,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'blockhead': {
         // Triangle tick — percussive, distinct from sawtooth melody and square harmony
-        const notes = this.spreadOctaves(baseNotes, 3, 4);
+        const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
@@ -355,7 +356,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'flim': {
         // Square click — tiny percussive pips, distinct from triangle melody
-        const notes = this.spreadOctaves(baseNotes, 4, 6);
+        const notes = this.spreadWithDynamics(baseNotes, 4, 6, state);
         const fill = this.pickFill16(density * sectionMult * 0.2);
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
@@ -380,7 +381,7 @@ export class ArpLayer extends CachingLayer {
 
       case 'disco': {
         // Bubbly disco arp — sine with high FM, fast 16th notes, funky
-        const notes = this.spreadOctaves(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh));
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
         const discoPattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
@@ -415,6 +416,19 @@ export class ArpLayer extends CachingLayer {
       styles = biasStyleForMotion(styles, counterDir);
     }
     return randomChoice(styles);
+  }
+
+  // Spread chord notes with register dynamics applied
+  private spreadWithDynamics(
+    notes: string[], lowOct: number, highOct: number, state: GenerativeState
+  ): string[] {
+    if (shouldApplyRegisterSpread(state.mood)) {
+      const tension = state.tension?.overall ?? 0.5;
+      [lowOct, highOct] = applyRegisterSpread(
+        lowOct, highOct, this.name, tension, state.section, state.mood
+      );
+    }
+    return this.spreadOctaves(notes, lowOct, highOct);
   }
 
   // Spread chord notes across multiple octaves
