@@ -21,6 +21,8 @@ import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../the
 import type { TrajectoryState } from '../theory/form-trajectory';
 import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
 import { randomChoice } from './random';
+import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
+import type { SurpriseType } from '../theory/surprise-events';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
 import { HarmonyLayer } from './layers/harmony';
@@ -58,6 +60,7 @@ export class GenerativeController {
   private ticksSinceSilence = 0;
   private tensionMemory = new TensionMemory();
   private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
+  private ticksSinceLastSurprise = 20; // start with cooldown expired
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -410,6 +413,14 @@ export class GenerativeController {
       }
     }
 
+    // Surprise events: rare, joyful moments that break expectations
+    this.ticksSinceLastSurprise++;
+    const surprise = rollSurprise(this.state.mood, this.state.section, this.ticksSinceLastSurprise);
+    if (surprise !== 'none') {
+      this.ticksSinceLastSurprise = 0;
+      this.applySurprise(surprise, layerResults);
+    }
+
     const layerCodes = layerResults.map(r => r.code);
     // Apply rubato: subtle tempo variation based on section and tension
     const rubato = rubatoMultiplier(this.state.mood, this.state.section, this.state.tension?.overall ?? 0.5);
@@ -456,6 +467,67 @@ export class GenerativeController {
         } catch (finalErr) {
           console.warn('Fallback stack evaluation also failed:', finalErr);
         }
+      }
+    }
+  }
+
+  private applySurprise(
+    type: SurpriseType,
+    results: { name: string; code: string }[]
+  ): void {
+    switch (type) {
+      case 'octave-leap': {
+        const melody = results.find(r => r.name === 'melody');
+        if (melody) {
+          melody.code = melody.code.replace(
+            /note\("([^"]+)"\)/,
+            (_, notes) => `note("${applyOctaveLeap(notes)}")`
+          );
+        }
+        break;
+      }
+      case 'register-shift': {
+        const arp = results.find(r => r.name === 'arp');
+        if (arp) {
+          const dir = Math.random() < 0.6 ? 'up' : 'down';
+          arp.code = arp.code.replace(
+            /note\("([^"]+)"\)/,
+            (_, notes) => `note("${applyRegisterShift(notes, dir)}")`
+          );
+        }
+        break;
+      }
+      case 'unison': {
+        // Arp borrows melody's first non-rest note
+        const melody = results.find(r => r.name === 'melody');
+        const arp = results.find(r => r.name === 'arp');
+        if (melody && arp && this.state.activeMotif && this.state.activeMotif.length > 0) {
+          const unisonNote = this.state.activeMotif[0];
+          // Replace first note in arp with unison note
+          arp.code = arp.code.replace(
+            /note\("([^"]+)"\)/,
+            (_, notes) => {
+              const parts = notes.split(' ');
+              const firstNoteIdx = parts.findIndex((n: string) => n !== '~');
+              if (firstNoteIdx >= 0) parts[firstNoteIdx] = unisonNote;
+              return `note("${parts.join(' ')}")`;
+            }
+          );
+        }
+        break;
+      }
+      case 'brightness-flash': {
+        const flashMult = brightnessFlashMultiplier();
+        // Apply to harmony and melody
+        for (const result of results) {
+          if (result.name === 'harmony' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              (_, val) => `.lpf(${Math.round(parseFloat(val) * flashMult)})`
+            );
+          }
+        }
+        break;
       }
     }
   }
