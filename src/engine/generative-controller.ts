@@ -240,6 +240,9 @@ import { driftCorrectionGain } from '../theory/pitch-center-drift-correction';
 import { registerHandoffGain } from '../theory/register-handoff';
 import { tensionDecayFm } from '../theory/harmonic-tension-decay';
 import { onsetBalanceGain } from '../theory/onset-density-balance';
+import { releaseMultiplier as sustainReleaseMult } from '../theory/sustain-release-curve';
+import { chromaticNeighborFm } from '../theory/chromatic-neighbor-emphasis';
+import { densityInversionGain } from '../theory/rhythmic-density-inversion';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4577,6 +4580,56 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Sustain release curve: release time varies by section
+    {
+      const relMult = sustainReleaseMult(this.state.mood, this.state.section);
+      if (Math.abs(relMult - 1.0) > 0.05) {
+        for (const result of layerResults) {
+          if (result.name === 'melody' || result.name === 'harmony' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.decay\(([0-9.]+)\)/,
+              (_, val) => `.decay(${(parseFloat(val) * relMult).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Chromatic neighbor emphasis: FM boost for chromatic passing tones
+    {
+      const noteToPC4: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const chordPcs = (this.state.currentChord?.notes ?? []).map(n => {
+        const name = n.replace(/[0-9]/g, '');
+        return noteToPC4[name] ?? 0;
+      });
+      const rootPc = noteToPC4[this.state.scale?.root ?? 'C'] ?? 0;
+      const cnFm = chromaticNeighborFm(rootPc, chordPcs, this.state.mood);
+      if (cnFm > 1.02) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.fm\(([0-9.]+)\)/,
+            (_, val) => `.fm(${(parseFloat(val) * cnFm).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Rhythmic density inversion: melody/arp inverse correlation
+    {
+      const melodyDensity = this.state.tension?.rhythmic ?? 0.5;
+      const diGain = densityInversionGain(melodyDensity, this.state.mood);
+      if (Math.abs(diGain - 1.0) > 0.02) {
+        const arpResult = layerResults.find(r => r.name === 'arp');
+        if (arpResult) {
+          arpResult.code = arpResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * diGain).toFixed(4)})`
+          );
         }
       }
     }
