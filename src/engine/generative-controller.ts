@@ -234,6 +234,9 @@ import { accentShiftGain } from '../theory/temporal-accent-shift';
 import { brightnessArcLpf } from '../theory/timbral-brightness-arc';
 import { bassGravityGain, bassGravityDecay } from '../theory/bass-register-gravity';
 import { phraseSymmetryGain } from '../theory/phrase-symmetry-scoring';
+import { resolutionMomentumGain } from '../theory/harmonic-resolution-momentum';
+import { densityCouplingGain } from '../theory/layer-density-coupling';
+import { driftCorrectionGain } from '../theory/pitch-center-drift-correction';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -4571,6 +4574,51 @@ export class GenerativeController {
               (_, val) => `.gain(${(parseFloat(val) * breathGain).toFixed(4)})`
             );
           }
+        }
+      }
+    }
+
+    // Harmonic resolution momentum: forward drive approaching tonic
+    {
+      const noteToPC3: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const chordPc = noteToPC3[this.state.currentChord?.root ?? 'C'] ?? 0;
+      const tonicPc = noteToPC3[this.state.scale?.root ?? 'C'] ?? 0;
+      const rmGain = resolutionMomentumGain(chordPc, tonicPc, this.state.mood);
+      if (Math.abs(rmGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * rmGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Layer density coupling: active layer count modulates density
+    {
+      const dcGain = densityCouplingGain(layerResults.length, this.state.mood);
+      if (Math.abs(dcGain - 1.0) > 0.01) {
+        for (const result of layerResults) {
+          result.code = result.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * dcGain).toFixed(4)})`
+          );
+        }
+      }
+    }
+
+    // Pitch center drift correction: keep melodies anchored
+    {
+      const noteToMidi3: Record<string, number> = { C: 60, Db: 61, D: 62, Eb: 63, E: 64, F: 65, Gb: 66, G: 67, Ab: 68, A: 69, Bb: 70, B: 71 };
+      const rootMidi3 = noteToMidi3[this.state.currentChord?.root ?? 'C'] ?? 60;
+      const dcGain2 = driftCorrectionGain(rootMidi3, 66, this.state.mood); // center around F#4
+      if (dcGain2 < 0.98) {
+        const melodyResult = layerResults.find(r => r.name === 'melody');
+        if (melodyResult) {
+          melodyResult.code = melodyResult.code.replace(
+            /\.gain\(([0-9.]+)\)/,
+            (_, val) => `.gain(${(parseFloat(val) * dcGain2).toFixed(4)})`
+          );
         }
       }
     }
