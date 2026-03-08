@@ -26,6 +26,7 @@ import { syncedDelayTime } from '../theory/delay-sync';
 import { shouldApplyHemiola, hemiolaType, hemiolaAccentMask, claveAccentMask } from '../theory/hemiola';
 import { layerPhaseOffset, shouldApplyPhaseOffset } from '../theory/rhythmic-phase';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../theory/tension-orchestration';
+import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../theory/harmonic-color';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -79,6 +80,28 @@ export abstract class CachingLayer implements Layer {
 
     // Timbral morphing: FM index evolves within sections
     result = this.applyTimbralMorph(result, state);
+
+    // Harmonic color: FM parameters respond to harmonic tension
+    if (shouldApplyHarmonicColor(state.mood)) {
+      const tension = state.tension?.overall ?? 0.5;
+      // Modulate fmh ratio based on tension
+      if (result.includes('.fmh(')) {
+        result = result.replace(
+          /\.fmh\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.fmh(${tensionFmh(parseFloat(val), tension, state.mood).toFixed(2)})`
+        );
+      }
+      // Modulate FM index based on tension (only static .fm() values, not sine.range)
+      if (result.includes('.fm(') && !result.includes('.fm(sine')) {
+        const fmMult = tensionFmIndex(tension, state.mood);
+        if (Math.abs(fmMult - 1.0) > 0.03) {
+          result = result.replace(
+            /\.fm\((\d+(?:\.\d+)?)\)/g,
+            (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
+          );
+        }
+      }
+    }
 
     // Chorus depth: detuning adds warmth at peaks, cleans at breakdowns
     result = this.applyChorusDepth(result, state);

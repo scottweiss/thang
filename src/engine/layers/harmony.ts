@@ -28,6 +28,7 @@ import { smoothVoicing } from '../../theory/voice-leading';
 import { syncedDelayTime } from '../../theory/delay-sync';
 import { shouldAnimateHarmony, animateChordVoicing, voicingsToPattern } from '../../theory/harmonic-animation';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
+import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../../theory/harmonic-color';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -241,6 +242,26 @@ export class HarmonyLayer implements Layer {
           /\.fm\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
         );
+      }
+    }
+
+    // Harmonic color: FM parameters respond to tension
+    if (shouldApplyHarmonicColor(state.mood)) {
+      const tension = state.tension?.overall ?? 0.5;
+      if (result.includes('.fmh(')) {
+        result = result.replace(
+          /\.fmh\((\d+(?:\.\d+)?)\)/g,
+          (_match, val) => `.fmh(${tensionFmh(parseFloat(val), tension, state.mood).toFixed(2)})`
+        );
+      }
+      if (result.includes('.fm(') && !result.includes('.fm(sine')) {
+        const fmMult = tensionFmIndex(tension, state.mood);
+        if (Math.abs(fmMult - 1.0) > 0.03) {
+          result = result.replace(
+            /\.fm\((\d+(?:\.\d+)?)\)/g,
+            (_match, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
+          );
+        }
       }
     }
 
