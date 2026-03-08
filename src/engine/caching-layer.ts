@@ -33,6 +33,7 @@ import { adjustPanRange, shouldApplyStereoPlacement } from '../theory/stereo-pla
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../theory/sidechain-duck';
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../theory/resolution-glow';
+import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../theory/tension-articulation';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -173,6 +174,9 @@ export abstract class CachingLayer implements Layer {
 
     // Envelope evolution: attacks tighten in builds, soften in breakdowns
     result = this.applyEnvelopeEvolution(result, state);
+
+    // Tension articulation: note length tracks real-time tension arc
+    result = this.applyTensionArticulation(result, state);
 
     // Velocity evolution: per-note dynamics morph with section progress
     result = this.applyVelocityEvolution(result, state);
@@ -617,6 +621,44 @@ export abstract class CachingLayer implements Layer {
       result = result.replace(
         /\.release\((\d+(?:\.\d+)?)\)/g,
         (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
+      );
+    }
+
+    return result;
+  }
+
+  /**
+   * Scale ADSR envelope parameters by real-time tension.
+   * High tension → shorter/punchier notes (staccato), low tension → longer/legato.
+   * Stacks on top of section-based envelope evolution.
+   */
+  private applyTensionArticulation(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyTensionArticulation(state.mood)) return pattern;
+
+    const tension = state.tension?.overall ?? 0.5;
+    let result = pattern;
+
+    const aMult = tensionAttackMultiplier(tension, state.mood);
+    if (Math.abs(aMult - 1.0) > 0.03) {
+      result = result.replace(
+        /\.attack\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.attack(${(parseFloat(val) * aMult).toFixed(3)})`
+      );
+    }
+
+    const dMult = tensionDecayMultiplier(tension, state.mood);
+    if (Math.abs(dMult - 1.0) > 0.03) {
+      result = result.replace(
+        /\.decay\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.decay(${(parseFloat(val) * dMult).toFixed(3)})`
+      );
+    }
+
+    const sMult = tensionSustainMultiplier(tension, state.mood);
+    if (Math.abs(sMult - 1.0) > 0.03) {
+      result = result.replace(
+        /\.sustain\((\d+(?:\.\d+)?)\)/g,
+        (_, val) => `.sustain(${(parseFloat(val) * sMult).toFixed(4)})`
       );
     }
 

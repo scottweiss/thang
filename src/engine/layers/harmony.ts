@@ -36,6 +36,7 @@ import { adjustPanRange, shouldApplyStereoPlacement } from '../../theory/stereo-
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../../theory/resolution-glow';
+import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../../theory/tension-articulation';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -332,6 +333,32 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.release\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
+        );
+      }
+    }
+
+    // Tension articulation: note length tracks real-time tension arc
+    if (shouldApplyTensionArticulation(state.mood)) {
+      const tension = state.tension?.overall ?? 0.5;
+      const taMult = tensionAttackMultiplier(tension, state.mood);
+      if (Math.abs(taMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.attack\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.attack(${(parseFloat(val) * taMult).toFixed(3)})`
+        );
+      }
+      const tdMult = tensionDecayMultiplier(tension, state.mood);
+      if (Math.abs(tdMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.decay\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.decay(${(parseFloat(val) * tdMult).toFixed(3)})`
+        );
+      }
+      const tsMult = tensionSustainMultiplier(tension, state.mood);
+      if (Math.abs(tsMult - 1.0) > 0.03) {
+        result = result.replace(
+          /\.sustain\((\d+(?:\.\d+)?)\)/g,
+          (_, val) => `.sustain(${(parseFloat(val) * tsMult).toFixed(4)})`
         );
       }
     }
