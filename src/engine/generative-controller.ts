@@ -186,6 +186,9 @@ import { expectancyGainEmphasis } from '../theory/rhythmic-expectancy-violation'
 import { ambiguityReverbMultiplier } from '../theory/tonal-ambiguity-gradient';
 import { attackMultiplier } from '../theory/attack-transient-shaping';
 import { harmonicRhythmVariance } from '../theory/harmonic-rhythm-variance';
+import { centroidMomentumCorrection } from '../theory/spectral-centroid-momentum';
+import { varietyGainMultiplier } from '../theory/interval-variety-scoring';
+import { hierarchyGainMultiplier } from '../theory/metric-accent-hierarchy';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -3778,6 +3781,65 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               () => `.lpf(${Math.round(tracked)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Spectral centroid momentum: smooth brightness transitions
+    {
+      for (const result of layerResults) {
+        if (result.name === 'harmony' || result.name === 'melody') {
+          const lpfMatch = result.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+          if (lpfMatch) {
+            const currentLpf = parseFloat(lpfMatch[1]);
+            const prevLpf = currentLpf * 0.9; // estimate previous from slight reduction
+            const correction = centroidMomentumCorrection(prevLpf, currentLpf, this.state.mood);
+            if (Math.abs(correction - 1.0) > 0.02) {
+              result.code = result.code.replace(
+                /\.lpf\((\d+(?:\.\d+)?)\)/,
+                (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Interval variety scoring: diverse intervals get emphasis
+    {
+      const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+      const chordPcs = this.state.currentChord.notes.map((n: string) => noteToPC[n.replace(/\d+$/, '')] ?? 0);
+      const intervals = [];
+      for (let i = 1; i < chordPcs.length; i++) {
+        intervals.push(((chordPcs[i] - chordPcs[i - 1]) % 12 + 12) % 12);
+      }
+      if (intervals.length > 0) {
+        const vGain = varietyGainMultiplier(intervals, this.state.mood);
+        if (Math.abs(vGain - 1.0) > 0.01) {
+          for (const result of layerResults) {
+            if (result.name === 'melody') {
+              result.code = result.code.replace(
+                /\.gain\(([0-9.]+)\)/,
+                (_, val) => `.gain(${(parseFloat(val) * vGain).toFixed(4)})`
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Metric accent hierarchy: nested weight emphasis
+    {
+      const beatPos = Math.floor((this.state.sectionProgress ?? 0) * 16) % 16;
+      const hGain = hierarchyGainMultiplier(beatPos, this.state.mood);
+      if (Math.abs(hGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          if (result.name === 'texture' || result.name === 'arp') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * hGain).toFixed(4)})`
             );
           }
         }
