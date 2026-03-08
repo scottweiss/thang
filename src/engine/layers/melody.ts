@@ -14,6 +14,8 @@ import { registerShift, shouldShiftRegister } from '../../theory/register-evolut
 import { insertBreaths, breathingRate, ensurePhraseBoundary } from '../../theory/phrase-breathing';
 import { sectionContour, contourOffset, contourTargetIndex, contourPull } from '../../theory/melodic-contour';
 import { detectDirection } from '../../theory/contrapuntal-motion';
+import { selectMelodicNote, inferDirection as inferMelodicDirection } from '../../theory/melodic-gravity';
+import type { MelodicContext } from '../../theory/melodic-gravity';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -468,10 +470,34 @@ export class MelodyLayer extends CachingLayer {
         elements[i] = motif[motifIdx++];
       }
     }
-    // Fill remaining masked positions with ladder notes
+    // Fill remaining masked positions with gravity-weighted ladder notes
+    // (context-aware selection instead of random)
+    const tension = state.tension?.overall ?? 0.5;
     for (let i = 0; i < 8; i++) {
       if (mask[i] && elements[i] === '~') {
-        elements[i] = ladder[Math.floor(Math.random() * ladder.length)];
+        // Find the previous non-rest note for context
+        let prevIdx = -1;
+        for (let j = i - 1; j >= 0; j--) {
+          if (elements[j] !== '~') {
+            prevIdx = ladder.indexOf(elements[j]);
+            break;
+          }
+        }
+        // Infer direction from recent notes
+        const recentIndices = elements.slice(0, i)
+          .filter(e => e !== '~')
+          .map(e => ladder.indexOf(e))
+          .filter(idx => idx >= 0);
+        const dir = inferMelodicDirection(recentIndices);
+
+        const ctx: MelodicContext = {
+          prevIndex: prevIdx,
+          chordIndices: chordIndices,
+          direction: dir,
+          tension,
+        };
+        const selectedIdx = selectMelodicNote(ladder.length, ctx);
+        elements[i] = ladder[selectedIdx];
       }
     }
 
