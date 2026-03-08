@@ -324,6 +324,9 @@ import { groovePocketGain } from '../theory/rhythmic-groove-pocket';
 import { deceptiveResolutionLpf } from '../theory/harmonic-deceptive-resolution';
 import { stepwiseRecoveryGain } from '../theory/melodic-stepwise-recovery';
 import { crossAccentGain } from '../theory/rhythmic-cross-accent';
+import { plagalEnrichmentFm } from '../theory/harmonic-plagal-enrichment';
+import { contourArcShapingGain } from '../theory/melodic-contour-arc-shaping';
+import { polymetricAccentGain } from '../theory/rhythmic-polymetric-accent';
 import { voicingSpreadScore, spreadWeight } from '../theory/voicing-register-distribution';
 import { groupBoundaryRest } from '../theory/rhythmic-phrase-grouping';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
@@ -6417,6 +6420,59 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.gain\(([0-9.]+)\)/,
               (_, val) => `.gain(${(parseFloat(val) * caGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Harmonic plagal enrichment: warm FM on IV→I plagal motions
+    {
+      const prevDeg = this.state.chordHistory.length >= 2
+        ? this.state.chordHistory[this.state.chordHistory.length - 2].degree
+        : 0;
+      const curDeg = this.state.currentChord.degree;
+      const peFm = plagalEnrichmentFm(prevDeg, curDeg, this.state.mood, this.state.section);
+      if (peFm > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'harmony' || result.name === 'drone') {
+            result.code = result.code.replace(
+              /\.fm\(([0-9.]+)\)/,
+              (_, val) => `.fm(${(parseFloat(val) * peFm).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Melodic contour arc shaping: gain follows ideal arch contour
+    {
+      const progress = this.state.sectionProgress;
+      const dir = this.state.melodyDirection === 'ascending' ? 1
+        : this.state.melodyDirection === 'descending' ? -1 : 0;
+      const casGain = contourArcShapingGain(progress, dir, this.state.mood, this.state.section);
+      if (Math.abs(casGain - 1.0) > 0.001) {
+        for (const result of layerResults) {
+          if (result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * casGain).toFixed(4)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic polymetric accent: secondary meter accents
+    {
+      const beatPos = this.state.tick % 16;
+      const paGain = polymetricAccentGain(beatPos, this.state.tick, this.state.mood, this.state.section);
+      if (paGain > 1.001) {
+        for (const result of layerResults) {
+          if (result.name === 'arp' || result.name === 'melody') {
+            result.code = result.code.replace(
+              /\.gain\(([0-9.]+)\)/,
+              (_, val) => `.gain(${(parseFloat(val) * paGain).toFixed(4)})`
             );
           }
         }
