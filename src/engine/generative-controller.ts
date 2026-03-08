@@ -24,6 +24,7 @@ import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theor
 import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from '../theory/chromatic-approach';
 import { selectInversion, applyInversion, extractBassNote } from '../theory/chord-inversion';
 import { shouldApplyRelativeSub, relativeSubChord } from '../theory/relative-sub';
+import { reharmCooldown } from '../theory/reharm-density';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -69,6 +70,7 @@ export class GenerativeController {
   private tensionMemory = new TensionMemory();
   private formTrajectory: TrajectoryState = { ticksElapsed: 0, formLength: 80 };
   private prevBassNote: import('../types').NoteName | null = null;
+  private recentReharmCount = 0;
   private ticksSinceLastSurprise = 20; // start with cooldown expired
   private arrivalActive = false;
   private tonalGravity = new TonalGravity('C', 'minor');
@@ -328,11 +330,19 @@ export class GenerativeController {
       ? this.progression.forceToDegree(cadentialTarget)
       : this.progression.next(phraseBias);
 
+    // Reharmonization density: scale down substitution probability when
+    // too many consecutive reharms have occurred (prevents harmonic fatigue)
+    const reharmGate = reharmCooldown(this.recentReharmCount, this.state.mood);
+    let wasReharmonized = false;
+
+    const preReharmRoot = nextChord.root;
+    const preReharmQuality = nextChord.quality;
+
     // Modal interchange: occasionally borrow a chord from a parallel mode.
     // Higher tension increases borrow probability (up to 25% at max tension).
     // Skip when cadential steering is active — don't disrupt cadences.
     const tension = this.state.tension?.overall ?? 0.5;
-    const borrowProbability = tension * 0.25;
+    const borrowProbability = tension * 0.25 * reharmGate;
     if (Math.random() < borrowProbability && cadentialTarget === null) {
       const borrowed = getBorrowedChords(this.state.scale.type);
       if (borrowed.length > 0) {
@@ -426,6 +436,15 @@ export class GenerativeController {
       nextChord.notes = applyInversion(nextChord.notes, inversion);
     }
     this.prevBassNote = extractBassNote(nextChord.notes);
+
+    // Track reharmonization density for cooldown
+    wasReharmonized = nextChord.root !== preReharmRoot || nextChord.quality !== preReharmQuality;
+    if (wasReharmonized) {
+      this.recentReharmCount++;
+    } else {
+      // Diatonic chord resets the counter (relief from chromaticism)
+      this.recentReharmCount = Math.max(0, this.recentReharmCount - 1);
+    }
 
     this.state.chordHistory.push(this.state.currentChord);
     if (this.state.chordHistory.length > 16) {
