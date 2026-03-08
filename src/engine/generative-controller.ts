@@ -83,6 +83,7 @@ export class GenerativeController {
       layerCenterPitches: {},
       ticksSinceChordChange: 0,
       layerPhraseDensity: {},
+      layerStepPattern: {},
     };
 
     this.layers = [

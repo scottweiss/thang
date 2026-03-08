@@ -7,6 +7,7 @@ import { getAdjustedOctaveRange } from '../../theory/register';
 import { displaceSteps, syncopate, moodDisplacement } from '../../theory/rhythmic-displacement';
 import { sectionArticulation, articulationToStrudel } from '../../theory/articulation';
 import { complementaryDensity, callResponseAmount } from '../../theory/call-response';
+import { generateComplementaryRhythm, counterpointDensity } from '../../theory/rhythmic-counterpoint';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -393,7 +394,7 @@ export class ArpLayer extends CachingLayer {
     return curve.map(v => (baseGain * v).toFixed(4)).join(' ');
   }
 
-  /** Apply rhythmic displacement and syncopation for groove */
+  /** Apply rhythmic displacement, syncopation, and counterpoint for groove */
   private applyDisplacement(steps: string[], state: GenerativeState): string[] {
     const displacement = moodDisplacement(state.mood);
     let result = steps;
@@ -404,6 +405,25 @@ export class ArpLayer extends CachingLayer {
     const syncopationAmount = (state.tension?.rhythmic ?? 0.5) * 0.4;
     if (syncopationAmount > 0.1) {
       result = syncopate(result, '~', syncopationAmount, 4);
+    }
+    // Rhythmic counterpoint: silence arp where melody plays, for interlocking texture
+    const melodySteps = state.layerStepPattern?.melody;
+    if (melodySteps && melodySteps.length > 0) {
+      const strictness = counterpointDensity(state.section, state.tension?.overall ?? 0.5);
+      if (strictness > 0.1) {
+        const mask = generateComplementaryRhythm(melodySteps, result.length, 1.0 - strictness);
+        const filtered = result.map((step, i) => {
+          if (step === '~') return '~';
+          return mask[i] ? step : (Math.random() < strictness ? '~' : step);
+        });
+        // Ensure at least one note survives
+        const hasNote = filtered.some(s => s !== '~');
+        if (!hasNote) {
+          const firstNote = steps.findIndex(s => s !== '~');
+          if (firstNote >= 0) filtered[firstNote] = steps[firstNote];
+        }
+        result = filtered;
+      }
     }
     return result;
   }
