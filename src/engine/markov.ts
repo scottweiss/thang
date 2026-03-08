@@ -3,6 +3,7 @@ import { weightedChoice } from './random';
 export class MarkovChain<T> {
   private states: T[];
   private matrix: number[][];
+  private secondOrderMatrix?: number[][][];
 
   constructor(states: T[], matrix: number[][]) {
     this.states = states;
@@ -31,6 +32,32 @@ export class MarkovChain<T> {
 
   getStates(): T[] {
     return this.states;
+  }
+
+  setSecondOrderMatrix(matrix: number[][][]): void {
+    this.secondOrderMatrix = matrix;
+  }
+
+  nextWithHistory(
+    prevIndex: number,
+    currentIndex: number,
+    secondOrderMatrix?: number[][][],
+  ): { state: T; index: number } {
+    const m = secondOrderMatrix ?? this.secondOrderMatrix;
+    if (
+      m &&
+      prevIndex >= 0 &&
+      prevIndex < m.length &&
+      currentIndex >= 0 &&
+      currentIndex < (m[prevIndex]?.length ?? 0)
+    ) {
+      const weights = m[prevIndex][currentIndex];
+      if (weights && weights.length > 0) {
+        const nextIdx = weightedChoiceIndex(weights);
+        return { state: this.states[nextIdx], index: nextIdx };
+      }
+    }
+    return this.nextByIndex(currentIndex);
   }
 }
 
