@@ -15,6 +15,7 @@ import { shouldLayerAcceptChordChange } from '../theory/staggered-changes';
 import { rubatoMultiplier, cadentialRubato } from '../theory/rubato';
 import { shouldInsertSilence, silenceGainMultiplier } from '../theory/strategic-silence';
 import { TensionMemory } from '../theory/tension-memory';
+import { phraseCadenceBias } from '../theory/phrase-harmony';
 import { randomChoice } from './random';
 import { Layer } from './layer';
 import { DroneLayer } from './layers/drone';
@@ -272,9 +273,11 @@ export class GenerativeController {
     );
 
     // Either force a cadential target or let Markov decide
+    // Phrase-level bias steers toward half cadences (antecedent) or tonic (consequent)
+    const phraseBias = phraseCadenceBias(this.state.tick, this.state.mood, this.state.section);
     let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
-      : this.progression.next();
+      : this.progression.next(phraseBias);
 
     // Modal interchange: occasionally borrow a chord from a parallel mode.
     // Higher tension increases borrow probability (up to 25% at max tension).

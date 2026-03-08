@@ -180,9 +180,9 @@ export class ProgressionGenerator {
     this.previousDegree = startDegree;
   }
 
-  next(): ChordState {
+  next(externalBias?: number[]): ChordState {
     // Use second-order Markov when available (considers previous→current→next)
-    const result = this.chain.nextWithHistory(this.previousDegree, this.currentDegree);
+    const result = this.chain.nextWithHistory(this.previousDegree, this.currentDegree, undefined, externalBias);
     this.previousDegree = this.currentDegree;
     this.currentDegree = result.index;
 

@@ -42,6 +42,7 @@ export class MarkovChain<T> {
     prevIndex: number,
     currentIndex: number,
     secondOrderMatrix?: number[][][],
+    externalBias?: number[],
   ): { state: T; index: number } {
     const m = secondOrderMatrix ?? this.secondOrderMatrix;
     if (
@@ -53,9 +54,19 @@ export class MarkovChain<T> {
     ) {
       const weights = m[prevIndex][currentIndex];
       if (weights && weights.length > 0) {
-        const nextIdx = weightedChoiceIndex(weights);
+        const biased = externalBias
+          ? weights.map((w, i) => w * (externalBias[i] ?? 1))
+          : weights;
+        const nextIdx = weightedChoiceIndex(biased);
         return { state: this.states[nextIdx], index: nextIdx };
       }
+    }
+    // Apply external bias to first-order fallback too
+    if (externalBias) {
+      const baseWeights = this.matrix[currentIndex % this.matrix.length];
+      const biased = baseWeights.map((w, i) => w * (externalBias[i] ?? 1));
+      const nextIdx = weightedChoiceIndex(biased);
+      return { state: this.states[nextIdx], index: nextIdx };
     }
     return this.nextByIndex(currentIndex);
   }
