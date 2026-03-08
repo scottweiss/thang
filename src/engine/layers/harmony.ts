@@ -5,6 +5,7 @@ import { getVoicingRange, applyVoicingSpread } from '../../theory/voicing-spread
 import { findGuideTones } from '../../theory/guide-tones';
 import { adjustChordDensity } from '../../theory/harmonic-density';
 import { stereoWidth } from '../../theory/stereo-field';
+import { generateNudgePattern, shouldApplyMicroTiming } from '../../theory/micro-timing';
 
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
@@ -26,6 +27,12 @@ export class HarmonyLayer implements Layer {
 
     // Dynamic stereo field: modulate pan range for section/tension
     result = this.modulateStereo(result, state);
+
+    // Micro-timing: subtle timing offsets for human feel
+    if (shouldApplyMicroTiming(state.mood) && !result.includes('.nudge(')) {
+      const nudge = generateNudgePattern(state.mood, state.section, 8, state.tick);
+      result = result.replace(/\.orbit\((\d+)\)/, `.nudge("${nudge}").orbit($1)`);
+    }
 
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
     if (multiplier < 1.0) {

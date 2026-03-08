@@ -1,6 +1,7 @@
 import { Layer } from './layer';
 import { GenerativeState, Mood } from '../types';
 import { stereoWidth } from '../theory/stereo-field';
+import { generateNudgePattern, shouldApplyMicroTiming } from '../theory/micro-timing';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -21,6 +22,9 @@ export abstract class CachingLayer implements Layer {
 
     // Dynamic stereo field: modulate pan range based on section/tension
     result = this.modulateStereo(result, state);
+
+    // Micro-timing: add subtle timing offsets for human feel
+    result = this.applyMicroTiming(result, state);
 
     // Apply layer gain multiplier for smooth section transitions
     const multiplier = state.layerGainMultipliers[this.name] ?? 1.0;
@@ -81,6 +85,24 @@ export abstract class CachingLayer implements Layer {
         const max = Math.min(1, center + scaledHalf).toFixed(2);
         return `.pan(sine.range(${min}, ${max}).slow(${speed}))`;
       }
+    );
+  }
+
+  /**
+   * Add micro-timing offsets via .nudge() for humanization.
+   * Generates a short cycled nudge pattern based on mood/section.
+   * Only applied if the pattern doesn't already have .nudge().
+   */
+  private applyMicroTiming(pattern: string, state: GenerativeState): string {
+    if (!shouldApplyMicroTiming(state.mood)) return pattern;
+    // Don't double-apply
+    if (pattern.includes('.nudge(')) return pattern;
+
+    const nudge = generateNudgePattern(state.mood, state.section, 8, state.tick);
+    // Insert .nudge() before .orbit() (which every layer has at the end)
+    return pattern.replace(
+      /\.orbit\((\d+)\)/,
+      `.nudge("${nudge}").orbit($1)`
     );
   }
 
