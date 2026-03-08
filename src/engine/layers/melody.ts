@@ -548,9 +548,12 @@ export class MelodyLayer extends CachingLayer {
       [3, 2]
     );
     // Motivic development: 40% chance to develop a stored motif, 60% new
+    // Cross-section recall: breakdowns/peaks prefer motifs from earlier sections
     let rawMotif: string[];
     const recalled = this.motifMemory.count > 0 && Math.random() < 0.4
-      ? this.motifMemory.recall(state.tick)
+      ? (state.sectionChanged
+          ? this.motifMemory.recallCrossSection(state.tick, state.section)
+          : this.motifMemory.recall(state.tick))
       : null;
 
     if (recalled) {
@@ -584,8 +587,8 @@ export class MelodyLayer extends CachingLayer {
     } else {
       // Create a new motif via Narmour I-R model
       rawMotif = this.buildMotif(ladder, anchorIdx, motifLen, contour, state.sectionProgress ?? 0, state.section, state.mood);
-      // Store it for future development
-      this.motifMemory.store(rawMotif, state.tick);
+      // Store it for future development (tagged with section for cross-section recall)
+      this.motifMemory.store(rawMotif, state.tick, state.section);
     }
 
     // Apply chord-tone gravity: pull ending notes toward chord tones for resolution

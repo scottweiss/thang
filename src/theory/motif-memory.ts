@@ -18,6 +18,7 @@ export interface StoredMotif {
   notes: string[];       // the original note sequence
   createdAtTick: number; // when it was first created
   useCount: number;      // how many times it's been used
+  section?: string;      // originating section (for cross-section recall)
 }
 
 export class MotifMemory {
@@ -27,7 +28,7 @@ export class MotifMemory {
   /**
    * Store a new motif. If memory is full, drop the oldest/least-used.
    */
-  store(notes: string[], tick: number): void {
+  store(notes: string[], tick: number, section?: string): void {
     // Don't store very short motifs
     if (notes.length < 2) return;
 
@@ -35,7 +36,7 @@ export class MotifMemory {
     const key = notes.join(',');
     if (this.motifs.some(m => m.notes.join(',') === key)) return;
 
-    this.motifs.push({ notes: [...notes], createdAtTick: tick, useCount: 0 });
+    this.motifs.push({ notes: [...notes], createdAtTick: tick, useCount: 0, section });
 
     // Evict oldest/least-used if over capacity
     while (this.motifs.length > this.maxMotifs) {
@@ -194,6 +195,45 @@ export class MotifMemory {
       result.push(notes[i]);
     }
     return result;
+  }
+
+  /**
+   * Section-aware recall: prefer motifs from complementary sections.
+   * Breakdowns recall intro/groove motifs, peaks recall build motifs.
+   * Creates the "return" feeling of hearing familiar material recontextualized.
+   *
+   * @param tick       Current tick
+   * @param section    Current section
+   * @returns Stored motif, preferring cross-section recalls
+   */
+  recallCrossSection(tick: number, section: string): StoredMotif | null {
+    if (this.motifs.length === 0) return null;
+
+    // Which sections create the best "return" feeling from the current section?
+    const complementary: Record<string, string[]> = {
+      breakdown: ['intro', 'build', 'groove'],  // recall earlier material
+      peak:      ['build', 'intro'],             // recall buildup motifs
+      groove:    ['intro', 'breakdown'],         // recall opening/quiet material
+      build:     ['groove', 'intro'],            // recall established patterns
+      intro:     [],                              // no cross-recall at start
+    };
+
+    const targets = complementary[section] || [];
+    if (targets.length === 0) return this.recall(tick);
+
+    // Find motifs from complementary sections
+    const crossMotifs = this.motifs.filter(m => m.section && targets.includes(m.section));
+
+    if (crossMotifs.length > 0 && Math.random() < 0.5) {
+      // Pick the most used cross-section motif (it's the "theme")
+      crossMotifs.sort((a, b) => b.useCount - a.useCount);
+      const motif = crossMotifs[0];
+      motif.useCount++;
+      return motif;
+    }
+
+    // Fall back to regular recall
+    return this.recall(tick);
   }
 
   /** Clear all stored motifs (e.g., on mood change) */

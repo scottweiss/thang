@@ -151,4 +151,40 @@ describe('MotifMemory', () => {
       }
     }
   });
+
+  it('stores motifs with section tags', () => {
+    const mem = new MotifMemory();
+    mem.store(['C4', 'E4', 'G4'], 0, 'intro');
+    mem.store(['D4', 'F4', 'A4'], 10, 'build');
+    expect(mem.count).toBe(2);
+  });
+
+  it('recallCrossSection prefers complementary section motifs', () => {
+    const mem = new MotifMemory();
+    mem.store(['C4', 'E4', 'G4'], 0, 'intro');
+    mem.store(['D4', 'F4', 'A4'], 10, 'build');
+    mem.store(['E4', 'G4', 'B4'], 20, 'peak');
+
+    // From breakdown, should prefer intro/build/groove motifs
+    let introRecalled = 0;
+    for (let i = 0; i < 100; i++) {
+      const m = mem.recallCrossSection(30, 'breakdown');
+      if (m && m.section === 'intro') introRecalled++;
+    }
+    // Should recall intro motifs at least sometimes
+    expect(introRecalled).toBeGreaterThan(0);
+  });
+
+  it('recallCrossSection returns null for empty memory', () => {
+    const mem = new MotifMemory();
+    expect(mem.recallCrossSection(0, 'breakdown')).toBeNull();
+  });
+
+  it('recallCrossSection falls back to regular recall for intro', () => {
+    const mem = new MotifMemory();
+    mem.store(['C4', 'E4'], 0, 'intro');
+    // Intro has no complementary targets, falls back to regular recall
+    const m = mem.recallCrossSection(5, 'intro');
+    expect(m).not.toBeNull();
+  });
 });
