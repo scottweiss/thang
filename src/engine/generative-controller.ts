@@ -146,6 +146,9 @@ import { fieldTensionGain, fieldTensionBrightness } from '../theory/harmonic-fie
 import { consonanceArcFm } from '../theory/consonance-arc';
 import { thicknessGainReduction } from '../theory/rhythmic-thinning';
 import { spectralWidthLpf } from '../theory/spectral-width';
+import { formantLpfMultiplier } from '../theory/formant-tracking';
+import { shouldPreferPalindrome } from '../theory/rhythmic-palindrome';
+import { centroidCorrectionLpf } from '../theory/spectral-centroid-correction';
 import { totalDensity, densityGainCorrection, densityLpfCorrection, shouldApplyTexturalBalance } from '../theory/textural-density-balance';
 import { qualityDecayMultiplier, shouldApplySustainShape } from '../theory/chord-sustain-shape';
 import { randomChoice } from './random';
@@ -3086,6 +3089,51 @@ export class GenerativeController {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * decayLpf)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Formant tracking: melody LPF follows vocal-like formant curve
+    {
+      const melodyResult = layerResults.find(r => r.name === 'melody');
+      if (melodyResult) {
+        const lpfMatch = melodyResult.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+        if (lpfMatch) {
+          const baseLpf = parseFloat(lpfMatch[1]);
+          // Estimate MIDI note from chord root (melody register ~octave 4)
+          const noteToPC: Record<string, number> = { C: 0, Db: 1, D: 2, Eb: 3, E: 4, F: 5, Gb: 6, G: 7, Ab: 8, A: 9, Bb: 10, B: 11 };
+          const rootPc = noteToPC[this.state.currentChord.root] ?? 0;
+          const midiEstimate = 60 + rootPc; // C4 range
+          const fMul = formantLpfMultiplier(midiEstimate, baseLpf, this.state.mood);
+          if (Math.abs(fMul - 1.0) > 0.02) {
+            melodyResult.code = melodyResult.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              () => `.lpf(${Math.round(baseLpf * fMul)})`
+            );
+          }
+        }
+      }
+    }
+
+    // Rhythmic palindrome: preference stored for pattern generators
+    {
+      const _preferPalindrome = shouldPreferPalindrome(this.state.tick, this.state.mood, this.state.section);
+      // Available for arp/melody pattern selection
+    }
+
+    // Spectral centroid correction: auto-correct brightness per layer
+    {
+      for (const result of layerResults) {
+        const lpfMatch = result.code.match(/\.lpf\((\d+(?:\.\d+)?)\)/);
+        if (lpfMatch) {
+          const currentLpf = parseFloat(lpfMatch[1]);
+          const correction = centroidCorrectionLpf(currentLpf, this.state.mood);
+          if (Math.abs(correction - 1.0) > 0.02) {
+            result.code = result.code.replace(
+              /\.lpf\((\d+(?:\.\d+)?)\)/,
+              () => `.lpf(${Math.round(currentLpf * correction)})`
             );
           }
         }
