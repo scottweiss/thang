@@ -50,6 +50,8 @@ import { estimateCentroid, centroidDeviation, lpfCorrectionMultiplier, shouldCor
 import { layerActivity, accompanimentGainResponse, shouldFollowEnvelope, followingLayers } from '../theory/envelope-following';
 import { alignedFmh, shouldAlignOvertones } from '../theory/overtone-alignment';
 import { speakingLayer, conversationGainMultiplier, shouldApplyConversation } from '../theory/rhythmic-conversation';
+import { releasedEnergy, transferBoost, shouldTransferMomentum } from '../theory/momentum-transfer';
+import { combinedGain, dynamicRangeMultiplier, shouldApplyDynamicRange } from '../theory/dynamic-range';
 import { randomChoice } from './random';
 import { rollSurprise, applyOctaveLeap, applyRegisterShift, brightnessFlashMultiplier } from '../theory/surprise-events';
 import type { SurpriseType } from '../theory/surprise-events';
@@ -690,6 +692,32 @@ export class GenerativeController {
 
     if (layerResults.length === 0) return;
 
+    // Momentum transfer: boost entering layers with energy from fading layers
+    {
+      const targets: Record<string, number> = {};
+      for (const layer of this.layers) {
+        targets[layer.name] = this.state.activeLayers.has(layer.name) ? 1.0 : 0.0;
+      }
+      if (shouldTransferMomentum(this.state.layerGainMultipliers, targets, this.state.mood)) {
+        const released = releasedEnergy(this.state.layerGainMultipliers, targets);
+        for (const result of layerResults) {
+          const current = this.state.layerGainMultipliers[result.name] ?? 0;
+          const target = targets[result.name] ?? 0;
+          const boost = transferBoost(result.name, current, target, released, this.state.mood);
+          if (boost > 1.01) {
+            result.code = result.code.replace(
+              /\.gain\(([^)]+)\)/,
+              (_, expr) => {
+                const num = parseFloat(expr);
+                if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
+                return `.gain((${expr}) * ${boost.toFixed(4)})`;
+              }
+            );
+          }
+        }
+      }
+    }
+
     // Texture gradient: smooth density interpolation during section transitions
     if (shouldApplyGradient(this.state.sectionProgress ?? 0, this.state.sectionChanged, this.state.mood)) {
       const densityMult = gradientDensityMultiplier(
@@ -1146,6 +1174,33 @@ export class GenerativeController {
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${Math.round(parseFloat(val) * correction)})`
             );
+          }
+        }
+      }
+    }
+
+    // Dynamic range: soft-limit combined gain to prevent clipping/disappearing
+    {
+      const gains: number[] = [];
+      for (const result of layerResults) {
+        const match = result.code.match(/\.gain\(([0-9.]+)\)/);
+        if (match) gains.push(parseFloat(match[1]));
+      }
+      if (gains.length > 0) {
+        const total = combinedGain(gains);
+        if (shouldApplyDynamicRange(total, this.state.section)) {
+          const drMult = dynamicRangeMultiplier(total, this.state.mood, this.state.section);
+          if (Math.abs(drMult - 1.0) > 0.02) {
+            for (const result of layerResults) {
+              result.code = result.code.replace(
+                /\.gain\(([^)]+)\)/,
+                (_, expr) => {
+                  const num = parseFloat(expr);
+                  if (!isNaN(num)) return `.gain(${(num * drMult).toFixed(4)})`;
+                  return `.gain((${expr}) * ${drMult.toFixed(4)})`;
+                }
+              );
+            }
           }
         }
       }
