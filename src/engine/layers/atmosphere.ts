@@ -104,7 +104,7 @@ export class AtmosphereLayer extends CachingLayer {
       .gain(${(gain * 0.5).toFixed(4)})
       .hpf(${(3000 + brightness * 3000).toFixed(0)})
       .lpf(${(8000 + brightness * 4000).toFixed(0)})
-      .pan(sine.range(0.15, 0.85).slow(7))
+      .pan(sine.range(0.15, 0.85).slow(17))
       .delay(0.15)
       .delaytime(0.5)
       .delayfeedback(0.2)
