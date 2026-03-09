@@ -34,7 +34,7 @@ export function getVoicingRange(
   const sectionRanges: Record<Section, VoicingRange> = {
     intro:     { lowOctave: 3, highOctave: 4, spread: 0.3 },
     build:     { lowOctave: 3, highOctave: 4, spread: 0.5 },
-    peak:      { lowOctave: 2, highOctave: 5, spread: 0.9 },
+    peak:      { lowOctave: 3, highOctave: 5, spread: 0.9 },
     breakdown: { lowOctave: 3, highOctave: 4, spread: 0.2 },
     groove:    { lowOctave: 3, highOctave: 5, spread: 0.6 },
   };
@@ -67,7 +67,7 @@ export function applyVoicingSpread(
 
   // Parse note names and octaves
   const parsed = notes.map(n => {
-    const match = n.match(/^([A-G]#?)(\d)$/);
+    const match = n.match(/^([A-G](?:#|b)?)(\d)$/);
     if (!match) return { name: n, oct: 3 };
     return { name: match[1], oct: parseInt(match[2]) };
   });

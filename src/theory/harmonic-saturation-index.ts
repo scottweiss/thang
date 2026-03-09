@@ -68,9 +68,9 @@ export function complexitySaturation(
   mood: Mood
 ): number {
   const maxUseful = MAX_USEFUL_COMPLEXITY[mood];
-  if (complexity <= maxUseful * 0.8) return 0;
+  if (complexity <= maxUseful * 0.65) return 0;
   // Sigmoid-like ramp above threshold
-  const excess = (complexity - maxUseful * 0.8) / (maxUseful * 0.4);
+  const excess = (complexity - maxUseful * 0.65) / (maxUseful * 0.35);
   return Math.min(1, excess * excess);
 }
 

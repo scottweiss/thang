@@ -59,6 +59,13 @@ const TRANCE_PATTERNS_BUILD = [
   '~ ~ hh ~ ~ hh hh ~ ~ hh hh hh hh hh hh hh',        // building roll
 ];
 
+// Trance intro — kick from beat 1, iconic 4/4 entry
+const TRANCE_PATTERNS_INTRO = [
+  'bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~',     // four-on-floor kick only
+  'bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ hh ~',    // kick + trailing hat
+  'bd ~ hh ~ bd ~ ~ ~ bd ~ hh ~ bd ~ ~ ~',   // kick + sparse hats
+];
+
 // Trance breakdown — minimal
 const TRANCE_PATTERNS_BREAK = [
   '~ ~ ~ ~ cp ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~',        // just a clap
@@ -137,11 +144,11 @@ const BLOCKHEAD_VELOCITIES = [
 // Flim gentle glitchy beats — soft taps, light hats, delicate percussion
 // IDM finger-drumming: restrained, detailed, tender
 const FLIM_PATTERNS = [
-  '~ ~ hh ~ ~ ~ hh ~ ~ hh ~ ~ ~ ~ hh ~',       // sparse taps
-  'hh ~ ~ ~ ~ hh ~ ~ hh ~ ~ ~ ~ hh ~ ~',       // gentle rhythm
-  '~ ~ hh ~ hh ~ ~ ~ ~ ~ hh ~ ~ ~ ~ hh',       // delicate detail
-  '~ hh ~ ~ ~ ~ hh ~ ~ ~ ~ hh ~ ~ hh ~',       // quiet pulse
-  'hh ~ ~ hh ~ ~ ~ ~ hh ~ ~ ~ ~ hh ~ ~',       // subtle pattern
+  'bd ~ hh ~ ~ ~ hh ~ ~ hh ~ ~ sd ~ hh ~',     // gentle kick-snare frame
+  'hh ~ ~ ~ bd hh ~ ~ hh ~ ~ sd ~ hh ~ ~',     // off-grid kick placement
+  '~ ~ hh ~ hh ~ ~ bd ~ ~ hh ~ ~ ~ sd hh',     // late kick, late snare
+  'bd hh ~ ~ ~ ~ hh ~ sd ~ ~ hh ~ ~ hh ~',     // classic but quiet
+  'hh ~ bd hh ~ ~ ~ ~ hh ~ sd ~ ~ hh ~ ~',     // syncopated placement
 ];
 
 const FLIM_VELOCITIES = [
@@ -152,11 +159,11 @@ const FLIM_VELOCITIES = [
 // Disco patterns — kick on beats 1&3, clap on beats 2&4, hats on upbeats
 // 16 steps: 0,4,8,12 = beats 1,2,3,4; 2,6,10,14 = upbeats ("and")
 const DISCO_PATTERNS = [
-  'bd ~ hh ~ cp ~ hh ~ bd ~ hh ~ cp ~ hh ~',     // classic disco — clean
-  'bd ~ hh ~ cp ~ hh hh bd ~ hh ~ cp ~ hh hh',   // busy upbeat hats
-  'bd hh hh ~ cp ~ hh ~ bd hh hh ~ cp ~ hh ~',   // 16th hat run into clap
-  'bd ~ hh ~ cp hh hh ~ bd ~ hh ~ cp hh hh ~',   // hat flurry after clap
-  'bd ~ hh ~ cp ~ hh ~ bd ~ hh hh cp ~ hh hh',   // rolling ending
+  'bd ~ hh ~ [bd,cp] ~ hh ~ bd ~ hh ~ [bd,cp] ~ hh ~',     // classic four-on-the-floor
+  'bd hh hh ~ [bd,cp] hh hh hh bd hh hh ~ [bd,cp] hh hh hh', // busy 16th hats
+  'bd hh hh ~ [bd,cp] ~ hh ~ bd hh hh ~ [bd,cp] ~ hh ~',   // hat run into clap
+  'bd ~ hh ~ [bd,cp] hh hh ~ bd ~ hh ~ [bd,cp] hh hh ~',   // hat flurry after clap
+  'bd ~ hh ~ [bd,cp] ~ hh ~ bd ~ hh hh [bd,cp] ~ hh hh',   // rolling ending
 ];
 
 // Velocities aligned to beat structure: strong on 0,4,8,12; medium on hats; ghost on 16ths
@@ -212,8 +219,8 @@ export class TextureLayer extends CachingLayer {
           .slow(1)
           .gain(${fillGain.toFixed(3)})
           .lpf(${(2000 + brightness * 4000).toFixed(0)})
-          .room(${(room * 0.6).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
           .orbit(${this.orbit})`;
       }
     }
@@ -268,8 +275,8 @@ export class TextureLayer extends CachingLayer {
       .slow(3)
       .gain(${(gain * 0.4).toFixed(3)})
       .lpf(${(2500 + brightness * 3000).toFixed(0)})
-      .room(${room.toFixed(2)})
-      .roomsize(3)
+      .room(${(room * 0.4).toFixed(2)})
+      .roomsize(1.5)
       .orbit(${this.orbit})`;
   }
 
@@ -294,8 +301,8 @@ export class TextureLayer extends CachingLayer {
       .gain("${dtGainPattern}")
       .lpf(${(1800 + brightness * 3000).toFixed(0)})
       .pan(sine.range(0.3, 0.7).slow(11))
-      .room(${(room * 0.85).toFixed(2)})
-      .roomsize(3)
+      .room(${(room * 0.40).toFixed(2)})
+      .roomsize(1)
       .delay(0.2)
       .delaytime(0.375)
       .delayfeedback(0.15)
@@ -336,6 +343,8 @@ export class TextureLayer extends CachingLayer {
 
     switch (section) {
       case 'intro':
+        patterns = TRANCE_PATTERNS_INTRO;
+        break;
       case 'breakdown':
         patterns = TRANCE_PATTERNS_BREAK;
         break;
@@ -379,8 +388,8 @@ export class TextureLayer extends CachingLayer {
       .gain("${avrilGainPattern}")
       .hpf(${(4000 + brightness * 2000).toFixed(0)})
       .lpf(${(8000 + brightness * 3000).toFixed(0)})
-      .room(${(room * 0.8).toFixed(2)})
-      .roomsize(3)
+      .room(${(room * 0.25).toFixed(2)})
+      .roomsize(0.8)
       .orbit(${this.orbit})`;
   }
 
@@ -398,7 +407,7 @@ export class TextureLayer extends CachingLayer {
     }
     pattern = this.evolveForSection(pattern, section, tick);
 
-    // Xtal: warm, saturated breakbeats — heavy reverb, tape-like
+    // Xtal: warm, saturated breakbeats — moderate reverb for tape-like distance
     const xtalGainPattern = this.applyVelocity(gain * 0.7, randomChoice(XTAL_VELOCITIES));
     return `sound("${pattern}")
       .slow(2)
@@ -406,8 +415,8 @@ export class TextureLayer extends CachingLayer {
       .lpf(${(1200 + brightness * 1500).toFixed(0)})
       .hpf(60)
       .pan(sine.range(0.3, 0.7).slow(7))
-      .room(${(room * 1.0).toFixed(2)})
-      .roomsize(2.5)
+      .room(${(room * 0.45).toFixed(2)})
+      .roomsize(1.2)
       .delay(0.2)
       .delaytime(0.5)
       .delayfeedback(0.2)
@@ -462,8 +471,8 @@ export class TextureLayer extends CachingLayer {
       .lpf(${(1800 + brightness * 3000).toFixed(0)})
       .hpf(60)
       .pan(sine.range(0.35, 0.65).slow(13))
-      .room(${(room * 0.8).toFixed(2)})
-      .roomsize(2)
+      .room(${(room * 0.3).toFixed(2)})
+      .roomsize(0.8)
       .orbit(${this.orbit})`;
   }
 
@@ -475,18 +484,28 @@ export class TextureLayer extends CachingLayer {
 
     if (section === 'breakdown') {
       pattern = this.thinPattern(pattern, 0.3);
+    } else if (section === 'peak' || section === 'groove') {
+      // Densify: fill some rests with quiet hi-hat taps for intricate detail
+      const steps = pattern.split(' ');
+      for (let i = 0; i < steps.length; i++) {
+        if (steps[i] === '~' && Math.random() < 0.2) {
+          steps[i] = 'hh';
+        }
+      }
+      pattern = steps.join(' ');
     }
 
-    // Flim: soft, delicate, gentle — lots of reverb, quiet, detailed
+    // Flim: soft, delicate, clockwork — controlled reverb for intimate detail
+    // Lower HPF than before to let kicks/snares through while staying intimate
     const flimGainPattern = this.applyVelocity(gain, randomChoice(FLIM_VELOCITIES));
     return `sound("${pattern}")
       .slow(2)
       .gain("${flimGainPattern}")
-      .hpf(${(3000 + brightness * 2000).toFixed(0)})
-      .lpf(${(7000 + brightness * 4000).toFixed(0)})
+      .hpf(${(200 + brightness * 300).toFixed(0)})
+      .lpf(${(6000 + brightness * 4000).toFixed(0)})
       .pan(sine.range(0.25, 0.75).slow(17))
-      .room(${(room * 0.9).toFixed(2)})
-      .roomsize(3)
+      .room(${(room * 0.35).toFixed(2)})
+      .roomsize(1)
       .delay(0.15)
       .delaytime(0.5)
       .delayfeedback(0.2)
@@ -513,15 +532,15 @@ export class TextureLayer extends CachingLayer {
     }
     pattern = this.evolveForSection(pattern, section, tick);
 
-    // Disco: punchy, bright, tight — moderate reverb, open filter
+    // Disco: punchy, bright, tight — dry room for punch, open filter
     const discoGainPattern = this.applyVelocity(gain, randomChoice(DISCO_VELOCITIES));
     return `sound("${pattern}")
       .slow(1)
       .gain("${discoGainPattern}")
       .hpf(40)
       .lpf(${(4000 + brightness * 5000).toFixed(0)})
-      .room(${(room * 0.5).toFixed(2)})
-      .roomsize(1)
+      .room(${(room * 0.35).toFixed(2)})
+      .roomsize(0.6)
       .orbit(${this.orbit})`;
   }
 
@@ -581,7 +600,8 @@ export class TextureLayer extends CachingLayer {
     }).join(' ');
   }
 
-  // Evolve pattern based on section — builds add, breakdowns thin
+  // Evolve pattern based on section — builds add, breakdowns thin,
+  // peaks densify, grooves add micro-variation
   private evolveForSection(pattern: string, section: Section, _tick: number): string {
     const progress = this._sectionProgress;
     switch (section) {
@@ -589,6 +609,27 @@ export class TextureLayer extends CachingLayer {
         return evolveDrumPattern(pattern, progress, 'build', 0.6);
       case 'breakdown':
         return evolveDrumPattern(pattern, progress, 'thin', 0.5);
+      case 'peak': {
+        // Peak: densify rests with ghost hats — starts subtle, builds to climax
+        const fillProb = 0.08 + progress * 0.12; // 8% → 20%
+        const steps = pattern.split(' ');
+        for (let i = 0; i < steps.length; i++) {
+          if (steps[i] === '~' && Math.random() < fillProb) {
+            steps[i] = 'hh';
+          }
+        }
+        return steps.join(' ');
+      }
+      case 'groove': {
+        // Groove: occasional open hat swap for variation (prevents monotony)
+        const steps = pattern.split(' ');
+        for (let i = 0; i < steps.length; i++) {
+          if (steps[i] === 'hh' && Math.random() < 0.06) {
+            steps[i] = 'oh';
+          }
+        }
+        return steps.join(' ');
+      }
       default:
         return pattern;
     }

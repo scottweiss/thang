@@ -2,7 +2,7 @@ import { noteIndex } from './scales';
 
 // Parse "C#4" into { note, octave, midiApprox }
 function parseNote(noteStr: string): { name: string; octave: number; midi: number } {
-  const match = noteStr.match(/^([A-G]#?)(\d)$/);
+  const match = noteStr.match(/^([A-G](?:#|b)?)(\d)$/);
   if (!match) return { name: noteStr, octave: 3, midi: 60 };
   const name = match[1];
   const octave = parseInt(match[2]);

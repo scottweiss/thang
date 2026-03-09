@@ -65,15 +65,15 @@ describe('modulationSlowMult', () => {
 
 describe('modulationWindowTicks', () => {
   it('fast moods get shorter windows', () => {
-    expect(modulationWindowTicks('syro')).toBe(2);
+    expect(modulationWindowTicks('syro')).toBe(3);
   });
 
   it('slow moods get longer windows', () => {
     expect(modulationWindowTicks('ambient')).toBe(4);
   });
 
-  it('moderate moods get medium windows', () => {
-    expect(modulationWindowTicks('disco')).toBe(3);
+  it('groove-locked moods get longest windows', () => {
+    expect(modulationWindowTicks('disco')).toBe(4);
   });
 });
 
@@ -105,10 +105,10 @@ describe('modulationEnvelope', () => {
 
 describe('modulationTendency', () => {
   it('syro has highest tendency', () => {
-    expect(modulationTendency('syro')).toBe(0.35);
+    expect(modulationTendency('syro')).toBe(0.25);
   });
 
   it('ambient has lowest tendency', () => {
-    expect(modulationTendency('ambient')).toBe(0.03);
+    expect(modulationTendency('ambient')).toBe(0.0);
   });
 });

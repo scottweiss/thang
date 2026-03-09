@@ -14,16 +14,19 @@ describe('formPosition', () => {
     expect(formPosition({ ticksElapsed: 0, formLength: 100 })).toBe(0);
   });
 
-  it('returns 1 at end', () => {
-    expect(formPosition({ ticksElapsed: 100, formLength: 100 })).toBe(1);
+  it('wraps at end to start new cycle', () => {
+    expect(formPosition({ ticksElapsed: 100, formLength: 100 })).toBe(0);
+    // Just before end should be near 1
+    expect(formPosition({ ticksElapsed: 99, formLength: 100 })).toBeCloseTo(0.99);
   });
 
   it('returns 0.5 at midpoint', () => {
     expect(formPosition({ ticksElapsed: 50, formLength: 100 })).toBe(0.5);
   });
 
-  it('clamps to 1 beyond form length', () => {
-    expect(formPosition({ ticksElapsed: 200, formLength: 100 })).toBe(1);
+  it('cycles beyond form length', () => {
+    expect(formPosition({ ticksElapsed: 200, formLength: 100 })).toBe(0);
+    expect(formPosition({ ticksElapsed: 150, formLength: 100 })).toBe(0.5);
   });
 
   it('handles zero form length', () => {
@@ -100,7 +103,7 @@ describe('trajectoryGainMultiplier', () => {
   it('returns values in reasonable range', () => {
     for (let i = 0; i <= 100; i++) {
       const g = trajectoryGainMultiplier({ ticksElapsed: i, formLength: 100 });
-      expect(g).toBeGreaterThanOrEqual(0.8);
+      expect(g).toBeGreaterThanOrEqual(0.75);
       expect(g).toBeLessThanOrEqual(1.15);
     }
   });

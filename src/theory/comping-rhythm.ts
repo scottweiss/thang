@@ -74,9 +74,8 @@ export function pickCompingStyle(mood: Mood, section: Section): CompingStyle {
   const styles = MOOD_COMP_STYLES[mood];
   if (!styles || styles.length === 0) return 'sustained';
 
-  // Deterministic selection based on mood+section hash
-  const hash = (mood.length * 7 + section.length * 13) % styles.length;
-  return styles[hash];
+  // Random selection from mood's preferred styles
+  return styles[Math.floor(Math.random() * styles.length)];
 }
 
 /**

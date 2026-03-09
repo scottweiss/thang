@@ -64,10 +64,10 @@ export class EvolutionManager {
 
     if (timeSinceChord >= this.nextChordChange) {
       chordChange = true;
-      state.lastChordChange = state.elapsed;
-      this.chordChangeIndex++;
-      const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall, state.sectionProgress ?? 0, state.currentChord.degree, state.currentChord.quality);
-      this.nextChordChange = this.randomBetween(timing[0], timing[1]);
+      // Don't reset timer here — controller will call commitChordChange()
+      // only when the chord actually advances (inertia may block it).
+      // This ensures blocked changes retry next tick instead of
+      // waiting another full timer cycle.
     }
 
     if (timeSinceScale >= this.nextScaleChange) {
@@ -83,6 +83,17 @@ export class EvolutionManager {
     }
 
     return { chordChange, scaleChange };
+  }
+
+  /**
+   * Called by the controller when a chord change actually commits
+   * (i.e. not blocked by inertia). Resets the timer for next change.
+   */
+  commitChordChange(state: GenerativeState): void {
+    state.lastChordChange = state.elapsed;
+    this.chordChangeIndex++;
+    const timing = this.getEffectiveChordTiming(state.mood, state.section, state.tension?.overall, state.sectionProgress ?? 0, state.currentChord.degree, state.currentChord.quality);
+    this.nextChordChange = this.randomBetween(timing[0], timing[1]);
   }
 
   resetTimings(mood: Mood): void {

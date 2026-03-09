@@ -35,10 +35,13 @@ export type FormPhase = 'establishing' | 'rising' | 'climax' | 'denouement';
 
 /**
  * Get the current form position as 0-1.
+ * Cycles: after completing one arc, a new arc begins.
+ * The transition from denouement back to establishing
+ * creates a natural large-scale rhythm of tension and release.
  */
 export function formPosition(state: TrajectoryState): number {
   if (state.formLength <= 0) return 0.5;
-  return Math.min(1.0, state.ticksElapsed / state.formLength);
+  return (state.ticksElapsed % state.formLength) / state.formLength;
 }
 
 /**
@@ -94,8 +97,9 @@ export function tensionCeiling(state: TrajectoryState): number {
  */
 export function trajectoryGainMultiplier(state: TrajectoryState): number {
   const energy = energyEnvelope(state);
-  // Map energy 0-1 to gain multiplier 0.85-1.1
-  return 0.85 + energy * 0.25;
+  // Map energy 0-1 to gain multiplier 0.78-1.12
+  // ~3 dB range between establishing and climax for perceptible macro arc
+  return 0.78 + energy * 0.34;
 }
 
 /**

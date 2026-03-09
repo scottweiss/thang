@@ -14,6 +14,13 @@ import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, 
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 
+/** Safe multiply — prevents NaN cascade if regex captures non-numeric text */
+function safeMul(val: string, mult: number, decimals: number = 4): string {
+  const n = parseFloat(val);
+  if (isNaN(n) || isNaN(mult)) return val;
+  return (n * mult).toFixed(decimals);
+}
+
 // Section shapes the drone's presence — subtle in sparse sections, full in peak
 const SECTION_GAIN: Record<Section, number> = {
   intro: 0.8, build: 0.85, peak: 1.0, breakdown: 0.7, groove: 0.9,
@@ -38,13 +45,13 @@ export class DroneLayer implements Layer {
       if (Math.abs(rMult - 1.0) > 0.02) {
         result = result.replace(
           /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${(parseFloat(val) * rMult).toFixed(2)})`
+          (_match, val) => `.room(${safeMul(val, rMult, 2)})`
         );
       }
       if (Math.abs(sMult - 1.0) > 0.02) {
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+          (_match, val) => `.roomsize(${safeMul(val, sMult, 1)})`
         );
       }
     }
@@ -55,11 +62,11 @@ export class DroneLayer implements Layer {
       if (Math.abs(tsMult - 1.0) >= 0.03) {
         result = result.replace(
           /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${(parseFloat(val) * tsMult).toFixed(2)})`
+          (_match, val) => `.room(${safeMul(val, tsMult, 2)})`
         );
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${(parseFloat(val) * tsMult).toFixed(1)})`
+          (_match, val) => `.roomsize(${safeMul(val, tsMult, 1)})`
         );
       }
     }
@@ -70,7 +77,7 @@ export class DroneLayer implements Layer {
       if (Math.abs(resMult - 1.0) >= 0.03) {
         result = result.replace(
           /\.resonance\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.resonance(${Math.round(parseFloat(val) * resMult)})`
+          (_match, val) => `.resonance(${safeMul(val, resMult, 0)})`
         );
       }
     }
@@ -97,7 +104,7 @@ export class DroneLayer implements Layer {
       if (Math.abs(etRoomMult - 1.0) > 0.03) {
         result = result.replace(
           /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.room(${(parseFloat(val) * etRoomMult).toFixed(2)})`
+          (_, val) => `.room(${safeMul(val, etRoomMult, 2)})`
         );
       }
     }
@@ -251,15 +258,16 @@ export class DroneLayer implements Layer {
           .release(1.5)
           .slow(4)
           .gain(${(gain * 0.6).toFixed(3)})
-          .lpf(sine.range(${(150 + brightness * 150).toFixed(0)}, ${(300 + brightness * 400).toFixed(0)}).slow(11))
+          .lpf(sine.range(${(150 + brightness * 100).toFixed(0)}, ${(300 + brightness * 250).toFixed(0)}).slow(11))
           .pan(sine.range(0.3, 0.7).slow(13))
-          .room(${(room * 0.55).toFixed(2)})
-          .roomsize(2.5)
+          .room(${(room * 0.40).toFixed(2)})
+          .roomsize(1.8)
           .orbit(${this.orbit})`;
 
       case 'downtempo': {
         // Acoustic upright bass — warm, natural, pairs with Rhodes harmony
-        const dtBass = generateBassPattern(root, fifth, 'downtempo', 2, bassDir);
+        // 4-step at .slow(3) = ~2s per note at 90 BPM — walking half-note feel
+        const dtBass = generateBassPattern(root, fifth, 'downtempo', 4, bassDir);
         this.injectApproachNotes(dtBass, state, root, 2);
         return `note("${dtBass.join(' ')}")
           .sound("gm_acoustic_bass")
@@ -269,7 +277,7 @@ export class DroneLayer implements Layer {
           .release(0.3)
           .slow(3)
           .gain(${(gain * 1.1).toFixed(3)})
-          .lpf(sine.range(${(300 + brightness * 300).toFixed(0)}, ${(600 + brightness * 600).toFixed(0)}).slow(13))
+          .lpf(sine.range(${(300 + brightness * 200).toFixed(0)}, ${(600 + brightness * 300).toFixed(0)}).slow(13))
           .pan(sine.range(0.4, 0.6).slow(9))
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1.5)
@@ -288,7 +296,7 @@ export class DroneLayer implements Layer {
           .release(0.2)
           .slow(2)
           .gain(${(gain * 1.1).toFixed(3)})
-          .lpf(sine.range(${(400 + brightness * 300).toFixed(0)}, ${(700 + brightness * 600).toFixed(0)}).slow(7))
+          .lpf(sine.range(${(400 + brightness * 300).toFixed(0)}, ${(700 + brightness * 300).toFixed(0)}).slow(7))
           .pan(sine.range(0.4, 0.6).slow(19))
           .room(${(room * 0.2).toFixed(2)})
           .roomsize(1)
@@ -311,7 +319,7 @@ export class DroneLayer implements Layer {
           .release(0.1)
           .slow(1)
           .gain(${(gain * 1.1).toFixed(3)})
-          .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(700 + brightness * 1000).toFixed(0)}).slow(2))
+          .lpf(sine.range(${(300 + brightness * 300).toFixed(0)}, ${(600 + brightness * 300).toFixed(0)}).slow(2))
           .resonance(${(6 + brightness * 4).toFixed(0)})
           .detune(sine.range(-4, 4).slow(3))
           .pan(sine.range(0.35, 0.65).slow(11))
@@ -336,13 +344,13 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.4).toFixed(3)})
           .lpf(sine.range(${(120 + brightness * 100).toFixed(0)}, ${(250 + brightness * 200).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(15))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2.5)
+          .room(${(room * 0.25).toFixed(2)})
+          .roomsize(1)
           .orbit(${this.orbit})`;
 
       case 'xtal':
-        // Deep reverberant sub bass — sine with slow FM sweep, massive room
-        // SAW 85-92 style: warm, hazy, submerged
+        // Deep reverberant sub bass — sine with slow FM sweep
+        // SAW 85-92 style: warm, hazy, submerged (but controlled reverb to avoid mud)
         return `note("${root}1")
           .sound("sine")
           .fm(sine.range(${(0.3 + brightness * 0.2).toFixed(1)}, ${(0.8 + brightness * 0.5).toFixed(1)}).slow(23))
@@ -353,12 +361,12 @@ export class DroneLayer implements Layer {
           .decay(3)
           .sustain(0.25)
           .release(2)
-          .slow(5)
+          .slow(8)
           .gain(${(gain * 0.7).toFixed(3)})
           .lpf(sine.range(${(80 + brightness * 60).toFixed(0)}, ${(180 + brightness * 120).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(17))
-          .room(${(room * 0.6).toFixed(2)})
-          .roomsize(2.5)
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1.8)
           .orbit(${this.orbit})`;
 
       case 'syro': {
@@ -377,7 +385,7 @@ export class DroneLayer implements Layer {
           .release(0.05)
           .slow(1)
           .gain(${(gain * 1.0).toFixed(3)})
-          .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(800 + brightness * 1200).toFixed(0)}).slow(1.5))
+          .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(800 + brightness * 400).toFixed(0)}).slow(1.5))
           .resonance(${(8 + brightness * 4).toFixed(0)})
           .hpf(30)
           .detune(sine.range(-5, 5).slow(2))
@@ -389,17 +397,19 @@ export class DroneLayer implements Layer {
 
       case 'blockhead': {
         // Fingered electric bass — punchy, funky, pairs with organ harmony
+        // 8-step at .slow(1) to lock with 16-step drum grid
         const bhBass = generateBassPattern(root, fifth, 'blockhead', 4, bassDir);
-        this.injectApproachNotes(bhBass, state, root, 2);
-        return `note("${bhBass.join(' ')}")
+        const bhExpanded = [bhBass[0], '~', bhBass[1], bhBass[2], bhBass[3], '~', bhBass[0], '~'];
+        this.injectApproachNotes(bhExpanded, state, root, 2);
+        return `note("${bhExpanded.join(' ')}")
           .sound("gm_electric_bass_finger")
           .attack(0.005)
           .decay(0.4)
           .sustain(0.2)
           .release(0.15)
-          .slow(2)
+          .slow(1)
           .gain(${(gain * 1.2).toFixed(3)})
-          .lpf(sine.range(${(400 + brightness * 300).toFixed(0)}, ${(800 + brightness * 600).toFixed(0)}).slow(9))
+          .lpf(sine.range(${(400 + brightness * 300).toFixed(0)}, ${(800 + brightness * 300).toFixed(0)}).slow(9))
           .pan(sine.range(0.4, 0.6).slow(7))
           .room(${(room * 0.15).toFixed(2)})
           .roomsize(0.8)
@@ -423,7 +433,7 @@ export class DroneLayer implements Layer {
           .lpf(sine.range(${(100 + brightness * 80).toFixed(0)}, ${(220 + brightness * 180).toFixed(0)}).slow(21))
           .pan(sine.range(0.4, 0.6).slow(23))
           .room(${(room * 0.4).toFixed(2)})
-          .roomsize(2)
+          .roomsize(1.5)
           .orbit(${this.orbit})`;
 
       case 'disco': {
@@ -440,8 +450,8 @@ export class DroneLayer implements Layer {
           .sustain(0.12)
           .release(0.06)
           .slow(1)
-          .gain(${(gain * 1.3).toFixed(3)})
-          .lpf(sine.range(${(600 + brightness * 500).toFixed(0)}, ${(1400 + brightness * 1000).toFixed(0)}).slow(3))
+          .gain(${(gain * 1.1).toFixed(3)})
+          .lpf(sine.range(${(500 + brightness * 300).toFixed(0)}, ${(900 + brightness * 300).toFixed(0)}).slow(3))
           .hpf(30)
           .pan(sine.range(0.4, 0.6).slow(5))
           .room(${(room * 0.1).toFixed(2)})

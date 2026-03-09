@@ -115,7 +115,8 @@ const FORM_MATRICES: Record<Mood, TransitionMatrix> = {
 export function selectNextSection(
   mood: Mood,
   currentSection: Section,
-  cycleCount: number = 0
+  cycleCount: number = 0,
+  formPreference?: Partial<Record<Section, number>>
 ): Section {
   const matrix = FORM_MATRICES[mood] ?? FORM_MATRICES.downtempo;
   const weights = matrix[currentSection] ?? { build: 10 };
@@ -127,6 +128,11 @@ export function selectNextSection(
     // After first cycle, slightly boost adventurous transitions (self-repeats, skips)
     if (cycleCount > 0 && section === currentSection) {
       adjustedWeight *= 1.3;  // more likely to repeat sections in later cycles
+    }
+    // Form trajectory bias: macro arc shapes section choices
+    // (establishing favors intros, climax favors peaks, etc.)
+    if (formPreference?.[section] != null) {
+      adjustedWeight *= formPreference[section]!;
     }
     entries.push([section, adjustedWeight]);
   }

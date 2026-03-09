@@ -625,6 +625,13 @@ export class MelodyLayer extends CachingLayer {
     });
   }
 
+  /** Scale a pre-computed dynamic gain string by a multiplier */
+  private scaleDynamicGain(dynamicGain: string, multiplier: number): string {
+    return dynamicGain.split(' ')
+      .map(g => (parseFloat(g) * multiplier).toFixed(4))
+      .join(' ');
+  }
+
   private buildMoodPattern(
     mood: string, elements: string[], gain: number,
     dynamicGain: string, brightness: number, room: number,
@@ -645,13 +652,13 @@ export class MelodyLayer extends CachingLayer {
           .decay(0.8)
           .sustain(0.03)
           .release(0.6)
-          .slow(5)
-          .gain("${applyMelodicDynamics(gain * 0.7, elements)}")
+          .slow(6)
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.7)}")
           .hpf(300)
           .lpf(${(2500 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(7))
           .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2)
+          .roomsize(1.5)
           .delay(0.3)
           .delaytime(0.5)
           .delayfeedback(0.25)
@@ -670,15 +677,16 @@ export class MelodyLayer extends CachingLayer {
           .hpf(350)
           .lpf(${(3000 + brightness * 3500).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(5))
-          .room(${(room * 0.6).toFixed(2)})
-          .roomsize(1.5)
-          .delay(0.3)
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1)
+          .delay(0.2)
           .delaytime(0.334)
-          .delayfeedback(0.3)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'lofi':
         // Square pluck — retro/chiptune edge, distinct from triangle harmony
+        // Scaled to 0.75 so Rhodes chords sit more prominently (lofi = chords-forward mix)
         return `note("${elements.join(' ')}")
           .sound("square")
           .fm(0.5)
@@ -686,12 +694,12 @@ export class MelodyLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.06)
           .attack(0.001)
-          .decay(0.2)
-          .sustain(0.02)
-          .release(0.12)
+          .decay(0.4)
+          .sustain(0.03)
+          .release(0.2)
           .slow(3)
-          .gain("${dynamicGain}")
-          .hpf(500)
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.75)}")
+          .hpf(350)
           .lpf(${(1800 + brightness * 2500).toFixed(0)})
           .detune(sine.range(-2, 2).slow(3))
           .pan(sine.range(0.35, 0.65).slow(4))
@@ -710,24 +718,24 @@ export class MelodyLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.1)
           .attack(0.001)
-          .decay(0.2)
-          .sustain(0.05)
-          .release(0.1)
+          .decay(0.6)
+          .sustain(0.08)
+          .release(0.3)
           .slow(1)
           .gain("${dynamicGain}")
           .hpf(300)
           .lpf(${(3000 + brightness * 5000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(3))
-          .room(${(room * 0.4).toFixed(2)})
-          .roomsize(1.5)
-          .delay(0.3)
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.25)
           .delaytime(0.341)
-          .delayfeedback(0.35)
+          .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
       case 'avril':
-        // Piano melody — same instrument as harmony for solo piano feel (Avril 14th)
-        // Higher register + shorter decay distinguishes melody from harmony pads
+        // Acoustic piano melody over Rhodes harmony — Avril 14th intimacy
+        // Shorter decay than harmony's Rhodes for melodic articulation
         return `note("${elements.join(' ')}")
           .sound("gm_piano")
           .attack(0.003)
@@ -735,15 +743,15 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.5)
           .slow(4)
-          .gain("${applyMelodicDynamics(gain * 0.85, elements)}")
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.85)}")
           .hpf(300)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(7))
-          .room(${(room * 0.4).toFixed(2)})
-          .roomsize(2)
-          .delay(0.3)
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.2)
           .delaytime(0.462)
-          .delayfeedback(0.25)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'xtal':
@@ -755,12 +763,12 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.5)
           .slow(4)
-          .gain("${applyMelodicDynamics(gain * 0.65, elements)}")
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.65)}")
           .hpf(300)
           .lpf(${(2000 + brightness * 2000).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(9))
           .room(${(room * 0.4).toFixed(2)})
-          .roomsize(2)
+          .roomsize(1.5)
           .delay(0.3)
           .delaytime(0.428)
           .delayfeedback(0.2)
@@ -779,20 +787,21 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.02)
           .release(0.08)
           .slow(1)
-          .gain("${applyMelodicDynamics(gain * 0.8, elements)}")
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.8)}")
           .hpf(600)
           .lpf(${(3000 + brightness * 4000).toFixed(0)})
           .crush(${(10 + brightness * 3).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(1.5))
           .room(${(room * 0.25).toFixed(2)})
           .roomsize(1)
-          .delay(0.3)
+          .delay(0.2)
           .delaytime(0.144)
-          .delayfeedback(0.3)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'blockhead':
-        // Sawtooth lead — buzzy, cuts through square harmony, jazzy phrasing
+        // Sawtooth lead — buzzy, cuts through organ harmony, hip-hop phrasing
+        // .slow(2) for active melodic lines over .slow(1) drums/bass/arp
         return `note("${elements.join(' ')}")
           .sound("sawtooth")
           .fm(0.5)
@@ -803,16 +812,16 @@ export class MelodyLayer extends CachingLayer {
           .decay(0.3)
           .sustain(0.03)
           .release(0.2)
-          .slow(3)
-          .gain("${applyMelodicDynamics(gain * 0.85, elements)}")
+          .slow(2)
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.95)}")
           .hpf(400)
           .lpf(${(2800 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(5))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(1.5)
-          .delay(0.25)
+          .room(${(room * 0.35).toFixed(2)})
+          .roomsize(1)
+          .delay(0.2)
           .delaytime(0.33)
-          .delayfeedback(0.25)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'flim':
@@ -828,14 +837,14 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.01)
           .release(0.1)
           .slow(3)
-          .gain("${applyMelodicDynamics(gain * 0.75, elements)}")
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.75)}")
           .hpf(400)
           .lpf(${(3200 + brightness * 3500).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1.5)
           .delay(0.25)
-          .delaytime(0.469)
+          .delaytime(0.357)
           .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
@@ -848,15 +857,15 @@ export class MelodyLayer extends CachingLayer {
           .sustain(0.03)
           .release(0.1)
           .slow(1)
-          .gain("${applyMelodicDynamics(gain * 0.95, elements)}")
+          .gain("${this.scaleDynamicGain(dynamicGain, 0.95)}")
           .hpf(500)
           .lpf(${(3500 + brightness * 4000).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(3))
-          .room(${(room * 0.4).toFixed(2)})
-          .roomsize(1.5)
-          .delay(0.2)
+          .room(${(room * 0.25).toFixed(2)})
+          .roomsize(0.8)
+          .delay(0.15)
           .delaytime(0.25)
-          .delayfeedback(0.25)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       default:
@@ -868,6 +877,8 @@ export class MelodyLayer extends CachingLayer {
   private buildAmbientPhrase(state: GenerativeState, density: number): string[] {
     const penta = getPentatonicSubset(state.scale);
     const tension = state.tension?.overall ?? 0.3;
+    // Section density: peaks/grooves get more notes, intros/breakdowns stay sparse
+    const sectionMult = SECTION_MELODY[state.section].densityMult;
 
     // Build a sparse ladder across 2 octaves
     const ladder: string[] = [];
@@ -892,8 +903,9 @@ export class MelodyLayer extends CachingLayer {
     const elements: string[] = [];
     // Phrase continuity: start from where we left off
     let prevIdx = this.lastNoteName ? ladder.indexOf(this.lastNoteName) : -1;
+    const noteProb = density * 0.15 * (0.6 + sectionMult * 0.6);
     for (let i = 0; i < 16; i++) {
-      if (Math.random() < density * 0.15) {
+      if (Math.random() < noteProb) {
         const ctx: MelodicContext = {
           prevIndex: prevIdx,
           chordIndices,

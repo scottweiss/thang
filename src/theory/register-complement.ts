@@ -22,15 +22,15 @@ import type { Mood } from '../types';
 
 /** How strongly to enforce register complementarity (0-1) */
 const COMPLEMENT_STRENGTH: Record<Mood, number> = {
-  lofi:      0.55,   // jazz voice separation
-  downtempo: 0.45,   // smooth separation
-  avril:     0.40,   // intimate clarity
-  flim:      0.40,   // delicate counterpoint
-  blockhead: 0.35,   // hip-hop layering
-  disco:     0.35,   // funky separation
-  syro:      0.30,   // IDM — some crossing OK
-  xtal:      0.25,   // dreamy overlap OK
-  trance:    0.20,   // power — less separation needed
+  lofi:      0.75,   // jazz voice separation — clear counterpoint
+  downtempo: 0.55,   // smooth separation
+  avril:     0.50,   // intimate clarity
+  flim:      0.45,   // delicate counterpoint
+  blockhead: 0.55,   // hip-hop — arp must separate from melody
+  disco:     0.50,   // funky separation
+  syro:      0.35,   // IDM — some crossing OK
+  xtal:      0.30,   // dreamy overlap OK
+  trance:    0.25,   // power — less separation needed
   ambient:   0.10,   // floating — overlap fine
 };
 

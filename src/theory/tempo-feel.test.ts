@@ -64,18 +64,23 @@ describe('tempoFeelMultiplier', () => {
 });
 
 describe('shouldApplyTempoFeel', () => {
-  it('returns true for all moods', () => {
-    const moods = ['lofi', 'trance', 'ambient', 'syro', 'disco'] as const;
+  it('returns true for moods with depth >= 0.005', () => {
+    const moods = ['lofi', 'ambient', 'syro', 'blockhead'] as const;
     moods.forEach(m => expect(shouldApplyTempoFeel(m)).toBe(true));
+  });
+
+  it('returns false for moods with depth < 0.005', () => {
+    const moods = ['disco', 'trance'] as const;
+    moods.forEach(m => expect(shouldApplyTempoFeel(m)).toBe(false));
   });
 });
 
 describe('tempoFeelDepth', () => {
   it('lofi has highest depth', () => {
-    expect(tempoFeelDepth('lofi')).toBe(0.030);
+    expect(tempoFeelDepth('lofi')).toBe(0.020);
   });
 
   it('trance has lowest depth', () => {
-    expect(tempoFeelDepth('trance')).toBe(0.005);
+    expect(tempoFeelDepth('trance')).toBe(0.003);
   });
 });

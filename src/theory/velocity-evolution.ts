@@ -93,9 +93,9 @@ function peakVelocity(beatPhase: number, stepIndex: number, intensity: number): 
   // Deterministic pseudo-random humanization
   const humanize = ((stepIndex * 7 + 3) % 11) / 55; // 0 to ~0.18
 
-  if (isDownbeat) return 1.15 * intensity + humanize * 0.05;
-  if (isBackbeat) return 1.1 * intensity + humanize * 0.05;
-  return (0.85 + humanize * 0.1) * intensity;
+  if (isDownbeat) return 1.0 + 0.15 * intensity + humanize * 0.05;
+  if (isBackbeat) return 1.0 + 0.1 * intensity + humanize * 0.05;
+  return 1.0 + (-0.15 + humanize * 0.1) * intensity;
 }
 
 /**
@@ -123,9 +123,9 @@ function grooveVelocity(beatPhase: number, stepIndex: number, intensity: number)
   const humanize = ((stepIndex * 13 + 5) % 9) / 90; // tiny variation
 
   switch (beat) {
-    case 0: return 1.05 * intensity + humanize; // downbeat
-    case 2: return 1.0 * intensity + humanize;  // beat 3
-    default: return 0.9 * intensity + humanize; // off-beats
+    case 0: return 1.0 + 0.05 * intensity + humanize; // downbeat
+    case 2: return 1.0 + humanize;                     // beat 3
+    default: return 1.0 - 0.1 * intensity + humanize;  // off-beats
   }
 }
 

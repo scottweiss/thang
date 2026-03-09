@@ -51,14 +51,14 @@ const MOOD_MATRICES: Record<Mood, number[][]> = {
     [2, 2, 1, 2, 1, 2, 0],
   ],
   trance: [
-    // Energetic — strong I-V-vi-IV progressions
-    [1, 0, 0, 3, 3, 3, 0],
+    // Energetic — strong I-V-vi-IV, vii° for dramatic leading-tone resolution
+    [1, 0, 0, 3, 3, 3, 1],
     [2, 1, 1, 2, 2, 2, 0],
     [2, 1, 1, 2, 2, 2, 0],
     [2, 0, 0, 1, 4, 2, 0],
     [3, 0, 0, 2, 1, 3, 0],
     [3, 0, 0, 3, 2, 1, 0],
-    [3, 0, 0, 2, 2, 2, 0],
+    [5, 0, 0, 1, 1, 1, 0],
   ],
   avril: [
     // Gentle, intimate — favor I(0), IV(3), vi(5), ii(1) movement
@@ -112,14 +112,14 @@ const MOOD_MATRICES: Record<Mood, number[][]> = {
     [3, 1, 0, 2, 1, 2, 0],
   ],
   disco: [
-    // Funky — strong I-IV-V-vi, classic disco progressions
-    [1, 2, 0, 3, 3, 2, 0],
+    // Funky — strong I-IV-V-vi, vii° as passing diminished for funk tension
+    [1, 2, 0, 3, 3, 2, 1],
     [2, 1, 1, 2, 3, 2, 0],
     [2, 2, 1, 2, 2, 2, 0],
     [2, 1, 0, 1, 4, 2, 0],
     [3, 1, 0, 2, 1, 3, 0],
     [3, 1, 0, 3, 2, 1, 0],
-    [3, 1, 0, 2, 3, 1, 0],
+    [5, 1, 0, 1, 2, 1, 0],
   ],
 };
 
@@ -155,6 +155,12 @@ function buildSecondOrderMatrix(): number[][][] {
 
   // I(0) → vi(5) → prefer IV(3) or ii(1): I-vi-IV or I-vi-ii
   m[0][5] = [0, 3, 0, 5, 0, 0, 0];
+
+  // V(4) → vii°(6) → strongly I(0): leading-tone resolution
+  m[4][6] = [7, 0, 0, 1, 0, 1, 0];
+
+  // I(0) → vii°(6) → strongly I(0): passing diminished returns home
+  m[0][6] = [6, 0, 0, 1, 1, 1, 0];
 
   return m;
 }

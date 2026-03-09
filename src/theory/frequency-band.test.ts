@@ -32,7 +32,7 @@ describe('hpfBandOffset', () => {
     // Drone is only the 'b' side of the harmony-drone pair,
     // so it gets a smaller offset
     const offset = hpfBandOffset('drone', active);
-    expect(offset).toBeLessThanOrEqual(5);
+    expect(offset).toBeLessThanOrEqual(10);
   });
 
   it('returns 0 for layers with no competing pairs active', () => {

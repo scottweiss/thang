@@ -93,16 +93,16 @@ const MOOD_PEAK_POSITION: Record<Mood, number> = {
 };
 
 const MOOD_PEAK_PROBABILITY: Record<Mood, number> = {
-  ambient:   0.3,    // low — ambient is free-form
-  downtempo: 0.5,    // moderate
-  lofi:      0.6,    // frequent — jazzy phrasing
-  trance:    0.4,    // moderate
-  avril:     0.7,    // high — lyrical phrasing
-  xtal:      0.3,    // low — dreamy
-  syro:      0.2,    // low — chaotic is the point
-  blockhead: 0.5,    // moderate
-  flim:      0.5,    // moderate
-  disco:     0.4,    // moderate
+  ambient:   0.4,    // gentle — peak adds direction even in drifting melodies
+  downtempo: 0.6,    // moderate-high
+  lofi:      0.75,   // frequent — jazzy phrasing needs clear climax
+  trance:    0.55,   // moderate — melodic trance benefits from arc
+  avril:     0.8,    // high — lyrical phrasing demands peak placement
+  xtal:      0.45,   // moderate — dreamy but structured
+  syro:      0.3,    // low — chaotic is the point
+  blockhead: 0.6,    // moderate-high — hip-hop melody contour
+  flim:      0.6,    // moderate-high
+  disco:     0.55,   // moderate
 };
 
 /**

@@ -14,9 +14,9 @@ describe('findScaleNeighbor', () => {
     expect(neighbor).toBe('F3');
   });
 
-  it('finds upper neighbor for G3 in C major', () => {
+  it('finds scale neighbor for G3 in C major (A3 or F3)', () => {
     const neighbor = findScaleNeighbor('G3', cMajor);
-    expect(neighbor).toBe('A3');
+    expect(['A3', 'F3']).toContain(neighbor);
   });
 
   it('finds upper neighbor for B3 (crosses octave)', () => {
@@ -68,7 +68,7 @@ describe('voicingsToPattern', () => {
   it('wraps each voicing in brackets', () => {
     const voicings = [['C3', 'E3', 'G3'], ['C3', 'F3', 'G3']];
     const pattern = voicingsToPattern(voicings);
-    expect(pattern).toBe('[C3 E3 G3] [C3 F3 G3]');
+    expect(pattern).toBe('[C3,E3,G3] [C3,F3,G3]');
   });
 });
 

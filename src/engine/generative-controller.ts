@@ -401,6 +401,24 @@ function safeP(val: string, fallback: number = 1): number {
   const n = parseFloat(val);
   return isNaN(n) ? fallback : n;
 }
+/** Scale gain by multiplier — handles both static .gain(0.12) and dynamic .gain("0.12 0.08 ...") */
+function mulGain(code: string, mult: number): string {
+  return code.replace(/\.gain\(([^)]+)\)/g, (match, expr) => {
+    // Static: .gain(0.12)
+    const num = parseFloat(expr);
+    if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
+    // Dynamic: .gain("0.12 0.08 0.15 0.10")
+    const quoted = expr.match(/^"([^"]+)"$/);
+    if (quoted) {
+      const scaled = quoted[1].split(' ').map((v: string) => {
+        const n = parseFloat(v);
+        return isNaN(n) ? v : (n * mult).toFixed(4);
+      }).join(' ');
+      return `.gain("${scaled}")`;
+    }
+    return match;
+  });
+}
 
 // CPS ≈ BPM / 240 for 4-beat cycles
 const MOOD_TEMPOS: Record<Mood, number> = {
@@ -432,7 +450,11 @@ export class GenerativeController {
   private prevBassNote: import('../types').NoteName | null = null;
   private recentReharmCount = 0;
   private cadentialPlan: CadentialPlan | null = null;
+  /** Track consecutive same-degree selections for anti-repetition escalation */
+  private consecutiveSameDegree = 0;
+  private lastSelectedDegree = -1;
   private ticksSinceLastSurprise = 20; // start with cooldown expired
+  private sectionTickAge = 0; // ticks since last section change
   private arrivalActive = false;
   private tonalGravity = new TonalGravity('C', 'minor');
   private emotionalMemory = new EmotionalMemoryBank();
@@ -533,6 +555,8 @@ export class GenerativeController {
     this.tensionMemory.clear();
     this.emotionalMemory.clear();
     this.prevTension = 0.5;
+    this.consecutiveSameDegree = 0;
+    this.lastSelectedDegree = -1;
     this.tonalGravity.reset(this.state.scale.root, this.state.scale.type);
     this.formTrajectory = { ticksElapsed: 0, formLength: moodFormLength(mood) };
     this.state.section = 'intro';
@@ -566,9 +590,9 @@ export class GenerativeController {
   forceNextSection(): void {
     this.state.sectionChanged = true;
     // Trigger section advance by setting elapsed past duration
-    this.sections.forceAdvance(this.state);
+    this.sections.forceAdvance(this.state, this.formTrajectory);
     // Kick-start gain interpolation immediately so new layers aren't silent
-    this.sections.evolve(this.state, 0);
+    this.sections.evolve(this.state, 0, this.formTrajectory);
     this.rebuildAll();
     this.onStateChange?.(this.state);
   }
@@ -585,6 +609,9 @@ export class GenerativeController {
     this.state.scaleChanged = false;
     this.state.sectionChanged = false;
 
+    // Track ticks since last section change for transition accents
+    this.sectionTickAge++;
+
     if (scaleChange) {
       this.modulateScale();
       this.state.scaleChanged = true;
@@ -594,19 +621,13 @@ export class GenerativeController {
       // Harmonic inertia: resist chord change when voicing is settled
       let allowChange = true;
       if (shouldApplyInertia(this.state.mood, this.state.section)) {
-        const chordPcs = this.state.currentChord.notes
-          .map(n => {
-            const name = n.replace(/\d+$/, '');
-            const map: Record<string, number> = {
-              'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
-              'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
-              'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
-            };
-            return map[name];
-          })
-          .filter((pc): pc is number => pc !== undefined);
-        // Simple consonance estimate: more thirds/fifths = more consonant
-        const consonance = chordPcs.length >= 3 ? 0.7 : 0.4;
+        // Quality-aware consonance: stable chords resist change, unstable chords resolve
+        const qualityConsonance: Record<string, number> = {
+          maj: 0.85, min: 0.75, maj7: 0.70, min7: 0.65, sus2: 0.50,
+          sus4: 0.45, dom7: 0.35, dim: 0.25, aug: 0.30, add9: 0.60,
+          min9: 0.55,
+        };
+        const consonance = qualityConsonance[this.state.currentChord.quality] ?? 0.5;
         const inertia = harmonicInertia(
           consonance, this.state.ticksSinceChordChange,
           this.state.mood, this.state.section
@@ -621,18 +642,20 @@ export class GenerativeController {
       }
       if (allowChange) {
         this.advanceChord();
+        this.evolution.commitChordChange(this.state);
         this.state.chordChanged = true;
         this.state.ticksSinceChordChange = 0;
       }
     }
 
     // Evolve sections (steers density/brightness, manages transitions)
-    this.sections.evolve(this.state, dt);
+    this.sections.evolve(this.state, dt, this.formTrajectory);
     this.state.sectionProgress = this.sections.getSectionProgress();
 
     // Strategic silence: brief drop before climactic sections
     // Structural arrival: coordinated convergence at section landmarks
     if (this.state.sectionChanged) {
+      this.sectionTickAge = 0;
       this.cadentialPlan = null; // reset cadential plan for new section
       if (shouldInsertSilence(this.state.section, true, this.prevSection)) {
         this.silenceActive = true;
@@ -902,8 +925,56 @@ export class GenerativeController {
         );
         bias *= magneticPull(candidatePc, attractor, this.state.mood, this.state.section);
       }
+      // Anti-repetition: penalize current degree to prevent harmonic stagnation.
+      // The compound biases above can overwhelm the Markov chain, causing the
+      // same degree to be selected repeatedly. Penalty escalates with each
+      // consecutive same-degree selection (not just ticks — actual selections).
+      if (degree === currentDegree) {
+        const basePenalty: Record<string, number> = {
+          ambient: 0.6,    // gentle — repetition OK
+          avril: 0.45,     // moderate
+          xtal: 0.5,       // gentle
+          flim: 0.4,       // moderate
+          downtempo: 0.35, // wants movement
+          lofi: 0.3,       // jazz moves
+          blockhead: 0.3,  // hip-hop moves
+          trance: 0.35,    // needs progression
+          disco: 0.3,      // funky changes
+          syro: 0.2,       // IDM wants variety
+        };
+        const base = basePenalty[this.state.mood] ?? 0.35;
+        // Escalate: each consecutive same-degree halves the bias further
+        const escalation = Math.pow(0.5, this.consecutiveSameDegree);
+        bias *= base * escalation;
+      }
       return bias;
     });
+
+    // Bias ratio capping: prevent compound biases from creating extreme skew.
+    // Without this, 6+ bias layers each giving 1.2-1.5x to tonic compound to
+    // overwhelm the Markov chain (degree 0 gets 10x+ vs alternatives).
+    // Cap: max bias can be at most N times the median bias.
+    const sortedBiases = [...combinedBias].sort((a, b) => a - b);
+    const median = sortedBiases[Math.floor(sortedBiases.length / 2)];
+    const maxRatio: Record<string, number> = {
+      ambient: 6.0,    // allow more tonic dominance
+      avril: 5.0,
+      xtal: 5.5,
+      flim: 4.5,
+      downtempo: 4.0,
+      lofi: 3.5,       // jazz wants spread
+      blockhead: 3.5,
+      trance: 4.0,
+      disco: 3.5,
+      syro: 3.0,       // IDM wants max spread
+    };
+    const cap = median * (maxRatio[this.state.mood] ?? 4.0);
+    if (cap > 0) {
+      for (let i = 0; i < combinedBias.length; i++) {
+        if (combinedBias[i] > cap) combinedBias[i] = cap;
+      }
+    }
+
     let nextChord = cadentialTarget !== null
       ? this.progression.forceToDegree(cadentialTarget)
       : this.progression.next(combinedBias);
@@ -1029,7 +1100,7 @@ export class GenerativeController {
         shouldInsertApproachChord(this.state.currentChord.root, nextChord.root, this.state.mood, this.state.section)) {
       const appRoot = approachChordRoot(this.state.currentChord.root, nextChord.root);
       nextChord = {
-        symbol: `${appRoot}dim7`,
+        symbol: getChordSymbol(appRoot, 'dim'),
         root: appRoot,
         quality: 'dim',
         notes: approachChordNotes(appRoot, 3),
@@ -1068,6 +1139,14 @@ export class GenerativeController {
     }
     this.state.currentChord = nextChord;
     this.state.progressionIndex++;
+
+    // Track consecutive same-degree selections for anti-repetition
+    if (nextChord.degree === this.lastSelectedDegree) {
+      this.consecutiveSameDegree++;
+    } else {
+      this.consecutiveSameDegree = 0;
+    }
+    this.lastSelectedDegree = nextChord.degree;
 
     // Set hint for next chord (melody can use for anticipation)
     this.state.nextChordHint = this.progression.peekNext();
@@ -1117,14 +1196,7 @@ export class GenerativeController {
           const target = targets[result.name] ?? 0;
           const boost = transferBoost(result.name, current, target, released, this.state.mood);
           if (boost > 1.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, boost);
           }
         }
       }
@@ -1162,14 +1234,7 @@ export class GenerativeController {
       if (Math.abs(densityMult - 1.0) > 0.03) {
         for (const result of layerResults) {
           // Scale gain proportionally to density change (thinner = quieter)
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * densityMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, densityMult);
         }
       }
     }
@@ -1189,14 +1254,7 @@ export class GenerativeController {
         if (Math.abs(densityCorr - 1.0) > 0.05) {
           for (const result of layerResults) {
             if (result.name === 'drone' || result.name === 'atmosphere') continue;
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * densityCorr).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, densityCorr);
           }
         }
       }
@@ -1217,14 +1275,7 @@ export class GenerativeController {
           densities[result.name] ?? 0.5, otherDens, this.state.mood, this.state.section
         );
         if (hMult < 0.97) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * hMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, hMult);
         }
       }
     }
@@ -1237,28 +1288,14 @@ export class GenerativeController {
         const dimMult = 0.95;
         for (const result of layerResults) {
           if (result.name === 'drone') continue;
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * dimMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, dimMult);
         }
       } else if (loopReps === 1 && this.state.chordChanged) {
         // Re-engagement boost when chord just changed after long hold
         const boost = reengagementGain(1, this.state.mood);
         if (boost > 1.01) {
           for (const result of layerResults) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, boost);
           }
         }
       }
@@ -1302,14 +1339,7 @@ export class GenerativeController {
       const silenceMult = silenceGainMultiplier(this.ticksSinceSilence, 1);
       if (silenceMult < 1.0) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (match, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * silenceMult).toFixed(4)})`;
-              return match;
-            }
-          );
+          result.code = mulGain(result.code, silenceMult);
         }
       }
     }
@@ -1319,11 +1349,19 @@ export class GenerativeController {
       const gpMult = 0.01; // near-silent, not completely zero (avoids audio glitch)
       for (const result of layerResults) {
         result.code = result.code.replace(
-          /\.gain\(([0-9.]+)\)/,
-          (_, expr) => {
-            const num = parseFloat(expr);
+          /\.gain\(([^)]+)\)/,
+          (_, gainExpr) => {
+            const num = parseFloat(gainExpr);
             if (!isNaN(num)) return `.gain(${(num * gpMult).toFixed(4)})`;
-            return _;
+            // Handle quoted gain patterns: .gain("0.12 0.08 0.15 ...")
+            const quoted = gainExpr.match(/^"([^"]+)"$/);
+            if (quoted) {
+              const scaled = quoted[1].split(' ').map((v: string) => {
+                const n = parseFloat(v); return isNaN(n) ? v : (n * gpMult).toFixed(4);
+              }).join(' ');
+              return `.gain("${scaled}")`;
+            }
+            return `.gain(${gainExpr})`;
           }
         );
       }
@@ -1356,14 +1394,7 @@ export class GenerativeController {
     const trajGain = trajectoryGainMultiplier(this.formTrajectory);
     if (Math.abs(trajGain - 1.0) > 0.02) {
       for (const result of layerResults) {
-        result.code = result.code.replace(
-          /\.gain\(([0-9.]+)\)/,
-          (_, expr) => {
-            const num = parseFloat(expr);
-            if (!isNaN(num)) return `.gain(${(num * trajGain).toFixed(4)})`;
-            return _;
-          }
-        );
+        result.code = mulGain(result.code, trajGain);
       }
     }
 
@@ -1371,14 +1402,7 @@ export class GenerativeController {
     if (shouldApplyHeadroom(layerResults.length)) {
       const hrScalar = headroomScalar(layerResults.length);
       for (const result of layerResults) {
-        result.code = result.code.replace(
-          /\.gain\(([0-9.]+)\)/,
-          (_, expr) => {
-            const num = parseFloat(expr);
-            if (!isNaN(num)) return `.gain(${(num * hrScalar).toFixed(4)})`;
-            return _;
-          }
-        );
+        result.code = mulGain(result.code, hrScalar);
       }
     }
 
@@ -1388,19 +1412,12 @@ export class GenerativeController {
         this.state.section, this.state.sectionProgress ?? 0, this.state.mood
       );
       const transAccent = transitionDynamicAccent(
-        this.state.section, this.state.sectionChanged ? 0 : 3
+        this.state.section, this.sectionTickAge
       );
       const macroMult = macroGain * transAccent;
       if (Math.abs(macroMult - 1.0) > 0.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * macroMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, macroMult);
         }
       }
     }
@@ -1493,14 +1510,7 @@ export class GenerativeController {
         if (hasAttack) {
           const gainMult = punchGainMultiplier(this.state.mood, this.state.section, true);
           if (gainMult > 1.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, gainMult);
           }
         }
       }
@@ -1537,14 +1547,7 @@ export class GenerativeController {
             ? salienceGainBoost(maxSalience, this.state.mood)
             : backgroundGainReduction(maxSalience, this.state.mood);
           if (Math.abs(mult - 1.0) > 0.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, mult);
           }
         }
       }
@@ -1555,14 +1558,7 @@ export class GenerativeController {
       const boost = downbeatGainBoost(this.state.mood, this.state.section);
       if (boost > 1.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, boost);
         }
       }
     }
@@ -1578,14 +1574,7 @@ export class GenerativeController {
         const rBoost = cadentialReverbBoost(cadStr, this.state.mood);
         for (const result of layerResults) {
           if (gBoost > 1.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, gBoost);
           }
           if (rBoost > 1.01) {
             result.code = result.code.replace(
@@ -1606,14 +1595,7 @@ export class GenerativeController {
         const boost = noveltyGainBoost(0, this.state.mood);
         if (boost > 1.01) {
           for (const result of layerResults) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, boost);
           }
         }
       }
@@ -1637,14 +1619,7 @@ export class GenerativeController {
             );
           }
           if (gainMult > 1.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, gainMult);
           }
         }
       }
@@ -1669,8 +1644,8 @@ export class GenerativeController {
       const prevComplexity = harmonicComplexity(prevPcs);
       if (prevComplexity > complexity) {
         const impact = simplificationImpactBonus(prevComplexity, complexity, this.state.mood);
-        if (impact > 0.05) {
-          const brightMult = 1.0 + impact * 0.2;
+        if (impact > 0.02) {
+          const brightMult = 1.0 + impact * 0.5;
           for (const result of layerResults) {
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
@@ -1704,14 +1679,7 @@ export class GenerativeController {
       if (resBonus > 0.05) {
         const gainBoost = 1.0 + resBonus * 0.3;
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, gainBoost);
         }
       }
     }
@@ -1749,14 +1717,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const boost = arrivalGainBoost(result.name);
         if (boost > 1.0) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, boost);
         }
       }
       // Force melody to land on chord root for convergence
@@ -1797,14 +1758,7 @@ export class GenerativeController {
       if (pocketMult < 0.98) {
         for (const result of layerResults) {
           if (isPocketLayer(result.name)) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * pocketMult).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, pocketMult);
           }
         }
       }
@@ -1821,14 +1775,7 @@ export class GenerativeController {
           if (followers.includes(result.name)) {
             const followMult = accompanimentGainResponse(melodyAct, this.state.mood, this.state.section);
             if (Math.abs(followMult - 1.0) > 0.02) {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, expr) => {
-                  const num = parseFloat(expr);
-                  if (!isNaN(num)) return `.gain(${(num * followMult).toFixed(4)})`;
-                  return _;
-                }
-              );
+              result.code = mulGain(result.code, followMult);
             }
           }
         }
@@ -1846,14 +1793,7 @@ export class GenerativeController {
             if (result.name === 'melody') continue;
             const boost = overlapGainBoost(this.state.mood, this.state.section, true);
             if (boost > 1.01) {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, expr) => {
-                  const num = parseFloat(expr);
-                  if (!isNaN(num)) return `.gain(${(num * boost).toFixed(4)})`;
-                  return _;
-                }
-              );
+              result.code = mulGain(result.code, boost);
             }
           }
         }
@@ -1925,14 +1865,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const convMult = conversationGainMultiplier(result.name, speaker, this.state.mood);
         if (Math.abs(convMult - 1.0) > 0.01) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * convMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, convMult);
         }
       }
     }
@@ -1963,14 +1896,7 @@ export class GenerativeController {
         const harmNotes = noteMatch ? noteMatch[1].split(/\s+/).filter(n => n !== '~').length : 3;
         const drumBoost = harmonyToDrumGain(harmNotes, this.state.mood);
         if (drumBoost > 1.01) {
-          textureResult.code = textureResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * drumBoost).toFixed(4)})`;
-              return _;
-            }
-          );
+          textureResult.code = mulGain(textureResult.code, drumBoost);
         }
       }
     }
@@ -2004,21 +1930,14 @@ export class GenerativeController {
     if (shouldApplyClarity(this.state.mood, layerResults.length)) {
       const layerGains: Record<string, number> = {};
       for (const result of layerResults) {
-        const match = result.code.match(/\.gain\(([0-9.]+)\)/);
+        const match = result.code.match(/\.gain\(([0-9.]+)\)/) || result.code.match(/\.gain\("([0-9.]+)/);
         layerGains[result.name] = match ? parseFloat(match[1]) : 0.1;
       }
       const dominant = findDominantLayer(layerGains);
       for (const result of layerResults) {
         const gBoost = clarityGainBoost(result.name, dominant, this.state.mood);
         if (gBoost > 1.01) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * gBoost).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, gBoost);
         }
         const lBoost = clarityLpfBoost(result.name, dominant, this.state.mood);
         if (lBoost > 1.01) {
@@ -2059,14 +1978,7 @@ export class GenerativeController {
       const eGainMult = energyGainMultiplier(energy, this.state.mood);
       if (Math.abs(eGainMult - 1.0) > 0.02) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * eGainMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, eGainMult);
         }
       }
       this.prevEnergy = energy;
@@ -2077,14 +1989,7 @@ export class GenerativeController {
       const dwMult = densityWaveMultiplier(this.state.tick, this.state.mood, this.state.section);
       if (Math.abs(dwMult - 1.0) > 0.02) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * dwMult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, dwMult);
         }
       }
     }
@@ -2200,14 +2105,7 @@ export class GenerativeController {
       );
       if (Math.abs(swell - 1.0) > 0.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * swell).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, swell);
         }
       }
     }
@@ -2246,14 +2144,7 @@ export class GenerativeController {
           }
           const gCorr = bassGainCorrection(bassCount, this.state.mood, isMain);
           if (gCorr < 0.97) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gCorr).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, gCorr);
           }
         }
       }
@@ -2266,14 +2157,7 @@ export class GenerativeController {
         if (result.name === 'melody' || result.name === 'drone' || result.name === 'atmosphere') continue;
         const mult = independenceDensityMult(melodyPattern, 0, this.state.mood, this.state.section);
         if (mult < 0.97) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, mult);
         }
       }
     }
@@ -2286,14 +2170,7 @@ export class GenerativeController {
         const lpfCorr = densityLpfCorrection(total, this.state.mood);
         if (gainCorr < 0.97) {
           for (const result of layerResults) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gainCorr).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, gainCorr);
           }
         }
         if (lpfCorr < 0.97) {
@@ -2452,7 +2329,7 @@ export class GenerativeController {
     if (shouldApplyContinuation(this.state.mood, this.state.section)) {
       for (const result of layerResults) {
         if (result.name === 'drone' || result.name === 'atmosphere') continue;
-        const gainMatch = result.code.match(/\.gain\(([0-9.]+)\)/);
+        const gainMatch = result.code.match(/\.gain\(([0-9.]+)\)/) || result.code.match(/\.gain\("([0-9.]+)/);
         if (!gainMatch) continue;
         const currentGain = parseFloat(gainMatch[1]);
         // Track gain history for this layer
@@ -2539,14 +2416,7 @@ export class GenerativeController {
         if (gainMult < 0.97) {
           for (const result of layerResults) {
             if (result.name === 'drone') continue; // drone is foundational
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                return _;
-              }
-            );
+            result.code = mulGain(result.code, gainMult);
           }
         }
       }
@@ -2585,14 +2455,7 @@ export class GenerativeController {
         if (shouldApplySubsonicPulse(this.state.mood, this.state.section, drumActivity > 0.1)) {
           const gainBoost = subsonicGainBoost(drumActivity, this.state.mood, this.state.section);
           if (gainBoost > 1.01) {
-            droneResult.code = droneResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * gainBoost).toFixed(4)})`;
-                return _;
-              }
-            );
+            droneResult.code = mulGain(droneResult.code, gainBoost);
           }
           const roomBoost = subsonicRoomBoost(drumActivity, this.state.mood, this.state.section);
           if (roomBoost > 1.01) {
@@ -2639,14 +2502,7 @@ export class GenerativeController {
           if (secResult) {
             const gainMult = collisionGainReduction(severity, this.state.mood, false);
             if (gainMult < 0.99) {
-              secResult.code = secResult.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, expr) => {
-                  const num = parseFloat(expr);
-                  if (!isNaN(num)) return `.gain(${(num * gainMult).toFixed(4)})`;
-                  return _;
-                }
-              );
+              secResult.code = mulGain(secResult.code, gainMult);
             }
           }
         }
@@ -2667,14 +2523,7 @@ export class GenerativeController {
         ) * 1000;
         const fusionBoost = fusionGainBalance(gapMs, this.state.mood);
         if (fusionBoost > 1.01) {
-          arpResult.code = arpResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * fusionBoost).toFixed(4)})`;
-              return _;
-            }
-          );
+          arpResult.code = mulGain(arpResult.code, fusionBoost);
         }
       }
     }
@@ -2683,7 +2532,7 @@ export class GenerativeController {
     {
       const gains: number[] = [];
       for (const result of layerResults) {
-        const match = result.code.match(/\.gain\(([0-9.]+)\)/);
+        const match = result.code.match(/\.gain\(([0-9.]+)\)/) || result.code.match(/\.gain\("([0-9.]+)/);
         if (match) gains.push(parseFloat(match[1]));
       }
       if (gains.length > 0) {
@@ -2692,14 +2541,7 @@ export class GenerativeController {
           const drMult = dynamicRangeMultiplier(total, this.state.mood, this.state.section);
           if (Math.abs(drMult - 1.0) > 0.02) {
             for (const result of layerResults) {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, expr) => {
-                  const num = parseFloat(expr);
-                  if (!isNaN(num)) return `.gain(${(num * drMult).toFixed(4)})`;
-                  return _;
-                }
-              );
+              result.code = mulGain(result.code, drMult);
             }
           }
         }
@@ -2786,14 +2628,7 @@ export class GenerativeController {
           const avgTension = profile.reduce((a, b) => a + b, 0) / profile.length;
           const mult = tensionGainMultiplier(avgTension, this.state.mood);
           if (Math.abs(mult - 1.0) > 0.01) {
-            melodyResult.code = melodyResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, expr) => {
-                const num = parseFloat(expr);
-                if (!isNaN(num)) return `.gain(${(num * mult).toFixed(4)})`;
-                return _;
-              }
-            );
+            melodyResult.code = mulGain(melodyResult.code, mult);
           }
         }
       }
@@ -2805,14 +2640,7 @@ export class GenerativeController {
         const result = layerResults[i];
         const gJit = gainJitter(this.state.tick, i, this.state.mood, this.state.section);
         if (Math.abs(gJit - 1.0) > 0.005) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, expr) => {
-              const num = parseFloat(expr);
-              if (!isNaN(num)) return `.gain(${(num * gJit).toFixed(4)})`;
-              return _;
-            }
-          );
+          result.code = mulGain(result.code, gJit);
         }
         const fJit = fmJitter(this.state.tick, i, this.state.mood, this.state.section);
         if (Math.abs(fJit - 1.0) > 0.01) {
@@ -2863,10 +2691,7 @@ export class GenerativeController {
         const max = maxHarmonyVoices(this.state.mood, melodyActive);
         const penalty = densityGainPenalty(4, max, this.state.mood);
         if (penalty < 1.0) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, penalty, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, penalty);
         }
       }
     }
@@ -2878,10 +2703,7 @@ export class GenerativeController {
         const sustainMult = pedalSustainMultiplier(this.state.mood, this.state.section);
         const decayMult = pedalDecayMultiplier(this.state.mood);
         // Boost drone gain for sustain effect
-        droneResult.code = droneResult.code.replace(
-          /\.gain\(([0-9.]+)\)/,
-          (_, val) => `.gain(${safeMul(val, Math.min(sustainMult, 1.4), 4)})`
-        );
+        droneResult.code = mulGain(droneResult.code, Math.min(sustainMult, 1.4));
         // Extend room for pedal resonance
         droneResult.code = droneResult.code.replace(
           /\.room\(([0-9.]+)\)/,
@@ -2896,10 +2718,7 @@ export class GenerativeController {
       if (harmonyResult) {
         const decayMult = functionDecayMultiplier(this.state.currentChord.degree, this.state.mood);
         if (Math.abs(decayMult - 1.0) > 0.01) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, decayMult, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, decayMult);
         }
       }
     }
@@ -2957,10 +2776,7 @@ export class GenerativeController {
         // Apply as subtle gain modulation (wider spread = slightly louder for presence)
         if (Math.abs(spread - 1.0) > 0.02) {
           const gainMod = 1.0 + (spread - 1.0) * 0.3; // dampen effect on gain
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, gainMod, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, gainMod);
         }
       }
     }
@@ -2992,10 +2808,7 @@ export class GenerativeController {
         const center = activeCenters[i];
         const correction = registralGainCorrection(center, activeCenters, this.state.mood);
         if (Math.abs(correction - 1.0) > 0.01) {
-          layerResults[i].code = layerResults[i].code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, correction, 4)})`
-          );
+          layerResults[i].code = mulGain(layerResults[i].code, correction);
         }
       }
     }
@@ -3062,10 +2875,7 @@ export class GenerativeController {
         const freq = layerFreqs[result.name] ?? 400;
         const correction = perceptualGainCorrection(freq, this.state.mood);
         if (Math.abs(correction - 1.0) > 0.01) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, correction, 4)})`
-          );
+          result.code = mulGain(result.code, correction);
         }
       }
     }
@@ -3093,10 +2903,7 @@ export class GenerativeController {
       if (Math.abs(mGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, mGain, 4)})`
-            );
+            result.code = mulGain(result.code, mGain);
           }
         }
       }
@@ -3120,10 +2927,7 @@ export class GenerativeController {
         const arpResult = layerResults.find(r => r.name === 'arp');
         if (arpResult && this.state.activeMotif && this.state.activeMotif.length > 0) {
           // Boost arp gain slightly for doubling effect
-          arpResult.code = arpResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, 1.08, 4)})`
-          );
+          arpResult.code = mulGain(arpResult.code, 1.08);
         }
       }
     }
@@ -3177,10 +2981,7 @@ export class GenerativeController {
       if (Math.abs(aGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, aGain, 4)})`
-            );
+            result.code = mulGain(result.code, aGain);
           }
         }
       }
@@ -3205,10 +3006,7 @@ export class GenerativeController {
         if (boost > 1.01) {
           const harmonyResult = layerResults.find(r => r.name === 'harmony');
           if (harmonyResult) {
-            harmonyResult.code = harmonyResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, boost, 4)})`
-            );
+            harmonyResult.code = mulGain(harmonyResult.code, boost);
           }
         }
       }
@@ -3228,10 +3026,7 @@ export class GenerativeController {
       if (Math.abs(spread - 1.0) > 0.02) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, spread, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, spread);
         }
       }
     }
@@ -3253,10 +3048,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const corr = densityGradientCorrection(result.name, densities, this.state.mood);
         if (Math.abs(corr - 1.0) > 0.02) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, corr, 4)})`
-          );
+          result.code = mulGain(result.code, corr);
         }
       }
     }
@@ -3267,10 +3059,7 @@ export class GenerativeController {
         if (shouldHoldPreviousChord(result.name, this.state.ticksSinceChordChange, this.state.mood, this.state.section)) {
           // Layer should still be playing previous chord — reduce gain slightly
           // to smooth the transition rather than hard-holding
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, 0.95, 4)})`
-          );
+          result.code = mulGain(result.code, 0.95);
         }
       }
     }
@@ -3299,10 +3088,7 @@ export class GenerativeController {
         if (gBoost > 1.01) {
           for (const result of layerResults) {
             if (result.name === 'harmony') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, gBoost, 4)})`
-              );
+              result.code = mulGain(result.code, gBoost);
             }
           }
         }
@@ -3364,10 +3150,7 @@ export class GenerativeController {
         if (Math.abs(cGain - 1.0) > 0.01) {
           const melodyResult = layerResults.find(r => r.name === 'melody');
           if (melodyResult) {
-            melodyResult.code = melodyResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, cGain, 4)})`
-            );
+            melodyResult.code = mulGain(melodyResult.code, cGain);
           }
         }
       }
@@ -3419,10 +3202,7 @@ export class GenerativeController {
       if (durMul > 1.05) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, Math.min(durMul, 1.2), 4)})`
-            );
+            result.code = mulGain(result.code, Math.min(durMul, 1.2));
           }
         }
       }
@@ -3512,10 +3292,7 @@ export class GenerativeController {
       if (Math.abs(cWeight - 1.0) > 0.02) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, cWeight, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, cWeight);
         }
       }
     }
@@ -3527,10 +3304,7 @@ export class GenerativeController {
       if (Math.abs(microGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, microGain, 4)})`
-            );
+            result.code = mulGain(result.code, microGain);
           }
         }
       }
@@ -3600,10 +3374,7 @@ export class GenerativeController {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
           const boost = 1.0 + (alignment - 0.7) * 0.2;
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, boost, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, boost);
         }
       }
     }
@@ -3639,10 +3410,7 @@ export class GenerativeController {
       if (Math.abs(decayMul - 1.0) > 0.05) {
         const atmoResult = layerResults.find(r => r.name === 'atmosphere');
         if (atmoResult) {
-          atmoResult.code = atmoResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${(safeP(val) * Math.max(0.7, Math.min(1.3, decayMul))).toFixed(4)})`
-          );
+          atmoResult.code = mulGain(atmoResult.code, Math.max(0.7, Math.min(1.3, decayMul)));
         }
       }
     }
@@ -3657,10 +3425,7 @@ export class GenerativeController {
       if (gainRed < 0.99) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, gainRed, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, gainRed);
         }
       }
       if (lpfCorr < 0.99) {
@@ -3712,10 +3477,7 @@ export class GenerativeController {
       if (Math.abs(qaGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, qaGain, 4)})`
-            );
+            result.code = mulGain(result.code, qaGain);
           }
         }
       }
@@ -3724,15 +3486,12 @@ export class GenerativeController {
     // Dynamic compression: section-aware gain compression
     {
       for (const result of layerResults) {
-        const gainMatch = result.code.match(/\.gain\(([0-9.]+)\)/);
+        const gainMatch = result.code.match(/\.gain\(([0-9.]+)\)/) || result.code.match(/\.gain\("([0-9.]+)/);
         if (gainMatch) {
           const currentGain = parseFloat(gainMatch[1]);
           const compMul = compressionMultiplier(currentGain, this.state.mood, this.state.section);
           if (Math.abs(compMul - 1.0) > 0.02) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, compMul, 4)})`
-            );
+            result.code = mulGain(result.code, compMul);
           }
         }
       }
@@ -3756,10 +3515,7 @@ export class GenerativeController {
           const partnerDensity = densities[partner] ?? 0.5;
           const cGain = complementGain(densities[result.name] ?? 0.5, partnerDensity, this.state.mood, this.state.section);
           if (cGain > 1.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, cGain, 4)})`
-            );
+            result.code = mulGain(result.code, cGain);
           }
         }
       }
@@ -3771,10 +3527,7 @@ export class GenerativeController {
       if (susMul > 1.05) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, Math.min(susMul, 1.3), 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, Math.min(susMul, 1.3));
         }
       }
     }
@@ -3853,10 +3606,7 @@ export class GenerativeController {
       if (gainRed < 0.99) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, gainRed, 4)})`
-            );
+            result.code = mulGain(result.code, gainRed);
           }
         }
       }
@@ -3926,10 +3676,7 @@ export class GenerativeController {
       if (Math.abs(fGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, fGain, 4)})`
-            );
+            result.code = mulGain(result.code, fGain);
           }
         }
       }
@@ -3957,10 +3704,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const decayMul = articulationContrastDecay(result.name, activeNames, this.state.mood);
         if (Math.abs(decayMul - 1.0) > 0.02) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, decayMul, 4)})`
-          );
+          result.code = mulGain(result.code, decayMul);
         }
       }
     }
@@ -4012,10 +3756,7 @@ export class GenerativeController {
       if (rc < 0.85) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${(safeP(val) * (0.9 + rc * 0.1)).toFixed(4)})`
-            );
+            result.code = mulGain(result.code, 0.9 + rc * 0.1);
           }
         }
       }
@@ -4028,10 +3769,7 @@ export class GenerativeController {
       if (mpGain < 0.98) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'harmony') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, mpGain, 4)})`
-            );
+            result.code = mulGain(result.code, mpGain);
           }
         }
       }
@@ -4047,10 +3785,7 @@ export class GenerativeController {
       if (Math.abs(dwGain - 1.0) > 0.02) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, dwGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, dwGain);
         }
       }
     }
@@ -4063,10 +3798,7 @@ export class GenerativeController {
       if (seqGain > 1.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, seqGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, seqGain);
         }
       }
     }
@@ -4077,10 +3809,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const rGain = rotatedAccentGain(beatPos, result.name, this.state.mood);
         if (Math.abs(rGain - 1.0) > 0.02) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, rGain, 4)})`
-          );
+          result.code = mulGain(result.code, rGain);
         }
       }
     }
@@ -4093,10 +3822,7 @@ export class GenerativeController {
       if (Math.abs(gGain - 1.0) > 0.01) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, gGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, gGain);
         }
       }
     }
@@ -4113,10 +3839,7 @@ export class GenerativeController {
       if (Math.abs(aGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, aGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, aGain);
         }
       }
     }
@@ -4146,10 +3869,7 @@ export class GenerativeController {
       if (Math.abs(rGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'drone') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rGain, 4)})`
-            );
+            result.code = mulGain(result.code, rGain);
           }
         }
       }
@@ -4163,10 +3883,7 @@ export class GenerativeController {
       if (Math.abs(spGain - 1.0) > 0.02) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, spGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, spGain);
         }
       }
     }
@@ -4178,10 +3895,7 @@ export class GenerativeController {
       if (Math.abs(sGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, sGain, 4)})`
-            );
+            result.code = mulGain(result.code, sGain);
           }
         }
       }
@@ -4212,10 +3926,7 @@ export class GenerativeController {
       const mGain = momentumDriveGain([motion], this.state.mood);
       if (mGain > 1.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, Math.min(mGain, 1.06), 4)})`
-          );
+          result.code = mulGain(result.code, Math.min(mGain, 1.06));
         }
       }
     }
@@ -4279,10 +3990,7 @@ export class GenerativeController {
         else if (result.name === 'melody') layerMidi = rootMidi + 7;
         const tGain = tessituraGainCorrection(layerMidi, result.name, this.state.mood);
         if (Math.abs(tGain - 1.0) > 0.02) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, tGain, 4)})`
-          );
+          result.code = mulGain(result.code, tGain);
         }
       }
     }
@@ -4311,10 +4019,7 @@ export class GenerativeController {
         const boost = alignmentGainBoost(activeCount, activeCount, this.state.mood);
         if (boost > 1.01) {
           for (const result of layerResults) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, Math.min(boost, 1.08), 4)})`
-            );
+            result.code = mulGain(result.code, Math.min(boost, 1.08));
           }
         }
       }
@@ -4344,10 +4049,7 @@ export class GenerativeController {
       if (Math.abs(sGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, sGain, 4)})`
-            );
+            result.code = mulGain(result.code, sGain);
           }
         }
       }
@@ -4360,10 +4062,7 @@ export class GenerativeController {
       if (invGain < 0.99) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, invGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, invGain);
         }
       }
     }
@@ -4375,10 +4074,7 @@ export class GenerativeController {
       if (Math.abs(densityGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, densityGain, 4)})`
-            );
+            result.code = mulGain(result.code, densityGain);
           }
         }
       }
@@ -4413,10 +4109,7 @@ export class GenerativeController {
       if (edgeGain < 0.97) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, edgeGain, 4)})`
-            );
+            result.code = mulGain(result.code, edgeGain);
           }
         }
       }
@@ -4446,10 +4139,7 @@ export class GenerativeController {
       if (Math.abs(gGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, gGain, 4)})`
-            );
+            result.code = mulGain(result.code, gGain);
           }
         }
       }
@@ -4465,10 +4155,7 @@ export class GenerativeController {
       if (Math.abs(rmGain - 1.0) > 0.01) {
         const droneResult = layerResults.find(r => r.name === 'drone');
         if (droneResult) {
-          droneResult.code = droneResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, rmGain, 4)})`
-          );
+          droneResult.code = mulGain(droneResult.code, rmGain);
         }
       }
     }
@@ -4539,10 +4226,7 @@ export class GenerativeController {
         if (Math.abs(vGain - 1.0) > 0.01) {
           for (const result of layerResults) {
             if (result.name === 'melody') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, vGain, 4)})`
-              );
+              result.code = mulGain(result.code, vGain);
             }
           }
         }
@@ -4556,10 +4240,7 @@ export class GenerativeController {
       if (Math.abs(hGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, hGain, 4)})`
-            );
+            result.code = mulGain(result.code, hGain);
           }
         }
       }
@@ -4631,10 +4312,7 @@ export class GenerativeController {
       if (Math.abs(mGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, mGain, 4)})`
-            );
+            result.code = mulGain(result.code, mGain);
           }
         }
       }
@@ -4664,10 +4342,7 @@ export class GenerativeController {
       if (emphGain > 1.01) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, emphGain, 4)})`
-            );
+            result.code = mulGain(result.code, emphGain);
           }
         }
       }
@@ -4701,10 +4376,7 @@ export class GenerativeController {
       if (Math.abs(sw - 1.0) > 0.05) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, sw, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, sw);
         }
       }
     }
@@ -4718,10 +4390,7 @@ export class GenerativeController {
         const breathGain = 1.0 - restProb * 0.4;
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, breathGain, 4)})`
-            );
+            result.code = mulGain(result.code, breathGain);
           }
         }
       }
@@ -4737,10 +4406,7 @@ export class GenerativeController {
       if (Math.abs(mtGain - 1.0) > 0.01) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, mtGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, mtGain);
         }
       }
     }
@@ -4767,10 +4433,7 @@ export class GenerativeController {
       if (Math.abs(plGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, plGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, plGain);
         }
       }
     }
@@ -4789,10 +4452,7 @@ export class GenerativeController {
       if (Math.abs(ogGain - 1.0) > 0.01) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, ogGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, ogGain);
         }
       }
     }
@@ -4806,10 +4466,7 @@ export class GenerativeController {
       if (Math.abs(taGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, taGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, taGain);
         }
       }
     }
@@ -4821,10 +4478,7 @@ export class GenerativeController {
       if (Math.abs(glGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, glGain, 4)})`
-            );
+            result.code = mulGain(result.code, glGain);
           }
         }
       }
@@ -4838,10 +4492,7 @@ export class GenerativeController {
       if (stGain > 1.01) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, stGain, 4)})`
-            );
+            result.code = mulGain(result.code, stGain);
           }
         }
       }
@@ -4854,10 +4505,7 @@ export class GenerativeController {
       if (Math.abs(lpGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, lpGain, 4)})`
-            );
+            result.code = mulGain(result.code, lpGain);
           }
         }
       }
@@ -4902,10 +4550,7 @@ export class GenerativeController {
       if (Math.abs(rcGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, rcGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, rcGain);
         }
       }
     }
@@ -4917,10 +4562,7 @@ export class GenerativeController {
       if (Math.abs(gsGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, gsGain, 4)})`
-            );
+            result.code = mulGain(result.code, gsGain);
           }
         }
       }
@@ -4933,10 +4575,7 @@ export class GenerativeController {
       if (Math.abs(spGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, spGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, spGain);
         }
       }
     }
@@ -4961,10 +4600,7 @@ export class GenerativeController {
       const aeGain = arrivalEmphasisGain(this.state.sectionProgress ?? 0, this.state.mood);
       if (aeGain > 1.02) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, aeGain, 4)})`
-          );
+          result.code = mulGain(result.code, aeGain);
         }
       }
     }
@@ -4992,10 +4628,7 @@ export class GenerativeController {
       if (reGain > 1.02) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, reGain, 4)})`
-            );
+            result.code = mulGain(result.code, reGain);
           }
         }
       }
@@ -5006,10 +4639,7 @@ export class GenerativeController {
       const hrGain = headroomGain(this.state.mood, this.state.section);
       if (hrGain < 0.97) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, hrGain, 4)})`
-          );
+          result.code = mulGain(result.code, hrGain);
         }
       }
     }
@@ -5022,10 +4652,7 @@ export class GenerativeController {
       const efGain = expectationFulfillmentGain(prevPc5, curPc5, this.state.mood);
       if (efGain > 1.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, efGain, 4)})`
-          );
+          result.code = mulGain(result.code, efGain);
         }
       }
     }
@@ -5040,10 +4667,7 @@ export class GenerativeController {
       if (Math.abs(tbGain - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'atmosphere' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, tbGain, 4)})`
-            );
+            result.code = mulGain(result.code, tbGain);
           }
         }
       }
@@ -5057,10 +4681,7 @@ export class GenerativeController {
       if (Math.abs(vlGain - 1.0) > 0.01) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, vlGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, vlGain);
         }
       }
     }
@@ -5072,10 +4693,7 @@ export class GenerativeController {
           if (result.name !== other.name) {
             const maGain = maskingAvoidanceGain(result.name, other.name, this.state.mood);
             if (maGain < 0.97) {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, maGain, 4)})`
-              );
+              result.code = mulGain(result.code, maGain);
               break; // only apply worst masker
             }
           }
@@ -5090,10 +4708,7 @@ export class GenerativeController {
       if (Math.abs(apGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp' || result.name === 'drone') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, apGain, 4)})`
-            );
+            result.code = mulGain(result.code, apGain);
           }
         }
       }
@@ -5108,10 +4723,7 @@ export class GenerativeController {
       if (Math.abs(pbGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, pbGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, pbGain);
         }
       }
     }
@@ -5158,10 +4770,7 @@ export class GenerativeController {
       if (Math.abs(diGain - 1.0) > 0.02) {
         const arpResult = layerResults.find(r => r.name === 'arp');
         if (arpResult) {
-          arpResult.code = arpResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, diGain, 4)})`
-          );
+          arpResult.code = mulGain(arpResult.code, diGain);
         }
       }
     }
@@ -5175,10 +4784,7 @@ export class GenerativeController {
           const layerMidi = result.name === 'arp' ? melodyMidi + 12 : melodyMidi - 5;
           const rhGain = registerHandoffGain(layerMidi, melodyMidi, this.state.mood);
           if (Math.abs(rhGain - 1.0) > 0.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rhGain, 4)})`
-            );
+            result.code = mulGain(result.code, rhGain);
           }
         }
       }
@@ -5207,10 +4813,7 @@ export class GenerativeController {
       if (obGain < 0.98) {
         for (const result of layerResults) {
           if (result.name !== 'drone' && result.name !== 'atmosphere') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, obGain, 4)})`
-            );
+            result.code = mulGain(result.code, obGain);
           }
         }
       }
@@ -5224,10 +4827,7 @@ export class GenerativeController {
       const rmGain = resolutionMomentumGain(chordPc, tonicPc, this.state.mood);
       if (Math.abs(rmGain - 1.0) > 0.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, rmGain, 4)})`
-          );
+          result.code = mulGain(result.code, rmGain);
         }
       }
     }
@@ -5237,10 +4837,7 @@ export class GenerativeController {
       const dcGain = densityCouplingGain(layerResults.length, this.state.mood);
       if (Math.abs(dcGain - 1.0) > 0.01) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, dcGain, 4)})`
-          );
+          result.code = mulGain(result.code, dcGain);
         }
       }
     }
@@ -5253,10 +4850,7 @@ export class GenerativeController {
       if (dcGain2 < 0.98) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, dcGain2, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, dcGain2);
         }
       }
     }
@@ -5290,10 +4884,7 @@ export class GenerativeController {
       if (Math.abs(bgGain - 1.0) > 0.01) {
         const droneResult = layerResults.find(r => r.name === 'drone');
         if (droneResult) {
-          droneResult.code = droneResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, bgGain, 4)})`
-          );
+          droneResult.code = mulGain(droneResult.code, bgGain);
           if (Math.abs(bgDecay - 1.0) > 0.02) {
             droneResult.code = droneResult.code.replace(
               /\.decay\(([0-9.]+)\)/,
@@ -5312,10 +4903,7 @@ export class GenerativeController {
       if (Math.abs(psGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, psGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, psGain);
         }
       }
     }
@@ -5327,10 +4915,7 @@ export class GenerativeController {
       if (Math.abs(dbGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, dbGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, dbGain);
         }
       }
     }
@@ -5342,10 +4927,7 @@ export class GenerativeController {
       if (ctGain < 0.98) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, ctGain);
         }
       }
     }
@@ -5357,10 +4939,7 @@ export class GenerativeController {
       if (Math.abs(asGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, asGain, 4)})`
-            );
+            result.code = mulGain(result.code, asGain);
           }
         }
       }
@@ -5369,16 +4948,13 @@ export class GenerativeController {
     // Energy conservation: soft limiter on total system energy
     {
       const layerGains = layerResults.map(r => {
-        const match = r.code.match(/\.gain\(([0-9.]+)\)/);
+        const match = r.code.match(/\.gain\(([0-9.]+)\)/) || r.code.match(/\.gain\("([0-9.]+)/);
         return match ? parseFloat(match[1]) : 0.5;
       });
       const ecGain = energyConservationGain(layerGains, this.state.mood);
       if (ecGain < 0.98) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, ecGain, 4)})`
-          );
+          result.code = mulGain(result.code, ecGain);
         }
       }
     }
@@ -5392,10 +4968,7 @@ export class GenerativeController {
       if (raGain < 0.98) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, raGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, raGain);
         }
       }
     }
@@ -5410,10 +4983,7 @@ export class GenerativeController {
       if (Math.abs(vcGain - 1.0) > 0.01) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, vcGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, vcGain);
         }
       }
     }
@@ -5427,10 +4997,7 @@ export class GenerativeController {
       if (Math.abs(rsGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'drone' || result.name === 'harmony') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rsGain, 4)})`
-            );
+            result.code = mulGain(result.code, rsGain);
           }
         }
       }
@@ -5446,10 +5013,7 @@ export class GenerativeController {
       if (Math.abs(rvMult - 1.0) > 0.02) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rvMult, 4)})`
-            );
+            result.code = mulGain(result.code, rvMult);
           }
         }
       }
@@ -5479,10 +5043,7 @@ export class GenerativeController {
       if (Math.abs(trGain - 1.0) > 0.01) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, trGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, trGain);
         }
       }
     }
@@ -5493,10 +5054,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const owGain = orchestralWeightGain(result.name, activeNames, this.state.mood);
         if (Math.abs(owGain - 1.0) > 0.01) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, owGain, 4)})`
-          );
+          result.code = mulGain(result.code, owGain);
         }
       }
     }
@@ -5508,10 +5066,7 @@ export class GenerativeController {
       if (Math.abs(ctGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
-            );
+            result.code = mulGain(result.code, ctGain);
           }
         }
       }
@@ -5544,10 +5099,7 @@ export class GenerativeController {
         if (Math.abs(lpGain - 1.0) > 0.005) {
           const melodyResult = layerResults.find(r => r.name === 'melody');
           if (melodyResult) {
-            melodyResult.code = melodyResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, lpGain, 4)})`
-            );
+            melodyResult.code = mulGain(melodyResult.code, lpGain);
           }
         }
       }
@@ -5560,10 +5112,7 @@ export class GenerativeController {
       if (Math.abs(prGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, prGain, 4)})`
-            );
+            result.code = mulGain(result.code, prGain);
           }
         }
       }
@@ -5575,10 +5124,7 @@ export class GenerativeController {
       if (Math.abs(fwGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'drone') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, fwGain, 4)})`
-            );
+            result.code = mulGain(result.code, fwGain);
           }
         }
       }
@@ -5592,10 +5138,7 @@ export class GenerativeController {
       if (Math.abs(rfGain - 1.0) > 0.005) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, rfGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, rfGain);
         }
       }
     }
@@ -5606,10 +5149,7 @@ export class GenerativeController {
       const daGain = downbeatAnchorGain(beatPos, this.state.mood, this.state.section);
       if (Math.abs(daGain - 1.0) > 0.005) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, daGain, 4)})`
-          );
+          result.code = mulGain(result.code, daGain);
         }
       }
     }
@@ -5620,10 +5160,7 @@ export class GenerativeController {
       if (Math.abs(scGain - 1.0) > 0.005) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, scGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, scGain);
         }
       }
     }
@@ -5635,10 +5172,7 @@ export class GenerativeController {
       if (Math.abs(pcGain - 1.0) > 0.005) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, pcGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, pcGain);
         }
       }
     }
@@ -5651,10 +5185,7 @@ export class GenerativeController {
       if (Math.abs(gcGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, gcGain, 4)})`
-            );
+            result.code = mulGain(result.code, gcGain);
           }
         }
       }
@@ -5684,10 +5215,7 @@ export class GenerativeController {
       if (Math.abs(ceGain - 1.0) > 0.005) {
         const melodyResult = layerResults.find(r => r.name === 'melody');
         if (melodyResult) {
-          melodyResult.code = melodyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, ceGain, 4)})`
-          );
+          melodyResult.code = mulGain(melodyResult.code, ceGain);
         }
       }
     }
@@ -5700,10 +5228,7 @@ export class GenerativeController {
       if (Math.abs(srGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, srGain, 4)})`
-            );
+            result.code = mulGain(result.code, srGain);
           }
         }
       }
@@ -5717,10 +5242,7 @@ export class GenerativeController {
         if (Math.abs(ctgGain - 1.0) > 0.005) {
           const melodyResult = layerResults.find(r => r.name === 'melody');
           if (melodyResult) {
-            melodyResult.code = melodyResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ctgGain, 4)})`
-            );
+            melodyResult.code = mulGain(melodyResult.code, ctgGain);
           }
         }
       }
@@ -5731,10 +5253,7 @@ export class GenerativeController {
       const tmGain = transitionMomentumGain(this.state.sectionProgress ?? 0, this.state.mood, this.state.section);
       if (Math.abs(tmGain - 1.0) > 0.005) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, tmGain, 4)})`
-          );
+          result.code = mulGain(result.code, tmGain);
         }
       }
     }
@@ -5746,10 +5265,7 @@ export class GenerativeController {
       if (Math.abs(svGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, svGain, 4)})`
-            );
+            result.code = mulGain(result.code, svGain);
           }
         }
       }
@@ -5760,10 +5276,7 @@ export class GenerativeController {
       const dsGain = densitySaturationGain(layerResults.length, this.state.mood);
       if (Math.abs(dsGain - 1.0) > 0.005) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, dsGain, 4)})`
-          );
+          result.code = mulGain(result.code, dsGain);
         }
       }
     }
@@ -5774,10 +5287,7 @@ export class GenerativeController {
       if (droneResult) {
         const bwGain = bassWeightGain(this.state.scale.root, this.state.currentChord.root, this.state.mood);
         if (Math.abs(bwGain - 1.0) > 0.005) {
-          droneResult.code = droneResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, bwGain, 4)})`
-          );
+          droneResult.code = mulGain(droneResult.code, bwGain);
         }
       }
     }
@@ -5831,10 +5341,7 @@ export class GenerativeController {
         const trFm = tensionReleaseFm(tensionDrop, this.state.mood);
         for (const result of layerResults) {
           if (Math.abs(trGain - 1.0) > 0.005) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, trGain, 4)})`
-            );
+            result.code = mulGain(result.code, trGain);
           }
           if (Math.abs(trFm - 1.0) > 0.005) {
             result.code = result.code.replace(
@@ -5907,10 +5414,7 @@ export class GenerativeController {
       if (Math.abs(avGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, avGain, 4)})`
-            );
+            result.code = mulGain(result.code, avGain);
           }
         }
       }
@@ -5926,10 +5430,7 @@ export class GenerativeController {
           .map(r => centers[r.name] ?? 64);
         const gfGain = gapFillingGain(myCenter, otherCenters, this.state.mood);
         if (Math.abs(gfGain - 1.0) > 0.005) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, gfGain, 4)})`
-          );
+          result.code = mulGain(result.code, gfGain);
         }
       }
     }
@@ -5944,10 +5445,7 @@ export class GenerativeController {
       if (Math.abs(hiGain - 1.0) > 0.005) {
         const harmonyResult = layerResults.find(r => r.name === 'harmony');
         if (harmonyResult) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, hiGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, hiGain);
         }
       }
     }
@@ -5969,10 +5467,7 @@ export class GenerativeController {
           if (Math.abs(ivGain - 1.0) > 0.005) {
             const melodyResult = layerResults.find(r => r.name === 'melody');
             if (melodyResult) {
-              melodyResult.code = melodyResult.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, ivGain, 4)})`
-              );
+              melodyResult.code = mulGain(melodyResult.code, ivGain);
             }
           }
         }
@@ -6008,10 +5503,7 @@ export class GenerativeController {
         // Harmony is an inner voice (index 1 in the ensemble)
         const vbGain = voiceBalanceGain(1, Math.max(voiceCount, 3), this.state.mood);
         if (Math.abs(vbGain - 1.0) > 0.005) {
-          harmonyResult.code = harmonyResult.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, vbGain, 4)})`
-          );
+          harmonyResult.code = mulGain(harmonyResult.code, vbGain);
         }
       }
     }
@@ -6024,10 +5516,7 @@ export class GenerativeController {
       if (Math.abs(rrGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rrGain, 4)})`
-            );
+            result.code = mulGain(result.code, rrGain);
           }
         }
       }
@@ -6055,10 +5544,7 @@ export class GenerativeController {
         if (Math.abs(rwGain - 1.0) > 0.005) {
           const melodyResult = layerResults.find(r => r.name === 'melody');
           if (melodyResult) {
-            melodyResult.code = melodyResult.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rwGain, 4)})`
-            );
+            melodyResult.code = mulGain(melodyResult.code, rwGain);
           }
         }
       }
@@ -6071,10 +5557,7 @@ export class GenerativeController {
         const idx = layerIndexMap[result.name] ?? 0;
         const tdwGain = temporalDensityWaveGain(this.state.tick, idx, this.state.mood);
         if (Math.abs(tdwGain - 1.0) > 0.005) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, tdwGain, 4)})`
-          );
+          result.code = mulGain(result.code, tdwGain);
         }
       }
     }
@@ -6090,10 +5573,7 @@ export class GenerativeController {
           const distance = Math.abs(myPitch - otherPitch);
           const oaGain = overlapAvoidanceGain(result.name, other.name, distance, this.state.mood);
           if (Math.abs(oaGain - 1.0) > 0.01) {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, oaGain, 4)})`
-            );
+            result.code = mulGain(result.code, oaGain);
             break; // only apply once per layer
           }
         }
@@ -6122,10 +5602,7 @@ export class GenerativeController {
       if (Math.abs(pbGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, pbGain, 4)})`
-            );
+            result.code = mulGain(result.code, pbGain);
           }
         }
       }
@@ -6169,10 +5646,7 @@ export class GenerativeController {
       const secGain = sectionEnergyCurveGain(this.state.sectionProgress ?? 0, this.state.mood, this.state.section);
       if (Math.abs(secGain - 1.0) > 0.005) {
         for (const result of layerResults) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, secGain, 4)})`
-          );
+          result.code = mulGain(result.code, secGain);
         }
       }
     }
@@ -6184,10 +5658,7 @@ export class GenerativeController {
       if (Math.abs(paGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'harmony') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, paGain, 4)})`
-            );
+            result.code = mulGain(result.code, paGain);
           }
         }
       }
@@ -6218,10 +5689,7 @@ export class GenerativeController {
         const idx = layerIndexMap[result.name] ?? 0;
         const dbGain = densityBreathingGain(this.state.tick, idx, this.state.mood, this.state.section);
         if (Math.abs(dbGain - 1.0) > 0.005) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, dbGain, 4)})`
-          );
+          result.code = mulGain(result.code, dbGain);
         }
       }
     }
@@ -6248,10 +5716,7 @@ export class GenerativeController {
       if (Math.abs(mtGain - 1.0) > 0.005) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, mtGain, 4)})`
-            );
+            result.code = mulGain(result.code, mtGain);
           }
         }
       }
@@ -6283,10 +5748,7 @@ export class GenerativeController {
       if (Math.abs(rwGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'drone') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, rwGain, 4)})`
-            );
+            result.code = mulGain(result.code, rwGain);
           }
         }
       }
@@ -6299,10 +5761,7 @@ export class GenerativeController {
       if (Math.abs(bsGain - 1.0) > 0.01) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, bsGain, 4)})`
-            );
+            result.code = mulGain(result.code, bsGain);
           }
         }
       }
@@ -6331,10 +5790,7 @@ export class GenerativeController {
       if (cwGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, cwGain, 4)})`
-            );
+            result.code = mulGain(result.code, cwGain);
           }
         }
       }
@@ -6348,10 +5804,7 @@ export class GenerativeController {
       if (sdGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, sdGain, 4)})`
-            );
+            result.code = mulGain(result.code, sdGain);
           }
         }
       }
@@ -6365,10 +5818,7 @@ export class GenerativeController {
         const dsGain = displacementEmphasisGain(dsOffset, this.state.mood);
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, dsGain, 4)})`
-            );
+            result.code = mulGain(result.code, dsGain);
           }
         }
       }
@@ -6406,10 +5856,7 @@ export class GenerativeController {
       if (ctGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
-            );
+            result.code = mulGain(result.code, ctGain);
           }
         }
       }
@@ -6422,10 +5869,7 @@ export class GenerativeController {
       if (Math.abs(gpGain - 1.0) > 0.001) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, gpGain, 4)})`
-            );
+            result.code = mulGain(result.code, gpGain);
           }
         }
       }
@@ -6460,10 +5904,7 @@ export class GenerativeController {
       if (srGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, srGain, 4)})`
-            );
+            result.code = mulGain(result.code, srGain);
           }
         }
       }
@@ -6476,10 +5917,7 @@ export class GenerativeController {
       if (caGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, caGain, 4)})`
-            );
+            result.code = mulGain(result.code, caGain);
           }
         }
       }
@@ -6513,10 +5951,7 @@ export class GenerativeController {
       if (Math.abs(casGain - 1.0) > 0.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, casGain, 4)})`
-            );
+            result.code = mulGain(result.code, casGain);
           }
         }
       }
@@ -6529,10 +5964,7 @@ export class GenerativeController {
       if (paGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, paGain, 4)})`
-            );
+            result.code = mulGain(result.code, paGain);
           }
         }
       }
@@ -6565,10 +5997,7 @@ export class GenerativeController {
       if (ntGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ntGain, 4)})`
-            );
+            result.code = mulGain(result.code, ntGain);
           }
         }
       }
@@ -6581,10 +6010,7 @@ export class GenerativeController {
       if (hpGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, hpGain, 4)})`
-            );
+            result.code = mulGain(result.code, hpGain);
           }
         }
       }
@@ -6619,10 +6045,7 @@ export class GenerativeController {
       if (awGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, awGain, 4)})`
-            );
+            result.code = mulGain(result.code, awGain);
           }
         }
       }
@@ -6635,10 +6058,7 @@ export class GenerativeController {
       if (agGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, agGain, 4)})`
-            );
+            result.code = mulGain(result.code, agGain);
           }
         }
       }
@@ -6687,10 +6107,7 @@ export class GenerativeController {
       if (mmGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, mmGain, 4)})`
-            );
+            result.code = mulGain(result.code, mmGain);
           }
         }
       }
@@ -6702,10 +6119,7 @@ export class GenerativeController {
       if (tpGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, tpGain, 4)})`
-            );
+            result.code = mulGain(result.code, tpGain);
           }
         }
       }
@@ -6720,10 +6134,7 @@ export class GenerativeController {
       if (ptGain < 0.999) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ptGain, 4)})`
-            );
+            result.code = mulGain(result.code, ptGain);
           }
         }
       }
@@ -6736,10 +6147,7 @@ export class GenerativeController {
       if (caGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, caGain, 4)})`
-            );
+            result.code = mulGain(result.code, caGain);
           }
         }
       }
@@ -6755,10 +6163,7 @@ export class GenerativeController {
       for (const result of layerResults) {
         const mult = result.name === 'melody' ? vcMelody : result.name === 'harmony' ? vcHarmony : 1.0;
         if (mult < 0.999) {
-          result.code = result.code.replace(
-            /\.gain\(([0-9.]+)\)/,
-            (_, val) => `.gain(${safeMul(val, mult, 4)})`
-          );
+          result.code = mulGain(result.code, mult);
         }
       }
     }
@@ -6787,10 +6192,7 @@ export class GenerativeController {
       if (taGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, taGain, 4)})`
-            );
+            result.code = mulGain(result.code, taGain);
           }
         }
       }
@@ -6824,10 +6226,7 @@ export class GenerativeController {
       if (cfGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, cfGain, 4)})`
-            );
+            result.code = mulGain(result.code, cfGain);
           }
         }
       }
@@ -6840,10 +6239,7 @@ export class GenerativeController {
       if (spGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, spGain, 4)})`
-            );
+            result.code = mulGain(result.code, spGain);
           }
         }
       }
@@ -6876,10 +6272,7 @@ export class GenerativeController {
       if (atGain < 0.999) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, atGain, 4)})`
-            );
+            result.code = mulGain(result.code, atGain);
           }
         }
       }
@@ -6892,10 +6285,7 @@ export class GenerativeController {
       if (aeGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, aeGain, 4)})`
-            );
+            result.code = mulGain(result.code, aeGain);
           }
         }
       }
@@ -6915,10 +6305,7 @@ export class GenerativeController {
         if (rmGain > 1.001) {
           for (const result of layerResults) {
             if (result.name === 'harmony' || result.name === 'melody') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, rmGain, 4)})`
-              );
+              result.code = mulGain(result.code, rmGain);
             }
           }
         }
@@ -6931,10 +6318,7 @@ export class GenerativeController {
       if (grGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, grGain, 4)})`
-            );
+            result.code = mulGain(result.code, grGain);
           }
         }
       }
@@ -6947,10 +6331,7 @@ export class GenerativeController {
       if (itGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, itGain, 4)})`
-            );
+            result.code = mulGain(result.code, itGain);
           }
         }
       }
@@ -6994,10 +6375,7 @@ export class GenerativeController {
       if (stGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, stGain, 4)})`
-            );
+            result.code = mulGain(result.code, stGain);
           }
         }
       }
@@ -7010,10 +6388,7 @@ export class GenerativeController {
       if (tfGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, tfGain, 4)})`
-            );
+            result.code = mulGain(result.code, tfGain);
           }
         }
       }
@@ -7030,10 +6405,7 @@ export class GenerativeController {
         if (ctGain > 1.001) {
           for (const result of layerResults) {
             if (result.name === 'harmony' || result.name === 'drone') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, ctGain, 4)})`
-              );
+              result.code = mulGain(result.code, ctGain);
             }
           }
         }
@@ -7049,10 +6421,7 @@ export class GenerativeController {
         if (rrGain > 1.001) {
           for (const result of layerResults) {
             if (result.name === 'melody') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, rrGain, 4)})`
-              );
+              result.code = mulGain(result.code, rrGain);
             }
           }
         }
@@ -7069,10 +6438,7 @@ export class GenerativeController {
       if (aaGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody' || result.name === 'harmony') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, aaGain, 4)})`
-            );
+            result.code = mulGain(result.code, aaGain);
           }
         }
       }
@@ -7103,10 +6469,7 @@ export class GenerativeController {
       if (psGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, psGain, 4)})`
-            );
+            result.code = mulGain(result.code, psGain);
           }
         }
       }
@@ -7119,10 +6482,7 @@ export class GenerativeController {
       if (bsGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'texture') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, bsGain, 4)})`
-            );
+            result.code = mulGain(result.code, bsGain);
           }
         }
       }
@@ -7138,10 +6498,7 @@ export class GenerativeController {
       if (ppGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ppGain, 4)})`
-            );
+            result.code = mulGain(result.code, ppGain);
           }
         }
       }
@@ -7155,10 +6512,7 @@ export class GenerativeController {
         if (tcGain > 1.001) {
           for (const result of layerResults) {
             if (result.name === 'melody') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, tcGain, 4)})`
-              );
+              result.code = mulGain(result.code, tcGain);
             }
           }
         }
@@ -7188,10 +6542,7 @@ export class GenerativeController {
       if (prGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'harmony' || result.name === 'drone') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, prGain, 4)})`
-            );
+            result.code = mulGain(result.code, prGain);
           }
         }
       }
@@ -7208,10 +6559,7 @@ export class GenerativeController {
       if (ivGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, ivGain, 4)})`
-            );
+            result.code = mulGain(result.code, ivGain);
           }
         }
       }
@@ -7224,10 +6572,7 @@ export class GenerativeController {
       if (antGain > 1.001) {
         for (const result of layerResults) {
           if (result.name === 'arp' || result.name === 'melody') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, antGain, 4)})`
-            );
+            result.code = mulGain(result.code, antGain);
           }
         }
       }
@@ -7287,10 +6632,7 @@ export class GenerativeController {
       if (Math.abs(bbGain - 1) > 0.001) {
         for (const result of layerResults) {
           if (result.name === 'texture' || result.name === 'melody' || result.name === 'arp') {
-            result.code = result.code.replace(
-              /\.gain\(([0-9.]+)\)/,
-              (_, val) => `.gain(${safeMul(val, bbGain, 4)})`
-            );
+            result.code = mulGain(result.code, bbGain);
           }
         }
       }
@@ -7307,10 +6649,7 @@ export class GenerativeController {
         if (caGain > 1.001) {
           for (const result of layerResults) {
             if (result.name === 'melody') {
-              result.code = result.code.replace(
-                /\.gain\(([0-9.]+)\)/,
-                (_, val) => `.gain(${safeMul(val, caGain, 4)})`
-              );
+              result.code = mulGain(result.code, caGain);
             }
           }
         }
@@ -7450,12 +6789,18 @@ export class GenerativeController {
       }
       case 'brightness-flash': {
         const flashMult = brightnessFlashMultiplier();
-        // Apply to harmony and melody
+        // Apply to harmony and melody — handle both static lpf(N) and dynamic sine.range(N, N)
         for (const result of results) {
           if (result.name === 'harmony' || result.name === 'melody') {
+            // Static: .lpf(3500)
             result.code = result.code.replace(
               /\.lpf\((\d+(?:\.\d+)?)\)/,
               (_, val) => `.lpf(${safeMul(val, flashMult, 0)})`
+            );
+            // Dynamic: .lpf(sine.range(N, N).slow(K))
+            result.code = result.code.replace(
+              /\.lpf\(sine\.range\((\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\)/,
+              (_, lo, hi) => `.lpf(sine.range(${safeMul(lo, flashMult, 0)}, ${safeMul(hi, flashMult, 0)})`
             );
           }
         }
@@ -7479,6 +6824,31 @@ export class GenerativeController {
     if (/\bNaN\b/.test(code) || /\bundefined\b/.test(code)) {
       console.warn(`[${layerName}] NaN or undefined in generated code`);
       return false;
+    }
+    // Check for unbalanced brackets in note patterns (causes Strudel parse errors)
+    const noteMatch = code.match(/note\("([^"]*)"\)/g);
+    if (noteMatch) {
+      for (const nm of noteMatch) {
+        const inner = nm.slice(6, -2); // extract content between note(" and ")
+        let depth = 0;
+        for (const ch of inner) {
+          if (ch === '[') depth++;
+          else if (ch === ']') depth--;
+          if (depth < 0) {
+            console.warn(`[${layerName}] unbalanced ] in note pattern: ${inner.substring(0, 80)}`);
+            return false;
+          }
+        }
+        if (depth !== 0) {
+          console.warn(`[${layerName}] unbalanced [ in note pattern: ${inner.substring(0, 80)}`);
+          return false;
+        }
+        // Check for empty brackets [] which crash Strudel's parser
+        if (/\[\s*\]/.test(inner)) {
+          console.warn(`[${layerName}] empty brackets in note pattern`);
+          return false;
+        }
+      }
     }
     return true;
   }

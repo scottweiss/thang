@@ -76,7 +76,7 @@ export function ensembleBreathMultiplier(
   // Map curve (-slight to +swell) with depth scaling
   // breathCurve ranges roughly 0.1 to 1.0
   // We want gain to range from (1 - depth*0.08) to (1 + depth*0.10)
-  const multiplier = 1.0 + (breathCurve - 0.5) * depth * 0.18 * roleBoost;
+  const multiplier = 1.0 + (breathCurve - 0.5) * depth * 0.24 * roleBoost;
 
   return multiplier;
 }

@@ -41,7 +41,7 @@ export class AtmosphereLayer extends CachingLayer {
         return this.buildTranceAtmosphere(density, brightness, room, section, root);
 
       case 'avril':
-        return this.buildAvrilAtmosphere(density, brightness, room);
+        return this.buildAvrilAtmosphere(density, brightness, room, section);
 
       case 'xtal':
         return this.buildXtalAtmosphere(density, brightness, room, section, root);
@@ -61,15 +61,15 @@ export class AtmosphereLayer extends CachingLayer {
   }
 
   private buildAmbientAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
-    // Evolving noise wash — FM index creates breathy texture
+    // Evolving breathy texture — root3 sits above drone (root2) for clarity
     // Section controls the warmth and openness
     const sectionGain = { intro: 0.6, build: 0.8, peak: 1.0, breakdown: 0.7, groove: 0.9 }[section];
     const gain = 0.04 * (0.3 + density * 0.4) * sectionGain;
     // Peak sections open the filter wider
     const lpfBoost = section === 'peak' || section === 'groove' ? 200 : 0;
-    const lpf = 300 + brightness * 500 + lpfBoost;
+    const lpf = 600 + brightness * 800 + lpfBoost;
 
-    return `note("${root}1")
+    return `note("${root}3")
       .sound("sine")
       .fm(${(12 + brightness * 8).toFixed(0)})
       .fmh(0.5)
@@ -82,10 +82,10 @@ export class AtmosphereLayer extends CachingLayer {
       .slow(7)
       .gain(${gain.toFixed(4)})
       .lpf(sine.range(${(lpf * 0.7).toFixed(0)}, ${lpf.toFixed(0)}).slow(23))
-      .hpf(150)
+      .hpf(250)
       .pan(sine.range(0.2, 0.8).slow(19))
-      .room(${(room * 0.5).toFixed(2)})
-      .roomsize(3)
+      .room(${(room * 0.45).toFixed(2)})
+      .roomsize(2)
       .orbit(${this.orbit})`;
   }
 
@@ -136,9 +136,11 @@ export class AtmosphereLayer extends CachingLayer {
       .orbit(${this.orbit})`;
   }
 
-  private buildAvrilAtmosphere(density: number, brightness: number, room: number): string {
+  private buildAvrilAtmosphere(density: number, brightness: number, room: number, section: Section): string {
     // Very quiet tape hiss — sparse hh with heavy HPF, barely audible
-    const gain = 0.02 * (0.2 + density * 0.3);
+    // Section gain: quieter in intro/breakdown, slightly more present at peak
+    const sectionGain = { intro: 0.5, build: 0.7, peak: 1.0, breakdown: 0.6, groove: 0.8 }[section];
+    const gain = 0.02 * (0.2 + density * 0.3) * sectionGain;
 
     const hissSteps: string[] = [];
     for (let i = 0; i < 16; i++) {
@@ -151,35 +153,35 @@ export class AtmosphereLayer extends CachingLayer {
       .hpf(${(5000 + brightness * 2000).toFixed(0)})
       .lpf(${(9000 + brightness * 3000).toFixed(0)})
       .pan(sine.range(0.3, 0.7).slow(11))
-      .room(${(room * 0.5).toFixed(2)})
-      .roomsize(3)
+      .room(${(room * 0.40).toFixed(2)})
+      .roomsize(2)
       .orbit(${this.orbit})`;
   }
 
   private buildXtalAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
-    // Warm noise wash — vintage tape texture, slow breathing filter
-    // SAW 85-92: hazy, enveloping, like old cassette warmth
+    // Crystalline shimmer — triangle carrier with bright FM creates glass-like sparkle
+    // Distinct from ambient's warm sine wash: brighter, snappier, more responsive
     const sectionGain = { intro: 0.7, build: 0.85, peak: 1.0, breakdown: 0.75, groove: 0.9 }[section];
     const gain = 0.045 * (0.3 + density * 0.4) * sectionGain;
-    const lpf = 250 + brightness * 350;
+    const lpf = 900 + brightness * 1200;
 
-    return `note("${root}1")
-      .sound("sine")
-      .fm(${(10 + brightness * 6).toFixed(0)})
-      .fmh(0.5)
+    return `note("${root}4")
+      .sound("triangle")
+      .fm(${(6 + brightness * 4).toFixed(0)})
+      .fmh(3)
       .fmenv("exp")
-      .fmdecay(2.5)
-      .attack(3.5)
-      .decay(5)
-      .sustain(0.35)
-      .release(3)
+      .fmdecay(1)
+      .attack(1.5)
+      .decay(3)
+      .sustain(0.15)
+      .release(2)
       .slow(8)
       .gain(${gain.toFixed(4)})
       .lpf(sine.range(${(lpf * 0.6).toFixed(0)}, ${lpf.toFixed(0)}).slow(29))
-      .hpf(150)
-      .pan(sine.range(0.2, 0.8).slow(23))
-      .room(${(room * 0.5).toFixed(2)})
-      .roomsize(3)
+      .hpf(500)
+      .pan(sine.range(0.15, 0.85).slow(23))
+      .room(${(room * 0.6).toFixed(2)})
+      .roomsize(2)
       .orbit(${this.orbit})`;
   }
 
@@ -308,8 +310,8 @@ export class AtmosphereLayer extends CachingLayer {
     const gain = 0.06 * (0.3 + density * 0.4) * sectionGain;
 
     if (section === 'peak' || section === 'groove') {
-      // Lush disco string ensemble — classic disco strings
-      return `note("${root}2")
+      // Lush disco string ensemble — classic disco strings in violin register
+      return `note("${root}4")
         .sound("gm_string_ensemble_1")
         .attack(0.6)
         .decay(2)
@@ -317,15 +319,16 @@ export class AtmosphereLayer extends CachingLayer {
         .release(1)
         .slow(3)
         .gain(${gain.toFixed(4)})
-        .lpf(${(1000 + brightness * 1600).toFixed(0)})
+        .hpf(200)
+        .lpf(${(1200 + brightness * 2000).toFixed(0)})
         .pan(sine.range(0.2, 0.8).slow(7))
-        .room(${(room * 0.6).toFixed(2)})
-        .roomsize(3)
+        .room(${(room * 0.4).toFixed(2)})
+        .roomsize(1.5)
         .orbit(${this.orbit})`;
     }
 
-    // Intro/build/breakdown: gentler strings
-    return `note("${root}2")
+    // Intro/build/breakdown: gentler strings, slightly lower register
+    return `note("${root}3")
       .sound("gm_string_ensemble_1")
       .attack(1.2)
       .decay(3)
@@ -333,7 +336,8 @@ export class AtmosphereLayer extends CachingLayer {
       .release(1.5)
       .slow(5)
       .gain(${(gain * 0.5).toFixed(4)})
-      .lpf(${(500 + brightness * 800).toFixed(0)})
+      .hpf(200)
+      .lpf(${(600 + brightness * 1000).toFixed(0)})
       .pan(sine.range(0.3, 0.7).slow(11))
       .room(${(room * 0.5).toFixed(2)})
       .roomsize(2)
@@ -348,8 +352,8 @@ export class AtmosphereLayer extends CachingLayer {
     const gain = 0.05 * (0.3 + density * 0.5);
 
     if (section === 'build') {
-      // Rising filter sweep — LPF opens over time (via slow sine)
-      return `note("${root}1")
+      // Rising filter sweep — sits above bass (root3), avoids sub-bass mud
+      return `note("${root}3")
         .sound("sawtooth")
         .fm(${(15 + brightness * 10).toFixed(0)})
         .fmh(0.25)
@@ -361,8 +365,8 @@ export class AtmosphereLayer extends CachingLayer {
         .release(0.5)
         .slow(4)
         .gain(${(gain * 0.8).toFixed(4)})
-        .lpf(sine.range(${(200 + brightness * 300).toFixed(0)}, ${(1500 + brightness * 2000).toFixed(0)}).slow(8))
-        .hpf(120)
+        .lpf(sine.range(${(800 + brightness * 600).toFixed(0)}, ${(3000 + brightness * 3000).toFixed(0)}).slow(8))
+        .hpf(300)
         .resonance(8)
         .pan(sine.range(0.3, 0.7).slow(6))
         .room(${(room * 0.4).toFixed(2)})
@@ -371,8 +375,8 @@ export class AtmosphereLayer extends CachingLayer {
     }
 
     if (section === 'peak' || section === 'groove') {
-      // High energy noise wash — open filter, wider
-      return `note("${root}1")
+      // High energy wash — root3, above bass, airy presence
+      return `note("${root}3")
         .sound("sawtooth")
         .fm(${(18 + brightness * 8).toFixed(0)})
         .fmh(0.5)
@@ -384,8 +388,8 @@ export class AtmosphereLayer extends CachingLayer {
         .release(0.3)
         .slow(2)
         .gain(${gain.toFixed(4)})
-        .lpf(${(800 + brightness * 2000).toFixed(0)})
-        .hpf(120)
+        .lpf(${(2000 + brightness * 3000).toFixed(0)})
+        .hpf(300)
         .resonance(6)
         .pan(sine.range(0.25, 0.75).slow(5))
         .room(${(room * 0.35).toFixed(2)})
@@ -409,8 +413,8 @@ export class AtmosphereLayer extends CachingLayer {
       .lpf(${(200 + brightness * 400).toFixed(0)})
       .hpf(120)
       .pan(sine.range(0.3, 0.7).slow(11))
-      .room(${(room * 0.5).toFixed(2)})
-      .roomsize(2.5)
+      .room(${(room * 0.40).toFixed(2)})
+      .roomsize(1.8)
       .orbit(${this.orbit})`;
   }
 }

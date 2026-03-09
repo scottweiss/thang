@@ -80,7 +80,7 @@ describe('shouldApplyRegisterComplement', () => {
 
 describe('registerComplementStrength', () => {
   it('lofi has strong complement', () => {
-    expect(registerComplementStrength('lofi')).toBe(0.55);
+    expect(registerComplementStrength('lofi')).toBe(0.75);
   });
 
   it('ambient has weak complement', () => {

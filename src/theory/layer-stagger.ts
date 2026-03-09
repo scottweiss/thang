@@ -36,8 +36,18 @@ export function layerFadeInRate(layerName: string): number {
 
 /**
  * Get the fade-out step size for a layer.
- * Uniform fade-out for clean transitions.
+ * Reverse stagger — melody exits first, drums hold the groove longest.
+ * This creates a "peeling away" effect where the arrangement thins
+ * from the top down, mirroring how a real mix operator would pull faders.
  */
-export function layerFadeOutRate(_layerName: string): number {
-  return 0.5; // all layers exit at the same speed
+export function layerFadeOutRate(layerName: string): number {
+  switch (layerName) {
+    case 'melody':      return 0.55;  // melody exits first — the reveal unwound
+    case 'arp':         return 0.45;  // arpeggio follows melody out
+    case 'harmony':     return 0.40;  // chords thin next
+    case 'atmosphere':  return 0.35;  // texture fades
+    case 'drone':       return 0.30;  // bass holds longer — grounds the transition
+    case 'texture':     return 0.25;  // drums last out — holds groove through change
+    default:            return 0.40;
+  }
 }

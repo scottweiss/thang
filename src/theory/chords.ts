@@ -135,7 +135,7 @@ export function getChordSymbol(root: NoteName, quality: ChordQuality): string {
   // Strudel voicing() uses jazz symbols: ^7 = maj7, m7, 7 = dom7
   const qualityStr: Record<ChordQuality, string> = {
     maj: '', min: 'm', maj7: '^7', min7: 'm7', dom7: '7',
-    sus2: 'sus2', sus4: 'sus4', dim: 'm', aug: '',
+    sus2: 'sus2', sus4: 'sus4', dim: 'o', aug: '+',
     add9: 'add9', min9: 'm9',
   };
   return `${root}${qualityStr[quality]}`;

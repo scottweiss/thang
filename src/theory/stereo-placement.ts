@@ -69,10 +69,10 @@ export function shouldApplyStereoPlacement(mood: Mood): boolean {
 const LAYER_PAN_OFFSET: Record<string, number> = {
   drone:      0.00,    // center — bass frequencies
   harmony:   -0.12,    // slightly left
-  melody:     0.05,    // slightly right of center (main voice)
+  melody:     0.08,    // right of center (main voice, separated from drone/texture)
   texture:    0.00,    // center — rhythmic anchor
   arp:        0.15,    // right — opposite harmony
-  atmosphere: 0.00,    // center (already has wide pan wobble)
+  atmosphere: -0.06,   // slight left — balances melody's right offset
 };
 
 /** How much the per-layer offsets are applied per mood (0 = mono, 1 = full spread) */

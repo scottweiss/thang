@@ -58,6 +58,20 @@ import { selectApproachType, approachOffset, shouldApplyApproach } from '../../t
 import { shouldHoldPedal } from '../../theory/harmonic-pedal-tone';
 import { shouldApplyEllipsis, selectOmission, applyEllipsis } from '../../theory/harmonic-ellipsis';
 
+/** Safe multiply — prevents NaN cascade if regex captures non-numeric text */
+function safeMul(val: string, mult: number, decimals: number = 4): string {
+  const n = parseFloat(val);
+  if (isNaN(n) || isNaN(mult)) return val;
+  return (n * mult).toFixed(decimals);
+}
+
+/** Safe add — prevents NaN cascade for additive offsets */
+function safeAdd(val: string, offset: number, decimals: number = 0): string {
+  const n = parseFloat(val);
+  if (isNaN(n) || isNaN(offset)) return val;
+  return (n + offset).toFixed(decimals);
+}
+
 // Section shapes harmony presence — exposed in breakdown, full in peak
 const SECTION_GAIN: Record<Section, number> = {
   intro: 0.5, build: 0.8, peak: 1.0, breakdown: 0.65, groove: 0.9,
@@ -116,7 +130,7 @@ export class HarmonyLayer implements Layer {
       if (mult < 0.98) {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
+          (_match, val) => `.lpf(${safeMul(val, mult, 0)})`
         );
       }
     }
@@ -127,7 +141,7 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(tbMult - 1.0) >= 0.03) {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.lpf(${Math.round(parseFloat(val) * tbMult)})`
+          (_match, val) => `.lpf(${safeMul(val, tbMult, 0)})`
         );
       }
     }
@@ -139,7 +153,7 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(brightMult - 1.0) > 0.01) {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.lpf(${Math.round(parseFloat(val) * brightMult)})`
+          (_, val) => `.lpf(${safeMul(val, brightMult, 0)})`
         );
       }
     }
@@ -150,7 +164,7 @@ export class HarmonyLayer implements Layer {
       if (darkFactor < 0.98) {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.lpf(${Math.round(parseFloat(val) * darkFactor)})`
+          (_, val) => `.lpf(${safeMul(val, darkFactor, 0)})`
         );
       }
     }
@@ -164,7 +178,7 @@ export class HarmonyLayer implements Layer {
         if (glowMult > 1.01) {
           result = result.replace(
             /\.lpf\((\d+(?:\.\d+)?)\)/,
-            (_, val) => `.lpf(${Math.round(parseFloat(val) * glowMult)})`
+            (_, val) => `.lpf(${safeMul(val, glowMult, 0)})`
           );
         }
       }
@@ -176,7 +190,7 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(resMult - 1.0) >= 0.03) {
         result = result.replace(
           /\.resonance\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.resonance(${Math.round(parseFloat(val) * resMult)})`
+          (_match, val) => `.resonance(${safeMul(val, resMult, 0)})`
         );
       }
     }
@@ -190,13 +204,13 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(rMult - 1.0) > 0.02) {
         result = result.replace(
           /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${(parseFloat(val) * rMult).toFixed(2)})`
+          (_match, val) => `.room(${safeMul(val, rMult, 2)})`
         );
       }
       if (Math.abs(sMult - 1.0) > 0.02) {
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
+          (_match, val) => `.roomsize(${safeMul(val, sMult, 1)})`
         );
       }
     }
@@ -207,11 +221,11 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(tsMult - 1.0) >= 0.03) {
         result = result.replace(
           /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${(parseFloat(val) * tsMult).toFixed(2)})`
+          (_match, val) => `.room(${safeMul(val, tsMult, 2)})`
         );
         result = result.replace(
           /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${(parseFloat(val) * tsMult).toFixed(1)})`
+          (_match, val) => `.roomsize(${safeMul(val, tsMult, 1)})`
         );
       }
     }
@@ -233,13 +247,13 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(wetMult - 1.0) > 0.02) {
         result = result.replace(
           /\.delay\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.delay(${Math.min(1.0, parseFloat(val) * wetMult).toFixed(2)})`
+          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.delay(${val})` : `.delay(${Math.min(1.0, n * wetMult).toFixed(2)})`; }
         );
       }
       if (Math.abs(fbMult - 1.0) > 0.02) {
         result = result.replace(
           /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * fbMult).toFixed(2)})`
+          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.delayfeedback(${val})` : `.delayfeedback(${Math.min(0.85, n * fbMult).toFixed(2)})`; }
         );
       }
     }
@@ -250,7 +264,7 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(tdMult - 1.0) >= 0.03) {
         result = result.replace(
           /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * tdMult).toFixed(2)})`
+          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.delayfeedback(${val})` : `.delayfeedback(${Math.min(0.85, n * tdMult).toFixed(2)})`; }
         );
       }
     }
@@ -262,13 +276,13 @@ export class HarmonyLayer implements Layer {
       if (hpfOff > 5 && result.includes('.hpf(')) {
         result = result.replace(
           /\.hpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.hpf(${Math.round(parseFloat(val) + hpfOff)})`
+          (_match, val) => `.hpf(${safeAdd(val, hpfOff)})`
         );
       }
       if (lpfOff < -50 && result.includes('.lpf(')) {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.lpf(${Math.max(500, Math.round(parseFloat(val) + lpfOff))})`
+          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.lpf(${val})` : `.lpf(${Math.max(500, Math.round(n + lpfOff))})`; }
         );
       }
     }
@@ -279,7 +293,7 @@ export class HarmonyLayer implements Layer {
       if (offset >= 5) {
         result = result.replace(
           /\.hpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.hpf(${Math.round(parseFloat(val) + offset)})`
+          (_match, val) => `.hpf(${safeAdd(val, offset)})`
         );
       }
     }
@@ -312,7 +326,9 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.crush\((\d+(?:\.\d+)?)\)/g,
           (_match, val) => {
-            const crushed = Math.max(4, Math.min(16, parseFloat(val) + cOffset));
+            const n = parseFloat(val);
+            if (isNaN(n)) return `.crush(${val})`;
+            const crushed = Math.max(4, Math.min(16, n + cOffset));
             return `.crush(${Math.round(crushed)})`;
           }
         );
@@ -325,7 +341,7 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(fmMult - 1.0) > 0.03) {
         result = result.replace(
           /\.fm\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
+          (_match, val) => `.fm(${safeMul(val, fmMult, 1)})`
         );
       }
     }
@@ -336,7 +352,7 @@ export class HarmonyLayer implements Layer {
       if (result.includes('.fmh(')) {
         result = result.replace(
           /\.fmh\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.fmh(${tensionFmh(parseFloat(val), tension, state.mood).toFixed(2)})`
+          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.fmh(${val})` : `.fmh(${tensionFmh(n, tension, state.mood).toFixed(2)})`; }
         );
       }
       if (result.includes('.fm(') && !result.includes('.fm(sine')) {
@@ -344,7 +360,7 @@ export class HarmonyLayer implements Layer {
         if (Math.abs(fmMult - 1.0) > 0.03) {
           result = result.replace(
             /\.fm\((\d+(?:\.\d+)?)\)/g,
-            (_match, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
+            (_match, val) => `.fm(${safeMul(val, fmMult, 1)})`
           );
         }
       }
@@ -360,25 +376,25 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(aMult - 1.0) > 0.05) {
         result = result.replace(
           /\.attack\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.attack(${(parseFloat(val) * aMult).toFixed(3)})`
+          (_match, val) => `.attack(${safeMul(val, aMult, 3)})`
         );
       }
       if (Math.abs(dMult - 1.0) > 0.05) {
         result = result.replace(
           /\.decay\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.decay(${(parseFloat(val) * dMult).toFixed(3)})`
+          (_match, val) => `.decay(${safeMul(val, dMult, 3)})`
         );
       }
       if (Math.abs(sMult - 1.0) > 0.05) {
         result = result.replace(
           /\.sustain\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.sustain(${(parseFloat(val) * sMult).toFixed(4)})`
+          (_match, val) => `.sustain(${safeMul(val, sMult, 4)})`
         );
       }
       if (Math.abs(rMult - 1.0) > 0.05) {
         result = result.replace(
           /\.release\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.release(${(parseFloat(val) * rMult).toFixed(3)})`
+          (_match, val) => `.release(${safeMul(val, rMult, 3)})`
         );
       }
     }
@@ -390,21 +406,21 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(taMult - 1.0) > 0.03) {
         result = result.replace(
           /\.attack\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.attack(${(parseFloat(val) * taMult).toFixed(3)})`
+          (_, val) => `.attack(${safeMul(val, taMult, 3)})`
         );
       }
       const tdMult = tensionDecayMultiplier(tension, state.mood);
       if (Math.abs(tdMult - 1.0) > 0.03) {
         result = result.replace(
           /\.decay\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.decay(${(parseFloat(val) * tdMult).toFixed(3)})`
+          (_, val) => `.decay(${safeMul(val, tdMult, 3)})`
         );
       }
       const tsMult = tensionSustainMultiplier(tension, state.mood);
       if (Math.abs(tsMult - 1.0) > 0.03) {
         result = result.replace(
           /\.sustain\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.sustain(${(parseFloat(val) * tsMult).toFixed(4)})`
+          (_, val) => `.sustain(${safeMul(val, tsMult, 4)})`
         );
       }
     }
@@ -415,25 +431,25 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(tcMult.attack - 1.0) > 0.02) {
         result = result.replace(
           /\.attack\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.attack(${(parseFloat(val) * tcMult.attack).toFixed(3)})`
+          (_, val) => `.attack(${safeMul(val, tcMult.attack, 3)})`
         );
       }
       if (Math.abs(tcMult.decay - 1.0) > 0.02) {
         result = result.replace(
           /\.decay\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.decay(${(parseFloat(val) * tcMult.decay).toFixed(3)})`
+          (_, val) => `.decay(${safeMul(val, tcMult.decay, 3)})`
         );
       }
       if (Math.abs(tcMult.sustain - 1.0) > 0.02) {
         result = result.replace(
           /\.sustain\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.sustain(${(parseFloat(val) * tcMult.sustain).toFixed(4)})`
+          (_, val) => `.sustain(${safeMul(val, tcMult.sustain, 4)})`
         );
       }
       if (Math.abs(tcMult.release - 1.0) > 0.02) {
         result = result.replace(
           /\.release\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.release(${(parseFloat(val) * tcMult.release).toFixed(3)})`
+          (_, val) => `.release(${safeMul(val, tcMult.release, 3)})`
         );
       }
     }
@@ -470,21 +486,21 @@ export class HarmonyLayer implements Layer {
       if (Math.abs(etFmMult - 1.0) > 0.03 && result.includes('.fm(') && !result.includes('.fm(sine')) {
         result = result.replace(
           /\.fm\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.fm(${(parseFloat(val) * etFmMult).toFixed(1)})`
+          (_, val) => `.fm(${safeMul(val, etFmMult, 1)})`
         );
       }
       const etRoomMult = ensembleRoomMultiplier(layerCount, mood);
       if (Math.abs(etRoomMult - 1.0) > 0.03) {
         result = result.replace(
           /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.room(${(parseFloat(val) * etRoomMult).toFixed(2)})`
+          (_, val) => `.room(${safeMul(val, etRoomMult, 2)})`
         );
       }
       const etDelayMult = ensembleDelayMultiplier(layerCount, mood);
       if (Math.abs(etDelayMult - 1.0) > 0.03) {
         result = result.replace(
           /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.delayfeedback(${Math.min(0.85, parseFloat(val) * etDelayMult).toFixed(2)})`
+          (_, val) => { const n = parseFloat(val); return isNaN(n) ? `.delayfeedback(${val})` : `.delayfeedback(${Math.min(0.85, n * etDelayMult).toFixed(2)})`; }
         );
       }
     }
@@ -542,7 +558,7 @@ export class HarmonyLayer implements Layer {
         const bMult = 1.0 + emphasis.brightnessBoost;
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.lpf(${Math.round(parseFloat(val) * bMult)})`
+          (_match, val) => `.lpf(${safeMul(val, bMult, 0)})`
         );
       }
       if (emphasis.gainBoost > 0.01) {
@@ -691,10 +707,7 @@ export class HarmonyLayer implements Layer {
 
     // Apply voicing spread — wider at peaks, tighter at breakdowns
     const voicingRange = getVoicingRange(state.section, tension);
-    const isSusChord = chord.quality === 'sus2' || chord.quality === 'sus4' || hasSuspension;
-    if (isSusChord) {
-      chordNotes = applyVoicingSpread(chordNotes, voicingRange);
-    }
+    chordNotes = applyVoicingSpread(chordNotes, voicingRange);
 
     // Guide tone anticipation — subtly pull inner voice toward next chord
     // Only nudge inner voices (index > 0), never the root
@@ -784,9 +797,16 @@ export class HarmonyLayer implements Layer {
       }
     }
 
+    // Cap chord size: enrichment stages (color, ambiguity, spectral) can overshoot
+    if (chordNotes.length > 6) {
+      chordNotes = chordNotes.slice(0, 6);
+    }
+
     // Smooth voice leading: minimize total voice movement from previous voicing
+    let smoothed = false;
     if (this.lastVoicing && this.lastVoicing.length > 0 && state.chordChanged) {
       chordNotes = smoothVoicing(this.lastVoicing, chordNotes);
+      smoothed = true;
     }
 
     // Drop voicings: widen chords by dropping inner voices down an octave
@@ -825,7 +845,9 @@ export class HarmonyLayer implements Layer {
     // or when smooth voice leading was applied (to preserve the optimized voicing)
     const useRawNotes = chord.quality === 'sus2' || chord.quality === 'sus4'
       || hasSuspension || chordNotes.length > chord.notes.length
-      || chord.quality === 'add9' || chord.quality === 'min9';
+      || chord.quality === 'add9' || chord.quality === 'min9'
+      || chord.quality === 'dim' || chord.quality === 'aug'
+      || smoothed;
 
     // Suspension resolution: sus → resolve within one cycle
     if (hasSuspension && susResolutionVoicings) {
@@ -970,12 +992,12 @@ export class HarmonyLayer implements Layer {
           .sustain(0.3)
           .release(1.5)
           .slow(5)
-          .gain(${(gain * 0.6).toFixed(3)})
+          .gain(${(gain * 0.45).toFixed(3)})
           .hpf(250)
           .lpf(sine.range(${(700 + brightness * 500).toFixed(0)}, ${(1400 + brightness * 1000).toFixed(0)}).slow(13))
           .pan(sine.range(0.2, 0.8).slow(11))
-          .room(${(room * 0.65).toFixed(2)})
-          .roomsize(3)
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1.5)
           .orbit(${this.orbit})`;
 
       case 'downtempo':
@@ -987,15 +1009,15 @@ export class HarmonyLayer implements Layer {
           .sustain(0.08)
           .release(0.5)
           .slow(2)
-          .gain(${gain.toFixed(3)})
-          .hpf(200)
-          .lpf(sine.range(${(1500 + brightness * 1000).toFixed(0)}, ${(3000 + brightness * 2000).toFixed(0)}).slow(7))
+          .gain(${(gain * 0.9).toFixed(3)})
+          .hpf(300)
+          .lpf(sine.range(${(1500 + brightness * 500).toFixed(0)}, ${(2500 + brightness * 1000).toFixed(0)}).slow(7))
           .pan(sine.range(0.3, 0.7).slow(8))
-          .room(${(room * 0.75).toFixed(2)})
-          .roomsize(2.5)
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1)
           .delay(0.18)
-          .delaytime(0.334)
-          .delayfeedback(0.25)
+          .delaytime(0.28)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'lofi':
@@ -1003,20 +1025,20 @@ export class HarmonyLayer implements Layer {
         return `${chordStart}
           .sound("gm_epiano1")
           .attack(0.003)
-          .decay(0.5)
+          .decay(0.8)
           .sustain(0.08)
           .release(0.3)
           .slow(2)
-          .gain(${(gain * 1.1).toFixed(3)})
-          .hpf(250)
-          .lpf(${(1200 + brightness * 2500).toFixed(0)})
+          .gain(${(gain * 0.80).toFixed(3)})
+          .hpf(300)
+          .lpf(${(1200 + brightness * 1800).toFixed(0)})
           .crush(${(12 + brightness * 4).toFixed(0)})
           .detune(sine.range(-3, 3).slow(5))
           .pan(sine.range(0.3, 0.7).slow(7))
           .room(${(room * 0.5).toFixed(2)})
-          .roomsize(1.5)
+          .roomsize(1)
           .delay(0.15)
-          .delaytime(0.357)
+          .delaytime(0.428)
           .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
@@ -1030,13 +1052,13 @@ export class HarmonyLayer implements Layer {
           .release(0.5)
           .slow(2)
           .gain(${(gain * 0.75).toFixed(3)})
-          .hpf(300)
-          .lpf(sine.range(${(1200 + brightness * 1000).toFixed(0)}, ${(3000 + brightness * 3000).toFixed(0)}).slow(5))
+          .hpf(400)
+          .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 1000).toFixed(0)}).slow(5))
           .pan(sine.range(0.2, 0.8).slow(7))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2.5)
+          .room(${(room * 0.40).toFixed(2)})
+          .roomsize(1.5)
           .delay(0.18)
-          .delaytime(0.341)
+          .delaytime(0.455)
           .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
@@ -1050,14 +1072,14 @@ export class HarmonyLayer implements Layer {
           .release(1)
           .slow(3)
           .gain(${(gain * 0.8).toFixed(3)})
-          .hpf(220)
-          .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 1500).toFixed(0)}).slow(11))
+          .hpf(300)
+          .lpf(sine.range(${(1200 + brightness * 600).toFixed(0)}, ${(2500 + brightness * 1000).toFixed(0)}).slow(11))
           .pan(sine.range(0.3, 0.7).slow(9))
-          .room(${(room * 0.7).toFixed(2)})
-          .roomsize(2.5)
-          .delay(0.25)
-          .delaytime(0.462)
-          .delayfeedback(0.25)
+          .room(${(room * 0.35).toFixed(2)})
+          .roomsize(1)
+          .delay(0.15)
+          .delaytime(0.357)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})`;
 
       case 'xtal':
@@ -1074,11 +1096,11 @@ export class HarmonyLayer implements Layer {
           .hpf(200)
           .lpf(sine.range(${(800 + brightness * 500).toFixed(0)}, ${(1500 + brightness * 1000).toFixed(0)}).slow(17))
           .pan(sine.range(0.2, 0.8).slow(13))
-          .room(${(room * 0.7).toFixed(2)})
-          .roomsize(3)
-          .delay(0.3)
-          .delaytime(0.428)
-          .delayfeedback(0.3)
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1.8)
+          .delay(0.2)
+          .delaytime(0.334)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'syro':
@@ -1086,7 +1108,7 @@ export class HarmonyLayer implements Layer {
         // fmh 3 (not 5) to avoid timbral collision with sine/fmh5 melody
         return `${chordStart}
           .sound("triangle")
-          .fm(${(3 + brightness * 2).toFixed(1)})
+          .fm(${(2 + brightness * 1).toFixed(1)})
           .fmh(3)
           .fmenv("exp")
           .fmdecay(0.03)
@@ -1096,19 +1118,19 @@ export class HarmonyLayer implements Layer {
           .release(0.25)
           .slow(1)
           .gain(${(gain * 0.75).toFixed(3)})
-          .hpf(200)
-          .lpf(${(2500 + brightness * 3000).toFixed(0)})
+          .hpf(400)
+          .lpf(${(2500 + brightness * 1000).toFixed(0)})
           .crush(${(10 + brightness * 2).toFixed(0)})
-          .pan(sine.range(0.15, 0.85).slow(2))
+          .pan(sine.range(0.25, 0.75).slow(2))
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1.5)
-          .delay(0.25)
+          .delay(0.20)
           .delaytime(0.216)
-          .delayfeedback(0.35)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})`;
 
       case 'blockhead':
-        // Warm organ — GM rock organ, cinematic hip-hop feel
+        // Warm organ — GM rock organ, cinematic hip-hop feel (dry, upfront)
         return `${chordStart}
           .sound("gm_rock_organ")
           .attack(0.005)
@@ -1116,15 +1138,15 @@ export class HarmonyLayer implements Layer {
           .sustain(0.1)
           .release(0.5)
           .slow(2)
-          .gain(${(gain * 0.95).toFixed(3)})
-          .hpf(250)
-          .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2800 + brightness * 2000).toFixed(0)}).slow(7))
+          .gain(${(gain * 0.85).toFixed(3)})
+          .hpf(350)
+          .lpf(sine.range(${(1200 + brightness * 600).toFixed(0)}, ${(2500 + brightness * 1000).toFixed(0)}).slow(7))
           .pan(sine.range(0.3, 0.7).slow(9))
-          .room(${(room * 0.7).toFixed(2)})
-          .roomsize(2.5)
-          .delay(0.2)
-          .delaytime(0.33)
-          .delayfeedback(0.25)
+          .room(${(room * 0.30).toFixed(2)})
+          .roomsize(1)
+          .delay(0.12)
+          .delaytime(0.25)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})`;
 
       case 'flim':
@@ -1135,36 +1157,36 @@ export class HarmonyLayer implements Layer {
           .decay(1.5)
           .sustain(0.04)
           .release(1.2)
-          .slow(4)
+          .slow(5)
           .gain(${(gain * 0.65).toFixed(3)})
           .hpf(250)
-          .lpf(${(2800 + brightness * 3000).toFixed(0)})
+          .lpf(${(2500 + brightness * 1000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(9))
-          .room(${(room * 0.6).toFixed(2)})
-          .roomsize(2)
-          .delay(0.3)
-          .delaytime(0.469)
-          .delayfeedback(0.3)
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1.5)
+          .delay(0.2)
+          .delaytime(0.572)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'disco':
-        // Disco Rhodes stabs — GM electric piano, short and funky
+        // Synth pad — bright polysynth for late-70s Moroder feel (clavinet melody + synth pad = classic disco)
         return `${chordStart}
-          .sound("gm_epiano1")
-          .attack(0.003)
-          .decay(0.35)
-          .sustain(0.06)
-          .release(0.15)
-          .slow(1)
+          .sound("gm_pad_polysynth")
+          .attack(0.01)
+          .decay(0.5)
+          .sustain(0.2)
+          .release(0.25)
+          .slow(2)
           .gain(${(gain * 0.9).toFixed(3)})
-          .hpf(250)
-          .lpf(${(3000 + brightness * 4000).toFixed(0)})
+          .hpf(350)
+          .lpf(${(2500 + brightness * 1000).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(4))
-          .room(${(room * 0.55).toFixed(2)})
-          .roomsize(2)
-          .delay(0.15)
-          .delaytime(0.25)
-          .delayfeedback(0.2)
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.1)
+          .delaytime(0.334)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})`;
     }
   }

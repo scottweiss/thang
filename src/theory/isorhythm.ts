@@ -156,7 +156,7 @@ const MOOD_ISORHYTHM: Record<Mood, number> = {
   ambient:   0.30,   // phasing is core to ambient
   xtal:      0.25,   // crystalline evolving patterns
   flim:      0.20,   // delicate phase music
-  syro:      0.25,   // IDM complexity
+  syro:      0.40,   // IDM complexity — needs frequent phase variation
   downtempo: 0.15,   // gentle evolution
   lofi:      0.10,   // occasional surprise
   avril:     0.15,   // subtle phasing
@@ -169,7 +169,7 @@ const MOOD_ISORHYTHM: Record<Mood, number> = {
 const SECTION_ISORHYTHM: Record<Section, number> = {
   groove:    1.3,    // sustained feel, time to develop
   breakdown: 1.5,    // sparse texture highlights phasing
-  build:     0.7,    // building energy, less contemplative
+  build:     0.9,    // building energy — phasing adds excitement
   peak:      0.5,    // too much going on
   intro:     1.0,    // establishing patterns
 };

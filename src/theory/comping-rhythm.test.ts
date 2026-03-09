@@ -77,9 +77,11 @@ describe('pickCompingStyle', () => {
     expect(['stabs', 'offbeat', 'charleston']).toContain(style);
   });
 
-  it('is deterministic for same mood/section', () => {
-    const a = pickCompingStyle('lofi', 'groove');
-    const b = pickCompingStyle('lofi', 'groove');
-    expect(a).toBe(b);
+  it('picks from mood-appropriate styles', () => {
+    // Run multiple times to verify all picks are valid
+    for (let i = 0; i < 20; i++) {
+      const style = pickCompingStyle('lofi', 'groove');
+      expect(['charleston', 'sparse', 'stabs']).toContain(style);
+    }
   });
 });

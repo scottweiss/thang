@@ -301,20 +301,22 @@ export class ArpLayer extends CachingLayer {
           .decay(1.5)
           .sustain(0.02)
           .release(0.8)
-          .slow(5)
+          .slow(7)
           .gain(${(0.12 * (0.4 + density * 0.4)).toFixed(3)})
           .hpf(300)
+          .lpf(${(2000 + brightness * 2000).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(17))
           .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2)
-          .delay(0.3)
+          .roomsize(1.5)
+          .delay(0.2)
           .delaytime(0.66)
-          .delayfeedback(0.35)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'downtempo': {
         // Square tick — rhythmic clicks distinct from triangle melody
+        // .slow(4) creates 3:4 polyrhythm against melody's .slow(3)
         const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
@@ -326,21 +328,22 @@ export class ArpLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.04)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
-          .slow(3)
+          .slow(4)
           .gain(${(0.16 * (0.5 + density * 0.5)).toFixed(3)})
           .hpf(400)
           .lpf(${(2500 + brightness * 3500).toFixed(0)})
           .pan(sine.range(0.35, 0.65).slow(7))
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1)
-          .delay(0.3)
-          .delaytime(0.33)
-          .delayfeedback(0.3)
+          .delay(0.2)
+          .delaytime(0.25)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'lofi': {
         // Triangle pluck — warm tick, distinct from square melody
+        // .slow(2) vs melody .slow(3) creates 2:3 polyrhythmic interplay
         const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
@@ -354,14 +357,14 @@ export class ArpLayer extends CachingLayer {
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(2)
           .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
-          .hpf(800)
+          .hpf(500)
           .lpf(${(2200 + brightness * 3000).toFixed(0)})
           .detune(sine.range(-2, 2).slow(4))
           .pan(sine.range(0.35, 0.65).slow(5))
           .room(${(room * 0.3).toFixed(2)})
-          .roomsize(1)
+          .roomsize(0.8)
           .delay(0.2)
-          .delaytime(0.375)
+          .delaytime(0.5)
           .delayfeedback(0.15)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
@@ -376,27 +379,28 @@ export class ArpLayer extends CachingLayer {
         return `note("${steps.join(' ')}")
           .sound("square")
           .fm(0.3)
-          .fmh(0.5)
+          .fmh(2)
           .fmenv("exp")
           .fmdecay(0.03)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(1)
           .gain("${tranceVelGain}")
           .hpf(400)
-          .lpf(${(2000 + brightness * 6000).toFixed(0)})
+          .lpf(sine.range(${(1200 + brightness * 1800).toFixed(0)}, ${(3000 + brightness * 5000).toFixed(0)}).slow(2))
           .resonance(${(8 + brightness * 4).toFixed(0)})
-          .pan(sine.range(0.3, 0.7).slow(7))
+          .pan(sine.range(0.3, 0.7).slow(5))
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
-          .delay(0.3)
+          .delay(0.2)
           .delaytime(0.114)
-          .delayfeedback(0.3)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'avril': {
         // Square pip — tiny gentle clicks, distinct from triangle melody
-        const notes = this.spreadWithDynamics(baseNotes, 4, 5, state);
+        // Dynamic range respects register-complement offset to avoid melody overlap
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
         const fill = this.pickFill16(density * sectionMult * 0.2);
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
@@ -411,17 +415,18 @@ export class ArpLayer extends CachingLayer {
           .hpf(300)
           .lpf(${(2200 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.35, 0.65).slow(13))
-          .room(${(room * 0.35).toFixed(2)})
-          .roomsize(1.5)
-          .delay(0.35)
-          .delaytime(0.66)
-          .delayfeedback(0.3)
+          .room(${(room * 0.25).toFixed(2)})
+          .roomsize(1)
+          .delay(0.15)
+          .delaytime(0.462)
+          .delayfeedback(0.12)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'xtal': {
         // Square chime pips — tiny clicks distinct from triangle melody and sine harmony
-        const notes = this.spreadWithDynamics(baseNotes, 4, 6, state);
+        // Dynamic range lets register-complement shift arp away from melody when needed
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(6, adjHigh), state);
         const xtalGain = 0.1 * (0.3 + density * 0.3);
 
         // Isorhythmic phasing: talea + color cycle independently for evolving patterns
@@ -447,17 +452,17 @@ export class ArpLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.05)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.15))}
-          .slow(5)
+          .slow(7)
           .gain("${xtalGainStr}")
-          .hpf(300)
+          .hpf(500)
           .lpf(${(1800 + brightness * 2000).toFixed(0)})
           .detune(sine.range(-1, 1).slow(9))
           .pan(sine.range(0.2, 0.8).slow(11))
           .room(${(room * 0.35).toFixed(2)})
           .roomsize(1.5)
-          .delay(0.35)
-          .delaytime(0.428)
-          .delayfeedback(0.3)
+          .delay(0.25)
+          .delaytime(0.352)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
@@ -479,7 +484,7 @@ export class ArpLayer extends CachingLayer {
           syroVelGain = isoSyro.gainStr;
         } else {
           const syroPattern = this.pickStyle(mood, section, counterDir);
-          const fill = this.pickFill16(density * sectionMult * 1.2);
+          const fill = this.pickFill16(Math.max(0.3, density * sectionMult * 1.2));
           syroSteps = this.applyDisplacement(this.buildFromFill(notes, syroPattern, 16, fill), state);
           syroVelGain = this.getVelocityGain(syroGain, 16, mood, section, progress, syroSteps);
         }
@@ -490,14 +495,14 @@ export class ArpLayer extends CachingLayer {
           .slow(1)
           .gain("${syroVelGain}")
           .hpf(400)
-          .lpf(sine.range(${(1000 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 3000).toFixed(0)}).slow(2))
+          .lpf(sine.range(${(800 + brightness * 600).toFixed(0)}, ${(3000 + brightness * 3500).toFixed(0)}).slow(1))
           .resonance(${(8 + brightness * 4).toFixed(0)})
-          .pan(sine.range(0.15, 0.85).slow(7))
+          .pan(sine.range(0.2, 0.8).slow(7))
           .room(${(room * 0.3).toFixed(2)})
-          .roomsize(1)
-          .delay(0.3)
-          .delaytime(0.144)
-          .delayfeedback(0.25)
+          .roomsize(0.8)
+          .delay(0.15)
+          .delaytime(0.108)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
@@ -516,7 +521,7 @@ export class ArpLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.04)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
-          .slow(2)
+          .slow(1)
           .gain("${bhVelGain}")
           .hpf(350)
           .lpf(${(2000 + brightness * 3000).toFixed(0)})
@@ -524,32 +529,34 @@ export class ArpLayer extends CachingLayer {
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1)
           .delay(0.2)
-          .delaytime(0.33)
+          .delaytime(0.165)
           .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
       case 'flim': {
-        // Square click — clockwork pips, mechanical/precise feel (Flim-style)
-        const notes = this.spreadWithDynamics(baseNotes, 4, 6, state);
-        const fill = this.pickFill16(density * sectionMult * 0.4);
+        // Pure sine pip — glass-like clockwork, distinct from triangle melody's bell tones
+        // Floor of 0.15 ensures clockwork arp is always audible, even in intro
+        // Dynamic range lets register-complement shift arp away from melody when needed
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(6, adjHigh), state);
+        const fill = this.pickFill16(Math.max(0.15, density * sectionMult * 0.4));
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
-          .sound("square")
+          .sound("sine")
           .fm(0.3)
           .fmh(3)
           .fmenv("exp")
-          .fmdecay(0.03)
+          .fmdecay(0.05)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(4)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
           .hpf(400)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
-          .pan(sine.range(0.2, 0.8).slow(11))
+          .pan(sine.range(0.3, 0.7).slow(11))
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .delay(0.25)
-          .delaytime(0.469)
+          .delaytime(0.25)
           .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
@@ -560,11 +567,11 @@ export class ArpLayer extends CachingLayer {
         const discoPattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
         const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
-        const discoGain = 0.18 * (0.5 + density * 0.5);
+        const discoGain = 0.14 * (0.5 + density * 0.5);
         const velGain = this.getVelocityGain(discoGain, 16, mood, section, progress, steps);
         return `note("${steps.join(' ')}")
           .sound("sine")
-          .fm(${(2 + brightness * 1.5).toFixed(1)})
+          .fm(${(1 + brightness * 1).toFixed(1)})
           .fmh(4)
           .fmenv("exp")
           .fmdecay(0.04)
@@ -572,13 +579,13 @@ export class ArpLayer extends CachingLayer {
           .slow(1)
           .gain("${velGain}")
           .hpf(600)
-          .lpf(${(3000 + brightness * 4000).toFixed(0)})
+          .lpf(sine.range(${(2500 + brightness * 3500).toFixed(0)}, ${(3500 + brightness * 4500).toFixed(0)}).slow(4))
           .pan(sine.range(0.25, 0.75).slow(9))
-          .room(${(room * 0.3).toFixed(2)})
-          .roomsize(1)
-          .delay(0.25)
+          .room(${(room * 0.2).toFixed(2)})
+          .roomsize(0.8)
+          .delay(0.15)
           .delaytime(0.125)
-          .delayfeedback(0.3)
+          .delayfeedback(0.15)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
     }

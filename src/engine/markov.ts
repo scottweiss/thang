@@ -53,7 +53,12 @@ export class MarkovChain<T> {
       currentIndex < (m[prevIndex]?.length ?? 0)
     ) {
       const weights = m[prevIndex][currentIndex];
-      if (weights && weights.length > 0) {
+      // Check sum > 0, not just length > 0: all-zero rows (undefined transitions)
+      // must fall through to first-order. Without this, weightedChoiceIndex
+      // returns 0 when total=0 (r=0, 0<=0 triggers on first element), locking
+      // the chain to degree 0 forever.
+      const weightsSum = weights ? weights.reduce((a, b) => a + b, 0) : 0;
+      if (weightsSum > 0) {
         const biased = externalBias
           ? weights.map((w, i) => w * (externalBias[i] ?? 1))
           : weights;
@@ -74,6 +79,8 @@ export class MarkovChain<T> {
 
 function weightedChoiceIndex(weights: number[]): number {
   const total = weights.reduce((a, b) => a + b, 0);
+  // Safety: if all weights are zero, pick uniformly at random
+  if (total <= 0) return Math.floor(Math.random() * weights.length);
   let r = Math.random() * total;
   for (let i = 0; i < weights.length; i++) {
     r -= weights[i];

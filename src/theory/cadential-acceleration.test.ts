@@ -62,10 +62,10 @@ describe('shouldAccelerate', () => {
 
 describe('accelStrength', () => {
   it('avril is highest', () => {
-    expect(accelStrength('avril')).toBe(0.50);
+    expect(accelStrength('avril')).toBe(0.35);
   });
 
   it('ambient is lowest', () => {
-    expect(accelStrength('ambient')).toBe(0.08);
+    expect(accelStrength('ambient')).toBe(0.03);
   });
 });

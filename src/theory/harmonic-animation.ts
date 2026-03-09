@@ -79,17 +79,39 @@ export function findScaleNeighbor(
   // Build pitch set from scale notes
   const scalePitchClasses = scaleNotes.map(n => noteIndex(n as NoteName));
 
-  // Find nearest scale pitch above
+  // Search both up and down for nearest scale neighbor
+  let upPitch: number | null = null;
+  let downPitch: number | null = null;
+
   for (let offset = 1; offset <= 3; offset++) {
-    const candidatePitch = pitch + offset;
-    const candidatePC = candidatePitch % 12;
-    if (scalePitchClasses.includes(candidatePC)) {
-      const candidateOct = Math.floor(candidatePitch / 12);
-      return `${noteFromIndex(candidatePC)}${candidateOct}`;
+    if (upPitch === null) {
+      const cp = pitch + offset;
+      if (scalePitchClasses.includes(cp % 12)) upPitch = cp;
     }
+    if (downPitch === null) {
+      const cp = pitch - offset;
+      if (cp >= 0 && scalePitchClasses.includes(((cp % 12) + 12) % 12)) downPitch = cp;
+    }
+    if (upPitch !== null && downPitch !== null) break;
   }
 
-  return null;
+  // Pick the nearest; slight upward bias when equidistant (upper neighbors lead)
+  let chosen: number | null = null;
+  if (upPitch !== null && downPitch !== null) {
+    const upDist = upPitch - pitch;
+    const downDist = pitch - downPitch;
+    if (upDist < downDist) chosen = upPitch;
+    else if (downDist < upDist) chosen = downPitch;
+    else chosen = Math.random() < 0.6 ? upPitch : downPitch;
+  } else {
+    chosen = upPitch ?? downPitch;
+  }
+
+  if (chosen === null) return null;
+
+  const chosenPC = ((chosen % 12) + 12) % 12;
+  const chosenOct = Math.floor(chosen / 12);
+  return `${noteFromIndex(chosenPC)}${chosenOct}`;
 }
 
 /**
@@ -101,7 +123,12 @@ export function findScaleNeighbor(
  */
 export function voicingsToPattern(voicings: string[][]): string {
   return voicings
-    .map(v => `[${v.join(' ')}]`)
+    .map(v => {
+      // Guard against empty voicings — empty brackets `[]` crash Strudel's parser
+      if (v.length === 0) return '~';
+      if (v.length === 1) return v[0];
+      return `[${v.join(',')}]`;
+    })
     .join(' ');
 }
 

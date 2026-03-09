@@ -87,7 +87,7 @@ export function sidechainGainPattern(
 
       // Exponential recovery: starts at (1 - depth), rises to 1.0
       const t = dist / halfBar; // 0 at kick, 1 at next kick
-      const recovery = 1.0 - depth * Math.exp(-rate * t * halfBar);
+      const recovery = 1.0 - depth * Math.exp(-rate * t);
       gains[i] = Math.min(gains[i], recovery);
     }
   }

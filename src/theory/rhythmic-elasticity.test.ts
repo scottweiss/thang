@@ -70,10 +70,10 @@ describe('shouldApplyElasticity', () => {
 
 describe('moodElasticity', () => {
   it('ambient is highest', () => {
-    expect(moodElasticity('ambient')).toBe(0.15);
+    expect(moodElasticity('ambient')).toBe(0.05);
   });
 
   it('trance is lowest', () => {
-    expect(moodElasticity('trance')).toBe(0.02);
+    expect(moodElasticity('trance')).toBe(0.01);
   });
 });

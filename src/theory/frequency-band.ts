@@ -34,13 +34,17 @@ const LAYER_BANDS: Record<string, { center: number; width: number }> = {
  */
 const COMPETING_PAIRS: { a: string; b: string; hpfOffset: number; lpfOffset: number }[] = [
   // Harmony and drone overlap in the low-mids
-  { a: 'harmony', b: 'drone', hpfOffset: 40, lpfOffset: 0 },
-  // Melody and arp compete in the upper-mids
-  { a: 'arp', b: 'melody', hpfOffset: 60, lpfOffset: 0 },
+  { a: 'harmony', b: 'drone', hpfOffset: 80, lpfOffset: 0 },
+  // Melody and arp compete in the upper-mids — push arp above melody
+  { a: 'arp', b: 'melody', hpfOffset: 200, lpfOffset: 0 },
   // Harmony and atmosphere overlap in the mids
-  { a: 'atmosphere', b: 'harmony', hpfOffset: 30, lpfOffset: 0 },
-  // Melody and harmony: push harmony's top down when melody is active
-  { a: 'harmony', b: 'melody', hpfOffset: 0, lpfOffset: -200 },
+  { a: 'atmosphere', b: 'harmony', hpfOffset: 60, lpfOffset: 0 },
+  // Melody and harmony: roll off harmony highs so melody cuts through
+  { a: 'harmony', b: 'melody', hpfOffset: 0, lpfOffset: -500 },
+  // Arp and harmony: push harmony down when arp is bright above it
+  { a: 'harmony', b: 'arp', hpfOffset: 0, lpfOffset: -300 },
+  // Arp and atmosphere: push arp lower when atmosphere has high-freq content
+  { a: 'arp', b: 'atmosphere', hpfOffset: 0, lpfOffset: -150 },
 ];
 
 /**

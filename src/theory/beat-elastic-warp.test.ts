@@ -43,17 +43,17 @@ describe('shouldApplyBeatWarp', () => {
     expect(shouldApplyBeatWarp('lofi')).toBe(true);
   });
 
-  it('ambient applies (barely)', () => {
-    expect(shouldApplyBeatWarp('ambient')).toBe(true);
+  it('ambient does not apply (0.01 <= 0.015)', () => {
+    expect(shouldApplyBeatWarp('ambient')).toBe(false);
   });
 });
 
 describe('warpRange', () => {
   it('lofi is widest', () => {
-    expect(warpRange('lofi')).toBe(0.07);
+    expect(warpRange('lofi')).toBe(0.04);
   });
 
   it('ambient is narrowest', () => {
-    expect(warpRange('ambient')).toBe(0.02);
+    expect(warpRange('ambient')).toBe(0.01);
   });
 });

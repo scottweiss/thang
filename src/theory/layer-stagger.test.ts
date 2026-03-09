@@ -45,13 +45,36 @@ describe('layerFadeInRate', () => {
 });
 
 describe('layerFadeOutRate', () => {
-  it('all layers fade out at the same rate', () => {
-    const layers = ['texture', 'drone', 'atmosphere', 'harmony', 'arp', 'melody'];
-    const rates = layers.map(l => layerFadeOutRate(l));
-    expect(new Set(rates).size).toBe(1); // all the same
+  it('melody exits fastest (reverse of entry stagger)', () => {
+    const melody = layerFadeOutRate('melody');
+    const texture = layerFadeOutRate('texture');
+    const harmony = layerFadeOutRate('harmony');
+    expect(melody).toBeGreaterThan(harmony);
+    expect(melody).toBeGreaterThan(texture);
   });
 
-  it('fade-out rate is positive', () => {
-    expect(layerFadeOutRate('melody')).toBeGreaterThan(0);
+  it('texture (drums) exits last — holds the groove', () => {
+    const layers = ['texture', 'drone', 'atmosphere', 'harmony', 'arp', 'melody'];
+    const rates = layers.map(l => layerFadeOutRate(l));
+    const textureRate = layerFadeOutRate('texture');
+    expect(textureRate).toBe(Math.min(...rates));
+  });
+
+  it('all rates are positive and <= 1', () => {
+    const layers = ['texture', 'drone', 'atmosphere', 'harmony', 'arp', 'melody'];
+    for (const layer of layers) {
+      const rate = layerFadeOutRate(layer);
+      expect(rate).toBeGreaterThan(0);
+      expect(rate).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('stagger creates meaningful exit delay', () => {
+    // melody exits in ceil(1/0.55) = 2 ticks
+    // texture exits in ceil(1/0.25) = 4 ticks
+    // That's a 2-tick (~4 second) stagger
+    const melodyTicks = Math.ceil(1 / layerFadeOutRate('melody'));
+    const textureTicks = Math.ceil(1 / layerFadeOutRate('texture'));
+    expect(textureTicks - melodyTicks).toBeGreaterThanOrEqual(1);
   });
 });

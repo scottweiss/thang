@@ -46,7 +46,7 @@ const SECTION_PLANING_MULT: Record<Section, number> = {
   intro: 1.5,       // dreamy, establishing
   build: 0.6,       // building tension, want functional harmony
   peak: 0.3,        // maximum energy, functional
-  breakdown: 1.8,   // most dreamy, planing shines here
+  breakdown: 1.3,   // dreamy — planing more likely but not dominant
   groove: 0.8,      // moderate
 };
 
