@@ -47,14 +47,14 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.20, spaciousnessTarget: 0.85, duration: [15, 25] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.75, duration: [40, 70] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.5, brightnessTarget: 0.55, spaciousnessTarget: 0.8, duration: [50, 80] },
-    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.9, duration: [35, 60] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.9, duration: [35, 60] },
     groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.4, brightnessTarget: 0.45, spaciousnessTarget: 0.8, duration: [45, 75] },
   },
   xtal: {
     intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.20, spaciousnessTarget: 0.9, duration: [15, 30] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'texture'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.8, duration: [40, 75] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.55, brightnessTarget: 0.60, spaciousnessTarget: 0.85, duration: [55, 100] },
-    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.95, duration: [40, 70] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.95, duration: [40, 70] },
     groove:    { activeLayers: ['drone', 'harmony', 'texture', 'arp', 'atmosphere'], densityTarget: 0.45, brightnessTarget: 0.45, spaciousnessTarget: 0.85, duration: [50, 90] },
   },
   syro: {
@@ -75,7 +75,7 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.20, spaciousnessTarget: 0.85, duration: [12, 22] },
     build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'arp'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.75, duration: [35, 55] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.55, brightnessTarget: 0.60, spaciousnessTarget: 0.8, duration: [40, 65] },
-    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.9, duration: [30, 50] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.9, duration: [30, 50] },
     groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.45, brightnessTarget: 0.45, spaciousnessTarget: 0.8, duration: [35, 60] },
   },
   disco: {
