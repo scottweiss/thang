@@ -623,11 +623,11 @@ export class MelodyLayer extends CachingLayer {
           .slow(5)
           .gain("${applyMelodicDynamics(gain * 0.7, elements)}")
           .pan(sine.range(0.15, 0.85).slow(7))
-          .room(${room.toFixed(2)})
-          .roomsize(4)
-          .delay(0.4)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(2)
+          .delay(0.3)
           .delaytime(0.5)
-          .delayfeedback(0.4)
+          .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
       case 'downtempo':
@@ -719,11 +719,11 @@ export class MelodyLayer extends CachingLayer {
           .hpf(300)
           .lpf(${(2000 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
-          .room(${(room * 1.0).toFixed(2)})
-          .roomsize(4)
-          .delay(0.45)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(2)
+          .delay(0.3)
           .delaytime(0.5)
-          .delayfeedback(0.4)
+          .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
       case 'xtal':
@@ -743,11 +743,11 @@ export class MelodyLayer extends CachingLayer {
           .hpf(250)
           .lpf(${(1500 + brightness * 1500).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(9))
-          .room(${(room * 0.8).toFixed(2)})
-          .roomsize(4)
-          .delay(0.4)
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(2)
+          .delay(0.3)
           .delaytime(0.5)
-          .delayfeedback(0.35)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'syro':
@@ -816,11 +816,11 @@ export class MelodyLayer extends CachingLayer {
           .hpf(400)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(7))
-          .room(${(room * 0.8).toFixed(2)})
-          .roomsize(3)
-          .delay(0.35)
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1.5)
+          .delay(0.25)
           .delaytime(0.5)
-          .delayfeedback(0.3)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'disco':
