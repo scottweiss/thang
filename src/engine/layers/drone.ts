@@ -231,8 +231,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.6).toFixed(3)})
           .lpf(sine.range(${(150 + brightness * 150).toFixed(0)}, ${(300 + brightness * 400).toFixed(0)}).slow(11))
           .pan(sine.range(0.3, 0.7).slow(13))
-          .room(${(room * 0.35).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.55).toFixed(2)})
+          .roomsize(3.5)
           .orbit(${this.orbit})`;
 
       case 'downtempo': {
@@ -325,8 +325,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.4).toFixed(3)})
           .lpf(sine.range(${(120 + brightness * 100).toFixed(0)}, ${(250 + brightness * 200).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(15))
-          .room(${(room * 0.4).toFixed(2)})
-          .roomsize(2)
+          .room(${(room * 0.5).toFixed(2)})
+          .roomsize(2.5)
           .orbit(${this.orbit})`;
 
       case 'xtal':
@@ -346,8 +346,8 @@ export class DroneLayer implements Layer {
           .gain(${(gain * 0.7).toFixed(3)})
           .lpf(sine.range(${(80 + brightness * 60).toFixed(0)}, ${(180 + brightness * 120).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(17))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(3)
+          .room(${(room * 0.6).toFixed(2)})
+          .roomsize(3.5)
           .orbit(${this.orbit})`;
 
       case 'syro': {
