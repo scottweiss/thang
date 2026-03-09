@@ -962,25 +962,19 @@ export class HarmonyLayer implements Layer {
   private buildSoundChain(chordStart: string, mood: import('../../types').Mood, gain: number, brightness: number, room: number): string {
     switch (mood) {
       case 'ambient':
-        // Ethereal glass pad — high harmonicity FM creates bell/shimmer overtones
-        // Slowly breathing FM index for organic evolution, long sustain for pad feel
+        // Ethereal choir pad — GM pad for airy, vocal-like chord washes (drone is FM sine)
         return `${chordStart}
-          .sound("sine")
-          .fm(sine.range(${(1 + brightness).toFixed(1)}, ${(2.5 + brightness * 2).toFixed(1)}).slow(19))
-          .fmh(4)
-          .fmenv("exp")
-          .fmdecay(0.8)
-          .attack(0.3)
+          .sound("gm_pad_choir")
+          .attack(0.5)
           .decay(2)
-          .sustain(0.4)
+          .sustain(0.3)
           .release(1.5)
-          .slow(4)
-          .gain(${(gain * 0.7).toFixed(3)})
-          .hpf(220)
-          .lpf(sine.range(${(600 + brightness * 400).toFixed(0)}, ${(1200 + brightness * 1200).toFixed(0)}).slow(13))
+          .slow(5)
+          .gain(${(gain * 0.6).toFixed(3)})
+          .hpf(250)
+          .lpf(sine.range(${(700 + brightness * 500).toFixed(0)}, ${(1400 + brightness * 1000).toFixed(0)}).slow(13))
           .pan(sine.range(0.2, 0.8).slow(11))
-          .detune(sine.range(-1, 1).slow(17))
-          .room(${(room * 0.6).toFixed(2)})
+          .room(${(room * 0.65).toFixed(2)})
           .roomsize(3)
           .orbit(${this.orbit})`;
 
@@ -1027,26 +1021,23 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'trance':
-        // Massive supersaw — wide detuned sawtooth with pumping filter
-        // Higher sustain for wall-of-sound, resonant filter sweep
+        // Lush strings pad — GM ensemble for wide harmonic bed (drone is sawtooth acid)
         return `${chordStart}
-          .sound("sawtooth")
-          .attack(0.03)
-          .decay(0.2)
-          .sustain(0.5)
-          .release(0.15)
-          .slow(1)
-          .gain(${(gain * 0.9).toFixed(3)})
-          .hpf(250)
-          .lpf(sine.range(${(800 + brightness * 1500).toFixed(0)}, ${(2500 + brightness * 4500).toFixed(0)}).slow(3))
-          .resonance(${(4 + brightness * 4).toFixed(0)})
-          .detune(sine.range(-4, 4).slow(6))
-          .pan(sine.range(0.2, 0.8).slow(4))
+          .sound("gm_string_ensemble_1")
+          .attack(0.1)
+          .decay(0.8)
+          .sustain(0.3)
+          .release(0.5)
+          .slow(2)
+          .gain(${(gain * 0.75).toFixed(3)})
+          .hpf(300)
+          .lpf(sine.range(${(1200 + brightness * 1000).toFixed(0)}, ${(3000 + brightness * 3000).toFixed(0)}).slow(5))
+          .pan(sine.range(0.2, 0.8).slow(7))
           .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2)
-          .delay(0.22)
+          .roomsize(2.5)
+          .delay(0.18)
           .delaytime(0.341)
-          .delayfeedback(0.35)
+          .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
       case 'avril':
@@ -1070,24 +1061,19 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'xtal':
-        // Lush warm pad — very slow attack, wide stereo, moderate reverb
-        // SAW 85-92: dreamy, washed-out, nostalgic warmth
+        // Warm pad synth — GM for dreamy washed-out chords (drone is deep sine sub)
+        // SAW 85-92: nostalgic, ethereal
         return `${chordStart}
-          .sound("sine")
-          .fm(sine.range(${(1 + brightness * 0.5).toFixed(1)}, ${(2 + brightness * 1).toFixed(1)}).slow(21))
-          .fmh(2)
-          .fmenv("exp")
-          .fmdecay(1.2)
-          .attack(1.2)
-          .decay(3)
-          .sustain(0.5)
-          .release(2)
+          .sound("gm_pad_warm")
+          .attack(0.8)
+          .decay(2)
+          .sustain(0.3)
+          .release(1.5)
           .slow(5)
-          .gain(${(gain * 0.6).toFixed(3)})
-          .hpf(180)
-          .lpf(sine.range(${(700 + brightness * 400).toFixed(0)}, ${(1200 + brightness * 1000).toFixed(0)}).slow(17))
+          .gain(${(gain * 0.55).toFixed(3)})
+          .hpf(200)
+          .lpf(sine.range(${(800 + brightness * 500).toFixed(0)}, ${(1500 + brightness * 1000).toFixed(0)}).slow(17))
           .pan(sine.range(0.2, 0.8).slow(13))
-          .detune(sine.range(-2, 2).slow(11))
           .room(${(room * 0.7).toFixed(2)})
           .roomsize(3)
           .delay(0.3)
