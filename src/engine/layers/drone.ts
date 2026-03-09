@@ -378,7 +378,7 @@ export class DroneLayer implements Layer {
 
       case 'blockhead': {
         // Warm sub bass — sine with slight saturation via low FM, solid hip-hop foundation
-        const bhBass = generateBassPattern(root, fifth, 'blockhead', 2, bassDir);
+        const bhBass = generateBassPattern(root, fifth, 'blockhead', 4, bassDir);
         this.injectApproachNotes(bhBass, state, root, 2);
         return `note("${bhBass.join(' ')}")
           .sound("sine")
