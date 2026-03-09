@@ -309,7 +309,7 @@ export class ArpLayer extends CachingLayer {
           .pan(sine.range(0.3, 0.7).slow(11))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
-          .delay(0.4)
+          .delay(0.3)
           .delaytime(0.66)
           .delayfeedback(0.35)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
