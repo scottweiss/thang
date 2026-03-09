@@ -999,6 +999,9 @@ export class HarmonyLayer implements Layer {
           .pan(sine.range(0.3, 0.7).slow(7))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(1.5)
+          .delay(0.15)
+          .delaytime(0.357)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
       case 'trance':
