@@ -277,7 +277,7 @@ export class DroneLayer implements Layer {
           .slow(2)
           .gain(${(gain * 1.2).toFixed(3)})
           .lpf(sine.range(${(300 + brightness * 200).toFixed(0)}, ${(500 + brightness * 500).toFixed(0)}).slow(5))
-          .detune(sine.range(-2, 2).slow(3))
+          .detune(sine.range(-2, 2).slow(7))
           .pan(sine.range(0.4, 0.6).slow(19))
           .room(${(room * 0.25).toFixed(2)})
           .roomsize(1)
