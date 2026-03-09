@@ -305,6 +305,7 @@ export class ArpLayer extends CachingLayer {
           .release(2)
           .slow(5)
           .gain(${(0.12 * (0.4 + density * 0.4)).toFixed(3)})
+          .hpf(300)
           .pan(sine.range(0.3, 0.7).slow(11))
           .room(${room.toFixed(2)})
           .roomsize(3)
@@ -383,7 +384,7 @@ export class ArpLayer extends CachingLayer {
           ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(1)
           .gain("${tranceVelGain}")
-          .hpf(250)
+          .hpf(400)
           .lpf(${(2000 + brightness * 6000).toFixed(0)})
           .resonance(${(8 + brightness * 6).toFixed(0)})
           .pan(sine.range(0.3, 0.7).slow(3))
