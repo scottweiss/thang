@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: '/thang/',
+  build: {
+    outDir: 'docs',
+  },
   optimizeDeps: {
     include: [
       '@strudel/web',
