@@ -303,7 +303,7 @@ export class DroneLayer implements Layer {
           .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(700 + brightness * 1000).toFixed(0)}).slow(2))
           .resonance(${(6 + brightness * 4).toFixed(0)})
           .detune(sine.range(-4, 4).slow(3))
-          .pan(sine.range(0.35, 0.65).slow(4))
+          .pan(sine.range(0.35, 0.65).slow(11))
           .room(${(room * 0.2).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
