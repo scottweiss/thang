@@ -357,18 +357,15 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'downtempo': {
-        // Square tick — rhythmic clicks distinct from triangle melody
+        // Kalimba — delicate plucked tine sound, distinct from vibraphone melody
         // .slow(4) creates 3:4 polyrhythm against melody's .slow(3)
         const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
+        steps = this.clampForSoundfont(steps);
         return `note("${steps.join(' ')}")
-          .sound("square")
-          .fm(0.3)
-          .fmh(0.5)
-          .fmenv("exp")
-          .fmdecay(0.04)
+          .sound("gm_kalimba")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(4)
           .gain(${(0.16 * (0.5 + density * 0.5)).toFixed(3)})
@@ -384,18 +381,15 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'lofi': {
-        // Triangle pluck — warm tick, distinct from square melody
+        // Marimba — warm wooden percussive attack, distinct from square melody
         // .slow(2) vs melody .slow(3) creates 2:3 polyrhythmic interplay
         const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
+        steps = this.clampForSoundfont(steps);
         return `note("${steps.join(' ')}")
-          .sound("triangle")
-          .fm(0.4)
-          .fmh(3)
-          .fmenv("exp")
-          .fmdecay(0.04)
+          .sound("gm_marimba")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(2)
           .gain(${(0.15 * (0.5 + density * 0.5)).toFixed(3)})
@@ -440,17 +434,14 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'avril': {
-        // Square pip — tiny gentle clicks, distinct from triangle melody
+        // Glockenspiel — bright bell-like, cuts through piano melody and Rhodes harmony
         // Dynamic range respects register-complement offset to avoid melody overlap
         const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
         const fill = this.pickFill16(density * sectionMult * 0.2);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
+        steps = this.clampForSoundfont(steps);
         return `note("${steps.join(' ')}")
-          .sound("square")
-          .fm(0.3)
-          .fmh(0.5)
-          .fmenv("exp")
-          .fmdecay(0.04)
+          .sound("gm_glockenspiel")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(5)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
@@ -466,7 +457,7 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'xtal': {
-        // Square chime pips — tiny clicks distinct from triangle melody and sine harmony
+        // Dulcimer — metallic shimmer, fits crystalline aesthetic, distinct from music_box melody
         // Dynamic range lets register-complement shift arp away from melody when needed
         const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(6, adjHigh), state);
         const xtalGain = 0.1 * (0.3 + density * 0.3);
@@ -487,12 +478,9 @@ export class ArpLayer extends CachingLayer {
           xtalGainStr = new Array(16).fill(xtalGain.toFixed(4)).join(' ');
         }
 
+        xtalSteps = this.clampForSoundfont(xtalSteps);
         return `note("${xtalSteps.join(' ')}")
-          .sound("square")
-          .fm(0.3)
-          .fmh(3)
-          .fmenv("exp")
-          .fmdecay(0.05)
+          .sound("gm_dulcimer")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.15))}
           .slow(7)
           .gain("${xtalGainStr}")
@@ -549,19 +537,16 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'blockhead': {
-        // Triangle tick — percussive, distinct from sawtooth melody and square harmony
+        // Clavinet — funky percussive keyboard, classic hip-hop sample character
         const notes = this.spreadWithDynamics(baseNotes, 3, 4, state);
         const pattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill8(density * sectionMult);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, pattern, 8, fill), state);
+        steps = this.clampForSoundfont(steps);
         const bhGain = 0.15 * (0.5 + density * 0.5);
         const bhVelGain = this.getVelocityGain(bhGain, 8, mood, section, progress, steps);
         return `note("${steps.join(' ')}")
-          .sound("triangle")
-          .fm(0.4)
-          .fmh(4)
-          .fmenv("exp")
-          .fmdecay(0.04)
+          .sound("gm_clavinet")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(1)
           .gain("${bhVelGain}")
@@ -577,18 +562,15 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'flim': {
-        // Pure sine pip — glass-like clockwork, distinct from triangle melody's bell tones
+        // Tubular bells — mechanical bell precision, Autechre-like clockwork quality
         // Floor of 0.15 ensures clockwork arp is always audible, even in intro
         // Dynamic range lets register-complement shift arp away from melody when needed
         const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(6, adjHigh), state);
         const fill = this.pickFill16(Math.max(0.15, density * sectionMult * 0.4));
-        const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
+        steps = this.clampForSoundfont(steps);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(0.3)
-          .fmh(3)
-          .fmenv("exp")
-          .fmdecay(0.05)
+          .sound("gm_tubular_bells")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(4)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
@@ -604,19 +586,16 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'disco': {
-        // Bubbly disco arp — sine with high FM, fast 16th notes, funky
+        // Clean electric guitar — classic disco guitar stabs, iconic and unmistakable
         const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
         const discoPattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, discoPattern, 16, fill), state);
+        steps = this.clampForSoundfont(steps);
         const discoGain = 0.14 * (0.5 + density * 0.5);
         const velGain = this.getVelocityGain(discoGain, 16, mood, section, progress, steps);
         return `note("${steps.join(' ')}")
-          .sound("sine")
-          .fm(${(1 + brightness * 1).toFixed(1)})
-          .fmh(4)
-          .fmenv("exp")
-          .fmdecay(0.04)
+          .sound("gm_electric_guitar_clean")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(1)
           .gain("${velGain}")
@@ -631,6 +610,17 @@ export class ArpLayer extends CachingLayer {
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
     }
+  }
+
+  /** Clamp note octaves to safe GM soundfont range (2–6) to avoid "no zone" errors */
+  private clampForSoundfont(steps: string[]): string[] {
+    return steps.map(s => {
+      if (s === '~') return s;
+      const m = s.match(/^([A-G][#b]?)(\d+)$/);
+      if (!m) return s;
+      const oct = Math.max(2, Math.min(6, parseInt(m[2], 10)));
+      return m[1] + oct;
+    });
   }
 
   // Pick arp style with contrapuntal bias
