@@ -1021,9 +1021,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'lofi':
-        // Lofi Rhodes — GM electric piano with bit crush and tape wobble
+        // Lofi jazz guitar — GM jazz guitar chords with bit crush and tape wobble
         return `${chordStart}
-          .sound("gm_epiano1")
+          .sound("gm_electric_guitar_jazz")
           .attack(0.003)
           .decay(0.8)
           .sustain(0.08)
@@ -1063,9 +1063,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'avril':
-        // Intimate Rhodes — GM electric piano for warm chord bed (melody keeps acoustic piano)
+        // Intimate nylon guitar — GM nylon for Satie-like warmth (melody keeps acoustic piano)
         return `${chordStart}
-          .sound("gm_epiano1")
+          .sound("gm_acoustic_guitar_nylon")
           .attack(0.005)
           .decay(1.5)
           .sustain(0.04)
@@ -1170,9 +1170,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'disco':
-        // Synth pad — bright polysynth for late-70s Moroder feel (clavinet melody + synth pad = classic disco)
+        // Brass section — classic disco brass stabs (clavinet melody + brass = iconic disco)
         return `${chordStart}
-          .sound("gm_pad_polysynth")
+          .sound("gm_brass_section")
           .attack(0.01)
           .decay(0.5)
           .sustain(0.2)
