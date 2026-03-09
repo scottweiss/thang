@@ -387,7 +387,7 @@ export class ArpLayer extends CachingLayer {
           .hpf(400)
           .lpf(${(2000 + brightness * 6000).toFixed(0)})
           .resonance(${(8 + brightness * 6).toFixed(0)})
-          .pan(sine.range(0.3, 0.7).slow(3))
+          .pan(sine.range(0.3, 0.7).slow(7))
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .delay(0.3)
