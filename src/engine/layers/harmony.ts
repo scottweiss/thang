@@ -983,7 +983,7 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'lofi':
-        // Lofi Rhodes — GM electric piano with bit crush for tape warmth
+        // Lofi Rhodes — GM electric piano with bit crush and tape wobble
         return `${chordStart}
           .sound("gm_epiano1")
           .attack(0.003)
@@ -995,6 +995,7 @@ export class HarmonyLayer implements Layer {
           .hpf(250)
           .lpf(${(1200 + brightness * 2500).toFixed(0)})
           .crush(${(12 + brightness * 4).toFixed(0)})
+          .detune(sine.range(-3, 3).slow(5))
           .pan(sine.range(0.3, 0.7).slow(7))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(1.5)
