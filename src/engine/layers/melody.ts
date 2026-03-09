@@ -123,7 +123,7 @@ export class MelodyLayer extends CachingLayer {
     const gain = 0.30 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
 
     // Build melodic phrase
-    let elements = (mood === 'ambient' || mood === 'xtal')
+    let elements = mood === 'ambient'
       ? this.buildAmbientPhrase(state, density)
       : this.buildStructuredPhrase(state, density);
 
@@ -1118,7 +1118,7 @@ export class MelodyLayer extends CachingLayer {
       lofi: effectiveDensity * 0.4,
       trance: effectiveDensity * 0.5,
       avril: effectiveDensity * 0.25,
-      xtal: effectiveDensity * 0.2,
+      xtal: effectiveDensity * 0.3,
       syro: effectiveDensity * 0.55,
       blockhead: effectiveDensity * 0.35,
       flim: effectiveDensity * 0.3,
