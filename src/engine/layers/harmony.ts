@@ -1018,7 +1018,7 @@ export class HarmonyLayer implements Layer {
           .hpf(250)
           .lpf(sine.range(${(800 + brightness * 1500).toFixed(0)}, ${(2500 + brightness * 4500).toFixed(0)}).slow(3))
           .resonance(${(4 + brightness * 4).toFixed(0)})
-          .detune(sine.range(-8, 8).slow(2))
+          .detune(sine.range(-4, 4).slow(4))
           .pan(sine.range(0.2, 0.8).slow(4))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
