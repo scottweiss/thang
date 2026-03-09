@@ -217,9 +217,10 @@ export class MelodyLayer extends CachingLayer {
         const pc = NOTE_PC[name];
         if (pc === undefined) continue;
         const score = gravityScore(pc, gMap);
-        // Only intervene on weak positions with low gravity
+        // Only intervene on truly dissonant notes (score < 0.05) on weak beats
+        // 0.15 was too aggressive — it killed passing tones and color notes
         const isWeak = i % 4 !== 0;
-        if (isWeak && score < 0.15) {
+        if (isWeak && score < 0.05) {
           // Snap to nearest chord tone
           const octave = elements[i].match(/\d+$/)?.[0] ?? '4';
           const chordNames = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
