@@ -8,8 +8,6 @@ const NOTE_INDEX: Record<string, number> = {
   'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
 };
 
-const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
 /** Strip octave, return semitone index (0-11). */
 function pitchClass(note: string): number {
   const name = noteName(note);
@@ -45,7 +43,7 @@ export function extractNotes(code: string): { index: number; note: string }[] {
   const tokens = m[1].split(/\s+/);
   const result: { index: number; note: string }[] = [];
   for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i] !== '~') {
+    if (tokens[i] !== '~' && tokens[i] !== '') {
       result.push({ index: i, note: tokens[i] });
     }
   }
@@ -135,7 +133,7 @@ export function adaptMelodyToChord(cachedCode: string, newChordTones: string[]):
     return token;
   });
 
-  return cachedCode.replace(m[1], adapted.join(' '));
+  return cachedCode.replace(m[0], `note("${adapted.join(' ')}")`);
 }
 
 /**
@@ -170,7 +168,7 @@ export function adaptArpToChord(
     return newChordTones[newIdx] + oct;
   });
 
-  return cachedCode.replace(m[1], adapted.join(' '));
+  return cachedCode.replace(m[0], `note("${adapted.join(' ')}")`);
 }
 
 /**
@@ -181,10 +179,11 @@ export function adaptDroneToChord(
   oldRoot: string,
   newRoot: string,
 ): string {
-  // Escape special regex characters in note names (e.g., F#)
+  const m = cachedCode.match(/note\("([^"]+)"\)/);
+  if (!m) return cachedCode;
   const escaped = oldRoot.replace(/[#]/g, '\\$&');
-  // Replace all occurrences of oldRoot + digit with newRoot + same digit
-  return cachedCode.replace(new RegExp(escaped + '(\\d)', 'g'), newRoot + '$1');
+  const swapped = m[1].replace(new RegExp(escaped + '(\\d)', 'g'), newRoot + '$1');
+  return cachedCode.replace(m[1], swapped);
 }
 
 /**
