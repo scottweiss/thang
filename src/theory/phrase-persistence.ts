@@ -183,7 +183,7 @@ export function adaptDroneToChord(
   if (!m) return cachedCode;
   const escaped = oldRoot.replace(/[#]/g, '\\$&');
   const swapped = m[1].replace(new RegExp(escaped + '(\\d)', 'g'), newRoot + '$1');
-  return cachedCode.replace(m[1], swapped);
+  return cachedCode.replace(m[0], `note("${swapped}")`);
 }
 
 /**
