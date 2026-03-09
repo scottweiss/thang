@@ -1129,7 +1129,7 @@ export class HarmonyLayer implements Layer {
           .slow(4)
           .gain(${(gain * 0.65).toFixed(3)})
           .hpf(250)
-          .lpf(${(2000 + brightness * 2500).toFixed(0)})
+          .lpf(${(2800 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.2, 0.8).slow(9))
           .room(${(room * 0.8).toFixed(2)})
           .roomsize(3)
