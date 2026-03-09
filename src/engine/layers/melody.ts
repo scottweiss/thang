@@ -929,7 +929,7 @@ export class MelodyLayer extends CachingLayer {
 
     // Build a pitch ladder across 2 octaves
     const [adjLow, adjHigh] = getAdjustedOctaveRange('melody', state.layerCenterPitches);
-    const baseOct = Math.max(adjLow, mood === 'trance' ? 3 : 4);
+    const baseOct = Math.max(adjLow, 4);
     const ladder = this.buildLadder(scaleNotes, baseOct, baseOct + 1);
 
     // Store center pitch for register coordination
