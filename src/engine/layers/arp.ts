@@ -125,8 +125,11 @@ export class ArpLayer extends CachingLayer {
     // Build arp notes from chord tones across octaves
     let baseNotes = chord.notes;
 
-    // Tintinnabuli: arp becomes a T-voice shadowing melody with tonic triad tones (Arvo Pärt)
-    if (state.activeMotif && state.activeMotif.length >= 3 &&
+    // Melody-relationship strategies: only ONE fires per tick to keep note pool focused.
+    // Previously all could fire simultaneously, bloating the pool to 15+ notes.
+    let melodyStrategyApplied = false;
+
+    if (!melodyStrategyApplied && state.activeMotif && state.activeMotif.length >= 3 &&
         shouldApplyTintinnabuli(state.tick, mood, section)) {
       const quality: 'maj' | 'min' = chord.quality === 'min' || chord.quality === 'min7' || chord.quality === 'min9'
         ? 'min' : 'maj';
@@ -135,11 +138,11 @@ export class ArpLayer extends CachingLayer {
       const validT = tVoice.filter(n => n !== '~' && n.match(/^[A-G]/));
       if (validT.length >= 2) {
         baseNotes = [...chord.notes.slice(0, 2), ...validT.slice(0, 4)];
+        melodyStrategyApplied = true;
       }
     }
 
-    // Heterophony: arp shadows the melody with variation instead of independent pattern
-    if (state.activeMotif && state.activeMotif.length >= 3 &&
+    if (!melodyStrategyApplied && state.activeMotif && state.activeMotif.length >= 3 &&
         shouldApplyHeterophony(state.tick, mood, section)) {
       const variation = selectVariation(mood, section, state.tick);
       let heteroNotes: string[];
@@ -160,22 +163,22 @@ export class ArpLayer extends CachingLayer {
       const validHetero = heteroNotes.filter(n => n !== '~' && n.match(/^[A-G]/));
       if (validHetero.length >= 2) {
         baseNotes = [...chord.notes, ...validHetero.slice(0, 4)];
+        melodyStrategyApplied = true;
       }
     }
 
-    // Imitative echo: transpose melody motif and use as arp base (canonic imitation)
-    if (state.activeMotif && state.activeMotif.length >= 3 &&
+    if (!melodyStrategyApplied && state.activeMotif && state.activeMotif.length >= 3 &&
         shouldEchoMotif(mood, section)) {
       const interval = selectEchoInterval(mood, this.echoCounter++);
       const echoed = transposeMotif(state.activeMotif, state.scale.notes, interval);
       const validEchoed = echoed.filter(n => n !== '~' && n.match(/^[A-G]/));
       if (validEchoed.length >= 2) {
         baseNotes = [...chord.notes, ...validEchoed.slice(0, 3)];
+        melodyStrategyApplied = true;
       }
     }
 
-    // Stretto: overlapping canonic entry of melody motif — creates urgency in builds
-    if (state.activeMotif && state.activeMotif.length >= 3 &&
+    if (!melodyStrategyApplied && state.activeMotif && state.activeMotif.length >= 3 &&
         shouldApplyStretto(state.tick, mood, section)) {
       const interval = strettoInterval(mood, state.tick);
       const transposed = transposeForStretto(state.activeMotif, interval, state.scale.notes);
@@ -184,36 +187,33 @@ export class ArpLayer extends CachingLayer {
       const validEntry = entry.filter(n => n !== '~' && n.match(/^[A-G]/));
       if (validEntry.length >= 2) {
         baseNotes = [...chord.notes, ...validEntry.slice(0, 4)];
+        melodyStrategyApplied = true;
       }
     }
 
-    // Thematic unity: occasionally blend melody motif notes into arp's note pool
-    // Creates callbacks to the melody's material — feels composed rather than random
-    if (state.activeMotif && state.activeMotif.length >= 2 &&
+    if (!melodyStrategyApplied && state.activeMotif && state.activeMotif.length >= 2 &&
         (section === 'build' || section === 'peak' || section === 'groove') &&
         Math.random() < 0.2) {
-      // Take 1-2 notes from the motif to enrich the arp palette
       const motifSample = state.activeMotif.slice(0, Math.min(2, state.activeMotif.length));
       baseNotes = [...chord.notes, ...motifSample];
+      melodyStrategyApplied = true;
     }
 
-    // Voice exchange: borrow specific melody pitches for counterpoint richness
-    if (state.activeMotif && state.activeMotif.length >= 2 &&
+    if (!melodyStrategyApplied && state.activeMotif && state.activeMotif.length >= 2 &&
         shouldExchangeVoices(state.tick, mood, section)) {
       const exchanged = selectExchangeNotes(
         state.activeMotif, baseNotes, chord.notes, 1
       );
       if (exchanged.length > 0) {
         baseNotes = [...baseNotes, ...exchanged];
+        melodyStrategyApplied = true;
       }
     }
 
-    // Pitch complementarity: enrich arp with scale notes the melody ISN'T playing
-    // Fills harmonic gaps rather than doubling — richer overall texture
+    // Harmonic enrichment: only one of complement / pitch-class fires (not both)
     if (shouldApplyComplement(mood) && state.activeMotif && state.activeMotif.length > 0) {
       const str = complementStrength(mood);
       const weights = complementWeights(state.activeMotif, state.scale.notes, chord.notes.map(n => n.replace(/\d+$/, '')), str);
-      // Add 1-2 complementary scale notes weighted by what melody isn't playing
       const ladder = state.scale.notes;
       const w = weightLadder(ladder, weights);
       const extra: string[] = [];
@@ -227,10 +227,8 @@ export class ArpLayer extends CachingLayer {
       if (extra.length > 0) {
         baseNotes = [...baseNotes, ...extra];
       }
-    }
-
-    // Pitch-class set enrichment: add mood-appropriate interval color
-    if (section !== 'intro' && Math.random() < 0.25) {
+    } else if (section !== 'intro' && Math.random() < 0.25) {
+      // Pitch-class set enrichment: only if complement didn't fire
       const NOTE_PC: Record<string, number> = {
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
         'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
