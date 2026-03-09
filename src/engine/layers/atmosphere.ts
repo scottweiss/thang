@@ -82,9 +82,10 @@ export class AtmosphereLayer extends CachingLayer {
       .slow(7)
       .gain(${gain.toFixed(4)})
       .lpf(sine.range(${(lpf * 0.7).toFixed(0)}, ${lpf.toFixed(0)}).slow(23))
+      .hpf(150)
       .pan(sine.range(0.2, 0.8).slow(19))
-      .room(${room.toFixed(2)})
-      .roomsize(6)
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(3)
       .orbit(${this.orbit})`;
   }
 
@@ -175,9 +176,10 @@ export class AtmosphereLayer extends CachingLayer {
       .slow(8)
       .gain(${gain.toFixed(4)})
       .lpf(sine.range(${(lpf * 0.6).toFixed(0)}, ${lpf.toFixed(0)}).slow(29))
+      .hpf(150)
       .pan(sine.range(0.2, 0.8).slow(23))
-      .room(${(room * 1.3).toFixed(2)})
-      .roomsize(7)
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(3)
       .orbit(${this.orbit})`;
   }
 
@@ -292,11 +294,11 @@ export class AtmosphereLayer extends CachingLayer {
       .hpf(${(5000 + brightness * 2000).toFixed(0)})
       .lpf(${(9000 + brightness * 3000).toFixed(0)})
       .pan(sine.range(0.2, 0.8).slow(13))
-      .room(${(room * 0.8).toFixed(2)})
-      .roomsize(4)
-      .delay(0.2)
+      .room(${(room * 0.4).toFixed(2)})
+      .roomsize(2)
+      .delay(0.15)
       .delaytime(0.66)
-      .delayfeedback(0.3)
+      .delayfeedback(0.2)
       .orbit(${this.orbit})`;
   }
 
@@ -360,9 +362,10 @@ export class AtmosphereLayer extends CachingLayer {
         .slow(4)
         .gain(${(gain * 0.8).toFixed(4)})
         .lpf(sine.range(${(200 + brightness * 300).toFixed(0)}, ${(1500 + brightness * 2000).toFixed(0)}).slow(8))
+        .hpf(120)
         .resonance(10)
-        .room(${(room * 0.6).toFixed(2)})
-        .roomsize(3)
+        .room(${(room * 0.4).toFixed(2)})
+        .roomsize(2)
         .orbit(${this.orbit})`;
     }
 
@@ -381,10 +384,11 @@ export class AtmosphereLayer extends CachingLayer {
         .slow(2)
         .gain(${gain.toFixed(4)})
         .lpf(${(800 + brightness * 2000).toFixed(0)})
+        .hpf(120)
         .resonance(6)
         .pan(sine.range(0.25, 0.75).slow(5))
-        .room(${(room * 0.5).toFixed(2)})
-        .roomsize(2)
+        .room(${(room * 0.35).toFixed(2)})
+        .roomsize(1.5)
         .orbit(${this.orbit})`;
     }
 
@@ -402,8 +406,9 @@ export class AtmosphereLayer extends CachingLayer {
       .slow(6)
       .gain(${(gain * 0.3).toFixed(4)})
       .lpf(${(200 + brightness * 400).toFixed(0)})
-      .room(${room.toFixed(2)})
-      .roomsize(5)
+      .hpf(120)
+      .room(${(room * 0.5).toFixed(2)})
+      .roomsize(2.5)
       .orbit(${this.orbit})`;
   }
 }
