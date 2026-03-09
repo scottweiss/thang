@@ -771,9 +771,9 @@ export class MelodyLayer extends CachingLayer {
           .pan(sine.range(0.15, 0.85).slow(1.5))
           .room(${(room * 0.25).toFixed(2)})
           .roomsize(1)
-          .delay(0.35)
+          .delay(0.3)
           .delaytime(0.144)
-          .delayfeedback(0.4)
+          .delayfeedback(0.3)
           .orbit(${this.orbit})`;
 
       case 'blockhead':
