@@ -18,16 +18,16 @@ import type { Mood, Section } from '../types';
  * Higher = more speed-up before cadences.
  */
 const ACCEL_STRENGTH: Record<Mood, number> = {
-  trance:    0.30,  // builds to drops
-  avril:     0.50,  // classical phrasing
-  disco:     0.25,  // moderate groove momentum
-  downtempo: 0.35,  // subtle push
-  blockhead: 0.20,  // hip-hop timing
-  lofi:      0.45,  // jazz phrase momentum
-  flim:      0.35,  // organic
-  xtal:      0.15,  // floating, less directed
-  syro:      0.10,  // ambiguous, no strong cadences
-  ambient:   0.08,  // barely perceptible
+  avril:     0.35,  // classical phrasing (was 0.50)
+  lofi:      0.30,  // jazz phrase momentum (was 0.45)
+  downtempo: 0.25,  // subtle push (was 0.35)
+  flim:      0.20,  // organic (was 0.35)
+  xtal:      0.12,  // floating, less directed (was 0.15)
+  blockhead: 0.10,  // groove — minimal (was 0.20)
+  syro:      0.08,  // ambiguous (was 0.10)
+  disco:     0.05,  // groove-locked — near-zero (was 0.25)
+  trance:    0.05,  // groove-locked — near-zero (was 0.30)
+  ambient:   0.03,  // barely perceptible (was 0.08)
 };
 
 /**

@@ -15,16 +15,16 @@ import type { Mood, Section } from '../types';
  * Per-mood warp range (maximum ± percentage of tempo change).
  */
 const WARP_RANGE: Record<Mood, number> = {
-  trance:    0.03,  // ±3% — tight
-  avril:     0.05,  // ±5% — expressive
-  disco:     0.03,  // ±3% — tight groove
-  downtempo: 0.06,  // ±6% — lazy
-  blockhead: 0.04,  // ±4% — moderate
-  lofi:      0.07,  // ±7% — maximum jazz breathing
-  flim:      0.05,  // ±5% — organic
-  xtal:      0.04,  // ±4% — ambient
-  syro:      0.03,  // ±3% — tight IDM
-  ambient:   0.02,  // ±2% — minimal
+  lofi:      0.04,  // ±4% — jazz breathing (was 0.07)
+  downtempo: 0.035, // ±3.5% — lazy (was 0.06)
+  avril:     0.03,  // ±3% — expressive (was 0.05)
+  flim:      0.025, // ±2.5% — organic (was 0.05)
+  blockhead: 0.02,  // ±2% — groove (was 0.04)
+  xtal:      0.02,  // ±2% — ambient (was 0.04)
+  syro:      0.015, // ±1.5% — tight IDM (was 0.03)
+  disco:     0.01,  // ±1% — groove-locked (was 0.03)
+  trance:    0.01,  // ±1% — groove-locked (was 0.03)
+  ambient:   0.01,  // ±1% — minimal (was 0.02)
 };
 
 /**

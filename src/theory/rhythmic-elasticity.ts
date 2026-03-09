@@ -17,16 +17,16 @@ import type { Mood, Section } from '../types';
  * Higher = more stretch.
  */
 const ELASTICITY: Record<Mood, number> = {
-  trance:    0.02,  // metronomic, almost no stretch
-  avril:     0.08,  // subtle rubato
-  disco:     0.03,  // groove-locked
-  downtempo: 0.10,  // moderate stretch
-  blockhead: 0.06,  // slight
-  lofi:      0.12,  // jazz — maximum elasticity
-  flim:      0.10,  // organic feel
-  xtal:      0.08,  // floating
-  syro:      0.05,  // complex but tight
-  ambient:   0.15,  // very elastic, dreamlike
+  lofi:      0.06,  // jazz — moderate elasticity (was 0.12)
+  downtempo: 0.05,  // moderate stretch (was 0.10)
+  flim:      0.05,  // organic feel (was 0.10)
+  ambient:   0.05,  // dreamlike (was 0.15)
+  xtal:      0.04,  // floating (was 0.08)
+  avril:     0.04,  // subtle rubato (was 0.08)
+  syro:      0.03,  // complex but tight (was 0.05)
+  blockhead: 0.02,  // groove (was 0.06)
+  disco:     0.01,  // groove-locked (was 0.03)
+  trance:    0.01,  // metronomic (was 0.02)
 };
 
 /**

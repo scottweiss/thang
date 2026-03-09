@@ -1050,9 +1050,9 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'avril':
-        // Intimate piano — GM acoustic piano with heavy reverb and delay
+        // Intimate Rhodes — GM electric piano for warm chord bed (melody keeps acoustic piano)
         return `${chordStart}
-          .sound("gm_piano")
+          .sound("gm_epiano1")
           .attack(0.005)
           .decay(1.5)
           .sustain(0.04)

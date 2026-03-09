@@ -31,16 +31,16 @@ const RATIO_VALUES: Record<ModulationRatio, number> = {
 
 /** How much each mood uses metric modulation (0-1) */
 const MODULATION_TENDENCY: Record<Mood, number> = {
-  syro:      0.35,  // IDM — rhythmic complexity
-  blockhead: 0.30,  // hip-hop — tempo play
-  flim:      0.25,  // glitchy transitions
-  lofi:      0.20,  // jazz — tempo shifts
-  disco:     0.15,  // buildups use it
-  trance:    0.12,  // transition effects
-  downtempo: 0.10,  // subtle
-  avril:     0.08,  // rare
-  xtal:      0.05,  // mostly static
-  ambient:   0.03,  // nearly none
+  syro:      0.25,  // IDM — rhythmic complexity (was 0.35)
+  flim:      0.18,  // glitchy transitions (was 0.25)
+  lofi:      0.12,  // jazz — tempo shifts (was 0.20)
+  blockhead: 0.10,  // hip-hop — occasional (was 0.30)
+  downtempo: 0.08,  // subtle (was 0.10)
+  avril:     0.05,  // rare (was 0.08)
+  xtal:      0.03,  // mostly static (was 0.05)
+  disco:     0.0,   // groove-locked — no metric modulation (was 0.15)
+  trance:    0.0,   // groove-locked — no metric modulation (was 0.12)
+  ambient:   0.0,   // no metric modulation (was 0.03)
 };
 
 /** Which transitions favor acceleration vs deceleration */

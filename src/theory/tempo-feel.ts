@@ -23,16 +23,16 @@ import type { Mood, Section } from '../types';
 
 /** Maximum tempo fluctuation per mood (as fraction, e.g., 0.03 = ±3%) */
 const FLUCTUATION_DEPTH: Record<Mood, number> = {
-  lofi:      0.030,   // jazz breathing
-  avril:     0.025,   // singer-songwriter feel
-  flim:      0.025,   // organic IDM
-  downtempo: 0.020,   // laid back feel
-  ambient:   0.020,   // organic breathing
-  xtal:      0.018,   // dreamy fluctuation
-  blockhead: 0.015,   // hip-hop pocket
-  disco:     0.012,   // funky but steady
-  syro:      0.010,   // tight but not mechanical
-  trance:    0.005,   // near-mechanical
+  lofi:      0.020,   // jazz breathing (was 0.030)
+  avril:     0.018,   // singer-songwriter feel (was 0.025)
+  flim:      0.015,   // organic IDM (was 0.025)
+  downtempo: 0.015,   // laid back feel (was 0.020)
+  xtal:      0.012,   // dreamy fluctuation (was 0.018)
+  ambient:   0.010,   // organic breathing (was 0.020)
+  blockhead: 0.008,   // hip-hop pocket (was 0.015)
+  syro:      0.006,   // tight but not mechanical (was 0.010)
+  disco:     0.004,   // groove-locked (was 0.012)
+  trance:    0.003,   // near-mechanical (was 0.005)
 };
 
 /** Fluctuation cycle period in ticks (how often tempo breathes) */
