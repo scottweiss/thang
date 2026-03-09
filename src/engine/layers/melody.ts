@@ -743,7 +743,7 @@ export class MelodyLayer extends CachingLayer {
           .hpf(250)
           .lpf(${(1500 + brightness * 1500).toFixed(0)})
           .detune(sine.range(-1.5, 1.5).slow(7))
-          .pan(sine.range(0.1, 0.9).slow(9))
+          .pan(sine.range(0.15, 0.85).slow(9))
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(2)
           .delay(0.3)
