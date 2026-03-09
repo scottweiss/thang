@@ -34,6 +34,7 @@ import { shouldApplyTintinnabuli, generateTVoice, selectPosition } from '../../t
 import { shouldApplyColorPedal, selectPedalTone, pedalOctave } from '../../theory/color-pedal';
 import { shouldApplyPhaseShift, phaseOffset, phaseToLate, phaseCycleLength } from '../../theory/phase-shift';
 import { arpDensityDegrade, shouldApplyArpDensityWave } from '../../theory/arp-density-wave';
+import { adaptArpToChord, phraseRepeatCount } from '../../theory/phrase-persistence';
 
 type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 
@@ -67,16 +68,53 @@ export class ArpLayer extends CachingLayer {
   private echoCounter = 0;
   private phaseActive = false;
   private phaseStartTick = 0;
+  /** Phrase persistence: remaining chord changes to keep current phrase */
+  private phraseRepeatsRemaining = 0;
+  /** Chord tones from last full regeneration (for adaptation) */
+  private lastChordTones: string[] = [];
+  /** Flag set by shouldRegenerate when chord adaptation is needed */
+  private needsChordAdaptation = false;
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
-    if (this.moodChanged(state)) return true;
-    if (state.chordChanged) return true;
-    if (state.scaleChanged) return true;
-    if (state.sectionChanged) return true;
+    if (this.moodChanged(state)) {
+      this.phraseRepeatsRemaining = 0;
+      return true;
+    }
+    if (state.scaleChanged) {
+      this.phraseRepeatsRemaining = 0;
+      return true;
+    }
+    if (state.sectionChanged) {
+      this.phraseRepeatsRemaining = 0;
+      return true;
+    }
+    if (state.chordChanged) {
+      if (this.phraseRepeatsRemaining > 0) {
+        this.phraseRepeatsRemaining--;
+        this.needsChordAdaptation = true;
+        return false;
+      }
+      return true;
+    }
 
     const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 3, blockhead: 10, flim: 14, disco: 6 }[state.mood] ?? 8;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
+  }
+
+  generate(state: GenerativeState): string {
+    this.needsChordAdaptation = false;
+    const result = super.generate(state);
+
+    // After super.generate, if shouldRegenerate set the adaptation flag,
+    // adapt the cached pattern to the new chord tones (remap chord tones)
+    if (this.needsChordAdaptation && this.cachedPattern) {
+      const newChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+      this.cachedPattern = adaptArpToChord(this.cachedPattern, this.lastChordTones, newChordTones);
+      this.lastChordTones = newChordTones;
+    }
+
+    return this.cachedPattern ?? result;
   }
 
   protected buildPattern(state: GenerativeState): string {
@@ -103,6 +141,10 @@ export class ArpLayer extends CachingLayer {
     }
     const section = state.section;
     this.lastMood = mood;
+
+    // Store chord tones and set phrase repeat counter for persistence
+    this.lastChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+    this.phraseRepeatsRemaining = phraseRepeatCount(state.mood);
 
     // Phase shift: Steve Reich-style gradual pattern offset
     if (!this.phaseActive && shouldApplyPhaseShift(state.tick, mood, section)) {
