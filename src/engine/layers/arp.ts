@@ -302,7 +302,7 @@ export class ArpLayer extends CachingLayer {
           .attack(0.05)
           .decay(1.5)
           .sustain(0.02)
-          .release(2)
+          .release(0.8)
           .slow(5)
           .gain(${(0.12 * (0.4 + density * 0.4)).toFixed(3)})
           .hpf(300)
