@@ -453,6 +453,7 @@ export class ArpLayer extends CachingLayer {
           .gain("${xtalGainStr}")
           .hpf(300)
           .lpf(${(1800 + brightness * 2000).toFixed(0)})
+          .detune(sine.range(-1, 1).slow(9))
           .pan(sine.range(0.1, 0.9).slow(11))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
