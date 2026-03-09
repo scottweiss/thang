@@ -258,50 +258,39 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'downtempo': {
-        // Warm FM bass — harmonicity 1 creates growl, slow FM sweep adds movement
+        // Acoustic upright bass — warm, natural, pairs with Rhodes harmony
         const dtBass = generateBassPattern(root, fifth, 'downtempo', 2, bassDir);
         this.injectApproachNotes(dtBass, state, root, 2);
         return `note("${dtBass.join(' ')}")
-          .sound("sine")
-          .fm(${(1 + brightness * 1.5).toFixed(1)})
-          .fmh(1)
-          .fmenv("exp")
-          .fmdecay(0.6)
-          .attack(0.1)
-          .decay(0.8)
-          .sustain(0.3)
-          .release(0.5)
+          .sound("gm_acoustic_bass")
+          .attack(0.02)
+          .decay(0.6)
+          .sustain(0.2)
+          .release(0.3)
           .slow(3)
-          .gain(${gain.toFixed(3)})
-          .lpf(sine.range(${(200 + brightness * 200).toFixed(0)}, ${(450 + brightness * 500).toFixed(0)}).slow(13))
-          .resonance(3)
-          .pan(sine.range(0.35, 0.65).slow(9))
-          .detune(sine.range(-3, 3).slow(11))
-          .room(${(room * 0.35).toFixed(2)})
+          .gain(${(gain * 1.1).toFixed(3)})
+          .lpf(sine.range(${(300 + brightness * 300).toFixed(0)}, ${(600 + brightness * 600).toFixed(0)}).slow(13))
+          .pan(sine.range(0.4, 0.6).slow(9))
+          .room(${(room * 0.3).toFixed(2)})
           .roomsize(1.5)
           .orbit(${this.orbit})`;
       }
 
       case 'lofi': {
-        // Warm sub bass — triangle + light FM for subtle tape saturation feel
+        // Fretless bass — smooth, warm, sliding jazz tone over Rhodes chords
         const lofiBass = generateBassPattern(root, fifth, 'lofi', 4, bassDir);
         this.injectApproachNotes(lofiBass, state, root, 2);
         return `note("${lofiBass.join(' ')}")
-          .sound("triangle")
-          .fm(${(0.3 + brightness * 0.5).toFixed(1)})
-          .fmh(1)
-          .fmenv("exp")
-          .fmdecay(0.3)
+          .sound("gm_fretless_bass")
           .attack(0.01)
-          .decay(0.3)
-          .sustain(0.15)
+          .decay(0.4)
+          .sustain(0.2)
           .release(0.2)
           .slow(2)
-          .gain(${(gain * 1.2).toFixed(3)})
-          .lpf(sine.range(${(300 + brightness * 200).toFixed(0)}, ${(500 + brightness * 500).toFixed(0)}).slow(5))
-          .detune(sine.range(-2, 2).slow(7))
+          .gain(${(gain * 1.1).toFixed(3)})
+          .lpf(sine.range(${(400 + brightness * 300).toFixed(0)}, ${(700 + brightness * 600).toFixed(0)}).slow(7))
           .pan(sine.range(0.4, 0.6).slow(19))
-          .room(${(room * 0.25).toFixed(2)})
+          .room(${(room * 0.2).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
       }
@@ -399,25 +388,21 @@ export class DroneLayer implements Layer {
       }
 
       case 'blockhead': {
-        // Warm sub bass — sine with slight saturation via low FM, solid hip-hop foundation
+        // Fingered electric bass — punchy, funky, pairs with organ harmony
         const bhBass = generateBassPattern(root, fifth, 'blockhead', 4, bassDir);
         this.injectApproachNotes(bhBass, state, root, 2);
         return `note("${bhBass.join(' ')}")
-          .sound("sine")
-          .fm(${(0.5 + brightness * 0.4).toFixed(1)})
-          .fmh(1)
-          .fmenv("exp")
-          .fmdecay(0.4)
-          .attack(0.01)
-          .decay(0.5)
-          .sustain(0.25)
-          .release(0.3)
+          .sound("gm_electric_bass_finger")
+          .attack(0.005)
+          .decay(0.4)
+          .sustain(0.2)
+          .release(0.15)
           .slow(2)
-          .gain(${(gain * 1.1).toFixed(3)})
-          .lpf(sine.range(${(250 + brightness * 200).toFixed(0)}, ${(500 + brightness * 400).toFixed(0)}).slow(9))
+          .gain(${(gain * 1.2).toFixed(3)})
+          .lpf(sine.range(${(400 + brightness * 300).toFixed(0)}, ${(800 + brightness * 600).toFixed(0)}).slow(9))
           .pan(sine.range(0.4, 0.6).slow(7))
-          .room(${(room * 0.2).toFixed(2)})
-          .roomsize(1)
+          .room(${(room * 0.15).toFixed(2)})
+          .roomsize(0.8)
           .orbit(${this.orbit})`;
       }
 
