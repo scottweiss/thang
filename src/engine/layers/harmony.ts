@@ -1094,9 +1094,9 @@ export class HarmonyLayer implements Layer {
           .pan(sine.range(0.1, 0.9).slow(2))
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
-          .delay(0.4)
+          .delay(0.25)
           .delaytime(0.216)
-          .delayfeedback(0.45)
+          .delayfeedback(0.35)
           .orbit(${this.orbit})`;
 
       case 'blockhead':
