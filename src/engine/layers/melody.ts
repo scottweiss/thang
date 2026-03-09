@@ -61,6 +61,7 @@ import { arcRegisterOffset, arcSemitoneShift, shouldApplyMelodicArc } from '../.
 import { detectSequence, suggestSequenceContinuation, shouldDetectSequence } from '../../theory/melodic-sequence-detection';
 import { weightGainMultiplier, shouldApplyRhythmicWeight } from '../../theory/rhythmic-weight';
 import { shouldPrepare, suggestPreparation, isDissonantAgainstChord } from '../../theory/harmonic-preparation';
+import { adaptMelodyToChord, phraseRepeatCount } from '../../theory/phrase-persistence';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -91,6 +92,12 @@ export class MelodyLayer extends CachingLayer {
   private gestureHistory: GestureType[] = [];
   /** Intervallic variety tracking */
   private recentIntervals: number[] = [];
+  /** Phrase persistence: remaining chord changes to keep current phrase */
+  private phraseRepeatsRemaining = 0;
+  /** Chord tones from last full regeneration (for adaptation) */
+  private lastChordTones: string[] = [];
+  /** Flag set by shouldRegenerate when chord adaptation is needed */
+  private needsChordAdaptation = false;
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -101,16 +108,45 @@ export class MelodyLayer extends CachingLayer {
       this.lastNoteName = null;
       this.gestureHistory = [];
       this.recentIntervals = [];
+      this.phraseRepeatsRemaining = 0;
       return true;
     }
-    if (state.chordChanged) return true;
-    if (state.scaleChanged) return true;
-    if (state.sectionChanged) return true;
+    if (state.scaleChanged) {
+      this.phraseRepeatsRemaining = 0;
+      return true;
+    }
+    if (state.sectionChanged) {
+      this.phraseRepeatsRemaining = 0;
+      return true;
+    }
+    if (state.chordChanged) {
+      if (this.phraseRepeatsRemaining > 0) {
+        this.phraseRepeatsRemaining--;
+        this.needsChordAdaptation = true;
+        return false;
+      }
+      return true;
+    }
 
     const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4, blockhead: 10, flim: 12, disco: 6 }[state.mood] ?? 8;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
+  }
+
+  generate(state: GenerativeState): string {
+    this.needsChordAdaptation = false;
+    const result = super.generate(state);
+
+    // After super.generate, if shouldRegenerate set the adaptation flag,
+    // adapt the cached pattern to the new chord tones (minimal nudging)
+    if (this.needsChordAdaptation && this.cachedPattern) {
+      const newChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+      this.cachedPattern = adaptMelodyToChord(this.cachedPattern, newChordTones);
+      this.lastChordTones = newChordTones;
+    }
+
+    return this.cachedPattern ?? result;
   }
 
   protected buildPattern(state: GenerativeState): string {
@@ -602,6 +638,10 @@ export class MelodyLayer extends CachingLayer {
         );
       }
     }
+
+    // Store chord tones and set phrase repeat counter for persistence
+    this.lastChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+    this.phraseRepeatsRemaining = phraseRepeatCount(state.mood);
 
     return finalPattern;
   }
