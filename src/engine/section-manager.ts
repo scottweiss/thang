@@ -17,10 +17,10 @@ const ALL_LAYERS = ['drone', 'harmony', 'melody', 'texture', 'arp', 'atmosphere'
 const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
   ambient: {
     intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.85, duration: [15, 25] },
-    build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'melody'], densityTarget: 0.4, brightnessTarget: 0.45, spaciousnessTarget: 0.7, duration: [40, 80] },
-    peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.6, brightnessTarget: 0.65, spaciousnessTarget: 0.75, duration: [50, 100] },
-    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.30, spaciousnessTarget: 0.9, duration: [40, 70] },
-    groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.5, brightnessTarget: 0.50, spaciousnessTarget: 0.8, duration: [50, 90] },
+    build:     { activeLayers: ['drone', 'harmony', 'atmosphere', 'melody'], densityTarget: 0.4, brightnessTarget: 0.45, spaciousnessTarget: 0.7, duration: [30, 55] },
+    peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.6, brightnessTarget: 0.65, spaciousnessTarget: 0.75, duration: [40, 75] },
+    breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.30, spaciousnessTarget: 0.9, duration: [30, 55] },
+    groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.5, brightnessTarget: 0.50, spaciousnessTarget: 0.8, duration: [40, 70] },
   },
   downtempo: {
     intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.30, spaciousnessTarget: 0.8, duration: [16, 30] },
@@ -76,7 +76,7 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     build:     { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere', 'arp'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.75, duration: [35, 55] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.55, brightnessTarget: 0.60, spaciousnessTarget: 0.8, duration: [40, 65] },
     breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.9, duration: [30, 50] },
-    groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.45, brightnessTarget: 0.45, spaciousnessTarget: 0.8, duration: [35, 60] },
+    groove:    { activeLayers: ALL_LAYERS, densityTarget: 0.45, brightnessTarget: 0.45, spaciousnessTarget: 0.8, duration: [35, 60] },
   },
   disco: {
     intro:     { activeLayers: ['drone', 'atmosphere', 'texture'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.65, duration: [10, 18] },
