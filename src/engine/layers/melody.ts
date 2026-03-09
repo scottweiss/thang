@@ -678,7 +678,7 @@ export class MelodyLayer extends CachingLayer {
     state: GenerativeState
   ): string {
     // Clamp notes for soundfont moods to avoid "no zone" errors
-    const sfMoods = ['ambient', 'downtempo', 'xtal', 'disco'];
+    const sfMoods = ['ambient', 'downtempo', 'xtal', 'disco', 'lofi', 'trance', 'blockhead', 'syro'];
     if (sfMoods.includes(mood)) {
       elements = this.clampForSoundfont(elements);
     }
@@ -725,14 +725,10 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'lofi':
-        // Square pluck — retro/chiptune edge, distinct from triangle harmony
+        // Flute — breathy, human quality, distinct from triangle harmony and marimba arp
         // Scaled to 0.75 so Rhodes chords sit more prominently (lofi = chords-forward mix)
         return `note("${elements.join(' ')}")
-          .sound("square")
-          .fm(0.5)
-          .fmh(0.5)
-          .fmenv("exp")
-          .fmdecay(0.06)
+          .sound("gm_flute")
           .attack(0.001)
           .decay(0.4)
           .sustain(0.03)
@@ -751,12 +747,9 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'trance':
+        // Sawtooth lead — classic synth, cutting, sits above square arp and string ensemble harmony
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(2)
-          .fmh(3)
-          .fmenv("exp")
-          .fmdecay(0.1)
+          .sound("gm_lead_2_sawtooth")
           .attack(0.001)
           .decay(0.6)
           .sustain(0.08)
@@ -815,13 +808,9 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'syro':
-        // Fast intricate FM plucks — sits above arp in frequency
+        // Chiff lead — weird digital character, perfect for IDM
         return `note("${elements.join(' ')}")
-          .sound("sine")
-          .fm(${(3 + brightness * 2).toFixed(1)})
-          .fmh(5)
-          .fmenv("exp")
-          .fmdecay(0.05)
+          .sound("gm_lead_4_chiff")
           .attack(0.001)
           .decay(0.15)
           .sustain(0.02)
@@ -840,14 +829,10 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'blockhead':
-        // Sawtooth lead — buzzy, cuts through organ harmony, hip-hop phrasing
+        // Trumpet — brassy, sample-based hip-hop character, distinct from organ harmony and clavinet arp
         // .slow(2) for active melodic lines over .slow(1) drums/bass/arp
         return `note("${elements.join(' ')}")
-          .sound("sawtooth")
-          .fm(0.5)
-          .fmh(5)
-          .fmenv("exp")
-          .fmdecay(0.06)
+          .sound("gm_trumpet")
           .attack(0.001)
           .decay(0.3)
           .sustain(0.03)
