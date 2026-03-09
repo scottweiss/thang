@@ -431,7 +431,7 @@ export class DroneLayer implements Layer {
         const discoBass = generateBassPattern(root, fifth, 'disco', 4, bassDir);
         // Expand to 8 steps with rests for rhythmic pattern
         const discoExpanded = [discoBass[0], discoBass[1], discoBass[2], discoBass[3],
-                               '~', discoBass[0], `${fifth}${1}`, discoBass[0]];
+                               '~', discoBass[0], `${fifth}${2}`, discoBass[0]];
         this.injectApproachNotes(discoExpanded, state, root, 2);
         return `note("${discoExpanded.join(' ')}")
           .sound("gm_slap_bass_1")

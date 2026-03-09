@@ -606,11 +606,36 @@ export class MelodyLayer extends CachingLayer {
     return finalPattern;
   }
 
+  /** Clamp notes to MIDI 48-84 (C3-C6) for soundfont moods to avoid missing zones. */
+  private clampForSoundfont(elements: string[]): string[] {
+    const NOTE_PC: Record<string, number> = {
+      'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+      'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+      'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
+    };
+    const PC_NAME = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    return elements.map(e => {
+      if (e === '~') return e;
+      const name = e.replace(/\d+$/, '');
+      const oct = parseInt(e.match(/\d+$/)?.[0] ?? '4');
+      const pc = NOTE_PC[name];
+      if (pc === undefined) return e;
+      const midi = Math.max(48, Math.min(84, pc + oct * 12));
+      return `${PC_NAME[midi % 12]}${Math.floor(midi / 12)}`;
+    });
+  }
+
   private buildMoodPattern(
     mood: string, elements: string[], gain: number,
     dynamicGain: string, brightness: number, room: number,
     state: GenerativeState
   ): string {
+    // Clamp notes for soundfont moods to avoid "no zone" errors
+    const sfMoods = ['ambient', 'downtempo', 'xtal', 'disco'];
+    if (sfMoods.includes(mood)) {
+      elements = this.clampForSoundfont(elements);
+    }
+
     switch (mood) {
       case 'ambient':
         // Celesta — ethereal bells, distinct from pad_choir harmony
