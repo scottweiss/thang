@@ -678,7 +678,7 @@ export class MelodyLayer extends CachingLayer {
     state: GenerativeState
   ): string {
     // Clamp notes for soundfont moods to avoid "no zone" errors
-    const sfMoods = ['ambient', 'downtempo', 'xtal', 'disco', 'lofi', 'trance', 'blockhead', 'syro'];
+    const sfMoods = ['ambient', 'downtempo', 'xtal', 'disco', 'lofi', 'trance', 'blockhead', 'syro', 'flim'];
     if (sfMoods.includes(mood)) {
       elements = this.clampForSoundfont(elements);
     }
@@ -850,13 +850,9 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'flim':
-        // Triangle pluck — distinct from sine harmony bells, shorter envelope
+        // Clarinet — warm woody tone with mechanical precision, very Autechre
         return `note("${elements.join(' ')}")
-          .sound("triangle")
-          .fm(0.6)
-          .fmh(7)
-          .fmenv("exp")
-          .fmdecay(0.04)
+          .sound("gm_clarinet")
           .attack(0.001)
           .decay(0.15)
           .sustain(0.01)
