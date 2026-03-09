@@ -573,7 +573,7 @@ export class ArpLayer extends CachingLayer {
           ${articulationToStrudel(sectionArticulation(section, tension, 0.1))}
           .slow(1)
           .gain("${velGain}")
-          .hpf(500)
+          .hpf(600)
           .lpf(${(3000 + brightness * 4000).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(3))
           .room(${(room * 0.3).toFixed(2)})
