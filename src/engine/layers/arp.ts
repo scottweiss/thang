@@ -306,7 +306,7 @@ export class ArpLayer extends CachingLayer {
           .slow(5)
           .gain(${(0.12 * (0.4 + density * 0.4)).toFixed(3)})
           .hpf(300)
-          .pan(sine.range(0.3, 0.7).slow(11))
+          .pan(sine.range(0.3, 0.7).slow(17))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
           .delay(0.3)
