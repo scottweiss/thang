@@ -461,7 +461,7 @@ export class TextureLayer extends CachingLayer {
       .gain("${bhGainPattern}")
       .lpf(${(1800 + brightness * 3000).toFixed(0)})
       .hpf(60)
-      .pan(sine.range(0.35, 0.65).slow(5))
+      .pan(sine.range(0.35, 0.65).slow(13))
       .room(${(room * 0.8).toFixed(2)})
       .roomsize(2)
       .orbit(${this.orbit})`;
