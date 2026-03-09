@@ -363,7 +363,8 @@ export class AtmosphereLayer extends CachingLayer {
         .gain(${(gain * 0.8).toFixed(4)})
         .lpf(sine.range(${(200 + brightness * 300).toFixed(0)}, ${(1500 + brightness * 2000).toFixed(0)}).slow(8))
         .hpf(120)
-        .resonance(10)
+        .resonance(8)
+        .pan(sine.range(0.3, 0.7).slow(6))
         .room(${(room * 0.4).toFixed(2)})
         .roomsize(2)
         .orbit(${this.orbit})`;
@@ -407,6 +408,7 @@ export class AtmosphereLayer extends CachingLayer {
       .gain(${(gain * 0.3).toFixed(4)})
       .lpf(${(200 + brightness * 400).toFixed(0)})
       .hpf(120)
+      .pan(sine.range(0.3, 0.7).slow(11))
       .room(${(room * 0.5).toFixed(2)})
       .roomsize(2.5)
       .orbit(${this.orbit})`;
