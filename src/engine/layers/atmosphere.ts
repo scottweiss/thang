@@ -70,11 +70,7 @@ export class AtmosphereLayer extends CachingLayer {
     const lpf = 600 + brightness * 800 + lpfBoost;
 
     return `note("${root}3")
-      .sound("sine")
-      .fm(${(12 + brightness * 8).toFixed(0)})
-      .fmh(0.5)
-      .fmenv("exp")
-      .fmdecay(2)
+      .sound("gm_pad_halo")
       .attack(3)
       .decay(4)
       .sustain(0.3)
@@ -166,11 +162,7 @@ export class AtmosphereLayer extends CachingLayer {
     const lpf = 900 + brightness * 1200;
 
     return `note("${root}4")
-      .sound("triangle")
-      .fm(${(6 + brightness * 4).toFixed(0)})
-      .fmh(3)
-      .fmenv("exp")
-      .fmdecay(1)
+      .sound("gm_fx_crystal")
       .attack(1.5)
       .decay(3)
       .sustain(0.15)
@@ -191,13 +183,9 @@ export class AtmosphereLayer extends CachingLayer {
     const gain = 0.04 * (0.3 + density * 0.5);
 
     if (section === 'peak' || section === 'groove') {
-      // High-frequency FM noise bursts — glitchy texture bed
+      // High-frequency digital texture bed — glitchy sci-fi artifacts
       return `note("${root}3")
-        .sound("sine")
-        .fm(${(20 + brightness * 12).toFixed(0)})
-        .fmh(${(3 + brightness * 2).toFixed(1)})
-        .fmenv("exp")
-        .fmdecay(0.05)
+        .sound("gm_fx_sci_fi")
         .attack(0.003)
         .decay(0.1)
         .sustain(0.05)
@@ -216,11 +204,7 @@ export class AtmosphereLayer extends CachingLayer {
     if (section === 'build') {
       // Rising digital texture — filter opening
       return `note("${root}2")
-        .sound("sine")
-        .fm(${(15 + brightness * 10).toFixed(0)})
-        .fmh(2)
-        .fmenv("exp")
-        .fmdecay(0.1)
+        .sound("gm_fx_sci_fi")
         .attack(1)
         .decay(1)
         .sustain(0.2)
@@ -238,11 +222,7 @@ export class AtmosphereLayer extends CachingLayer {
 
     // Intro/breakdown: quiet digital whispers
     return `note("${root}3")
-      .sound("sine")
-      .fm(${(8 + brightness * 5).toFixed(0)})
-      .fmh(1.5)
-      .fmenv("exp")
-      .fmdecay(0.2)
+      .sound("gm_fx_sci_fi")
       .attack(0.5)
       .decay(0.5)
       .sustain(0.1)
@@ -280,27 +260,26 @@ export class AtmosphereLayer extends CachingLayer {
   }
 
   private buildFlimAtmosphere(density: number, brightness: number, room: number, section: Section): string {
-    // Very quiet digital shimmer — sparse high-frequency detail, gentle
-    // Flim style: delicate, barely-there digital dust
+    // Mechanical echo texture — delicate digital shimmer, Autechre-like
     const sectionGain = { intro: 0.5, build: 0.7, peak: 1.0, breakdown: 0.6, groove: 0.8 }[section];
-    const gain = 0.02 * (0.2 + density * 0.3) * sectionGain;
+    const gain = 0.03 * (0.2 + density * 0.3) * sectionGain;
 
-    const shimmerSteps: string[] = [];
-    for (let i = 0; i < 16; i++) {
-      shimmerSteps.push(Math.random() < 0.06 ? 'hh' : '~');
-    }
-
-    return `sound("${shimmerSteps.join(' ')}")
-      .slow(3)
-      .gain(${(gain * 0.3).toFixed(4)})
-      .hpf(${(5000 + brightness * 2000).toFixed(0)})
-      .lpf(${(9000 + brightness * 3000).toFixed(0)})
+    return `note("C4")
+      .sound("gm_fx_echoes")
+      .attack(1)
+      .decay(3)
+      .sustain(0.1)
+      .release(2)
+      .slow(6)
+      .gain(${(gain * 0.4).toFixed(4)})
+      .hpf(${(3000 + brightness * 2000).toFixed(0)})
+      .lpf(${(7000 + brightness * 3000).toFixed(0)})
       .pan(sine.range(0.2, 0.8).slow(13))
-      .room(${(room * 0.4).toFixed(2)})
+      .room(${(room * 0.5).toFixed(2)})
       .roomsize(2)
-      .delay(0.15)
+      .delay(0.2)
       .delaytime(0.469)
-      .delayfeedback(0.2)
+      .delayfeedback(0.25)
       .orbit(${this.orbit})`;
   }
 
