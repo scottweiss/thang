@@ -47,7 +47,7 @@ export abstract class CachingLayer implements Layer {
   abstract name: string;
   abstract orbit: number;
 
-  private cachedPattern: string | null = null;
+  protected cachedPattern: string | null = null;
   private lastGeneratedAtTick = -1;
   protected lastMood: Mood | null = null;
 
