@@ -1114,7 +1114,7 @@ export class MelodyLayer extends CachingLayer {
       downtempo: effectiveDensity * 0.3,
       lofi: effectiveDensity * 0.4,
       trance: effectiveDensity * 0.5,
-      avril: effectiveDensity * 0.25,
+      avril: effectiveDensity * 0.4,
       xtal: effectiveDensity * 0.3,
       syro: effectiveDensity * 0.55,
       blockhead: effectiveDensity * 0.35,
