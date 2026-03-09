@@ -207,7 +207,7 @@ export class DroneLayer implements Layer {
     const tension = state.tension?.overall ?? 0.5;
     // Tension adds warmth to bass: opens filter slightly, less reverb at peaks
     // pedalGainMult softens when pedal tone clashes with current chord
-    const gain = 0.15 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1) * pedalGainMult;
+    const gain = 0.18 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1) * pedalGainMult;
     const room = (0.5 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.15);
     const brightness = state.params.brightness * sectionFilter * (0.9 + tension * 0.2);
 
