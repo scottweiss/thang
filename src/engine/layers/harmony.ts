@@ -1075,10 +1075,11 @@ export class HarmonyLayer implements Layer {
 
       case 'syro':
         // Glitchy FM bell/pluck — triangle carrier for contrast with sine melody
+        // fmh 3 (not 5) to avoid timbral collision with sine/fmh5 melody
         return `${chordStart}
           .sound("triangle")
           .fm(${(3 + brightness * 2).toFixed(1)})
-          .fmh(5)
+          .fmh(3)
           .fmenv("exp")
           .fmdecay(0.03)
           .attack(0.001)
