@@ -181,7 +181,10 @@ export abstract class CachingLayer implements Layer {
     }
 
     // Chorus depth: detuning adds warmth at peaks, cleans at breakdowns
-    result = this.applyChorusDepth(result, state);
+    // Skip for drums — detuned drums sound wobbly and wrong
+    if (this.name !== 'texture') {
+      result = this.applyChorusDepth(result, state);
+    }
 
     // Crush evolution: bit depth modulates for digital character
     result = this.applyCrushEvolution(result, state);
@@ -190,13 +193,16 @@ export abstract class CachingLayer implements Layer {
     result = this.applyHpfSweep(result, state);
 
     // Envelope evolution: attacks tighten in builds, soften in breakdowns
-    result = this.applyEnvelopeEvolution(result, state);
+    // Skip for drums — drum ADSR is carefully tuned per pattern template
+    if (this.name !== 'texture') {
+      result = this.applyEnvelopeEvolution(result, state);
 
-    // Tension articulation: note length tracks real-time tension arc
-    result = this.applyTensionArticulation(result, state);
+      // Tension articulation: note length tracks real-time tension arc
+      result = this.applyTensionArticulation(result, state);
 
-    // Textural contrast: differentiate ADSR between layers for clarity
-    result = this.applyTexturalContrast(result, state);
+      // Textural contrast: differentiate ADSR between layers for clarity
+      result = this.applyTexturalContrast(result, state);
+    }
 
     // Velocity evolution: per-note dynamics morph with section progress
     result = this.applyVelocityEvolution(result, state);
@@ -205,16 +211,22 @@ export abstract class CachingLayer implements Layer {
     result = this.applyMetricAccent(result, state);
 
     // Hemiola: cross-rhythm accents (3-over-4 or clave 3+3+2)
-    result = this.applyHemiola(result, state);
+    // Skip for drums — the drum patterns already have their own accent structure
+    if (this.name !== 'texture') {
+      result = this.applyHemiola(result, state);
+    }
 
     // Sidechain ducking: rhythmic gain pump on strong beats (EDM breathing effect)
     result = this.applySidechainDuck(result, state);
 
     // Rhythmic breath sync: micro-dips before strong beats for collective lift
-    result = this.applyBreathSync(result, state);
+    // Skip for drums — drums ARE the strong beats, shouldn't dip before themselves
+    if (this.name !== 'texture') {
+      result = this.applyBreathSync(result, state);
 
-    // Resultant rhythm: polyrhythmic accent mask for complex groove layers
-    result = this.applyResultantRhythm(result, state);
+      // Resultant rhythm: polyrhythmic accent mask for complex groove layers
+      result = this.applyResultantRhythm(result, state);
+    }
 
     // Rhythmic acceleration: arp/drums speed up in builds, slow in breakdowns
     result = this.applyRhythmicAcceleration(result, state);
@@ -231,8 +243,8 @@ export abstract class CachingLayer implements Layer {
     // Arrival emphasis: cadential resolution accent (gain + brightness boost)
     result = this.applyArrivalEmphasis(result, state);
 
-    // Rhythmic phase offset: shift arp timing for inter-layer phasing
-    if (shouldApplyPhaseOffset(this.name, state.mood)) {
+    // Rhythmic phase offset: shift arp timing for inter-layer phasing (not drums)
+    if (this.name !== 'texture' && shouldApplyPhaseOffset(this.name, state.mood)) {
       const offset = layerPhaseOffset(this.name, state.mood, state.section);
       if (offset > 0.01) {
         result = result.replace(
