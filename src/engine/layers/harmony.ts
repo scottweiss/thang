@@ -958,8 +958,8 @@ export class HarmonyLayer implements Layer {
           .lpf(sine.range(${(600 + brightness * 400).toFixed(0)}, ${(1200 + brightness * 1200).toFixed(0)}).slow(13))
           .pan(sine.range(0.15, 0.85).slow(11))
           .detune(sine.range(-1, 1).slow(17))
-          .room(${room.toFixed(2)})
-          .roomsize(5)
+          .room(${(room * 0.6).toFixed(2)})
+          .roomsize(3)
           .orbit(${this.orbit})`;
 
       case 'downtempo':
@@ -1036,11 +1036,11 @@ export class HarmonyLayer implements Layer {
           .hpf(220)
           .lpf(sine.range(${(1200 + brightness * 800).toFixed(0)}, ${(2500 + brightness * 1500).toFixed(0)}).slow(11))
           .pan(sine.range(0.3, 0.7).slow(9))
-          .room(${(room * 1.1).toFixed(2)})
-          .roomsize(4)
-          .delay(0.3)
+          .room(${(room * 0.7).toFixed(2)})
+          .roomsize(2.5)
+          .delay(0.25)
           .delaytime(0.5)
-          .delayfeedback(0.35)
+          .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
       case 'xtal':
