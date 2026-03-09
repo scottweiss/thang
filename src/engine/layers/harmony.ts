@@ -1093,7 +1093,7 @@ export class HarmonyLayer implements Layer {
           .crush(${(10 + brightness * 2).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(2))
           .room(${(room * 0.3).toFixed(2)})
-          .roomsize(1)
+          .roomsize(1.5)
           .delay(0.25)
           .delaytime(0.216)
           .delayfeedback(0.35)
