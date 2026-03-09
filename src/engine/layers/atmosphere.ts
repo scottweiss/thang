@@ -203,7 +203,7 @@ export class AtmosphereLayer extends CachingLayer {
 
     if (section === 'build') {
       // Rising digital texture — filter opening
-      return `note("${root}2")
+      return `note("${root}3")
         .sound("gm_fx_sci_fi")
         .attack(1)
         .decay(1)

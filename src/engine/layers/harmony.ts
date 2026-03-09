@@ -981,7 +981,26 @@ export class HarmonyLayer implements Layer {
     return this.buildSoundChain(chordStart, mood, gain, brightness, room);
   }
 
+  /** Clamp notes inside a note("...") or chord("...") string to octaves 2-6 for soundfont safety. */
+  private clampForSoundfont(pattern: string): string {
+    const m = pattern.match(/note\("([^"]+)"\)/);
+    if (!m) return pattern;
+    const clamped = m[1].split(/\s+/).map(s => {
+      if (s === '~') return s;
+      const nm = s.match(/^([A-G][#b]?)(\d+)$/);
+      if (!nm) return s;
+      const oct = Math.max(2, Math.min(6, parseInt(nm[2], 10)));
+      return nm[1] + oct;
+    }).join(' ');
+    return pattern.replace(m[1], clamped);
+  }
+
   private buildSoundChain(chordStart: string, mood: import('../../types').Mood, gain: number, brightness: number, room: number): string {
+    // Clamp notes for all soundfont moods to avoid "no zone" errors
+    const sfMoods = ['ambient', 'downtempo', 'lofi', 'trance', 'avril', 'xtal', 'blockhead', 'flim', 'disco'];
+    if (sfMoods.includes(mood)) {
+      chordStart = this.clampForSoundfont(chordStart);
+    }
     switch (mood) {
       case 'ambient':
         // Ethereal choir pad — GM pad for airy, vocal-like chord washes (drone is FM sine)
