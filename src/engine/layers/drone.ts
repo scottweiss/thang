@@ -232,7 +232,7 @@ export class DroneLayer implements Layer {
           .lpf(sine.range(${(150 + brightness * 150).toFixed(0)}, ${(300 + brightness * 400).toFixed(0)}).slow(11))
           .pan(sine.range(0.3, 0.7).slow(13))
           .room(${(room * 0.55).toFixed(2)})
-          .roomsize(3.5)
+          .roomsize(2.5)
           .orbit(${this.orbit})`;
 
       case 'downtempo': {
@@ -347,7 +347,7 @@ export class DroneLayer implements Layer {
           .lpf(sine.range(${(80 + brightness * 60).toFixed(0)}, ${(180 + brightness * 120).toFixed(0)}).slow(19))
           .pan(sine.range(0.4, 0.6).slow(17))
           .room(${(room * 0.6).toFixed(2)})
-          .roomsize(3.5)
+          .roomsize(2.5)
           .orbit(${this.orbit})`;
 
       case 'syro': {
