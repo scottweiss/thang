@@ -700,7 +700,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1.5)
           .delay(0.3)
-          .delaytime(0.1875)
+          .delaytime(0.341)
           .delayfeedback(0.35)
           .orbit(${this.orbit})`;
 

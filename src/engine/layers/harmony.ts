@@ -1020,7 +1020,7 @@ export class HarmonyLayer implements Layer {
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
           .delay(0.22)
-          .delaytime(0.25)
+          .delaytime(0.341)
           .delayfeedback(0.35)
           .orbit(${this.orbit})`;
 
