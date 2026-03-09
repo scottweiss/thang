@@ -634,6 +634,7 @@ export class MelodyLayer extends CachingLayer {
 
       case 'downtempo':
         // Triangle lead — cuts through sine harmony, plucky attack
+        // LPF base 3000 ensures melody stays brighter than harmony sweep ceiling
         return `note("${elements.join(' ')}")
           .sound("triangle")
           .fm(0.8)
@@ -647,7 +648,7 @@ export class MelodyLayer extends CachingLayer {
           .slow(3)
           .gain("${dynamicGain}")
           .hpf(350)
-          .lpf(${(2500 + brightness * 3500).toFixed(0)})
+          .lpf(${(3000 + brightness * 3500).toFixed(0)})
           .pan(sine.range(0.25, 0.75).slow(5))
           .room(${(room * 0.6).toFixed(2)})
           .roomsize(1.5)
