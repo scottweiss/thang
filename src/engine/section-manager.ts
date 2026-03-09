@@ -45,7 +45,7 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
   },
   avril: {
     intro:     { activeLayers: ['drone', 'atmosphere'], densityTarget: 0.2, brightnessTarget: 0.20, spaciousnessTarget: 0.85, duration: [15, 25] },
-    build:     { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.75, duration: [40, 70] },
+    build:     { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.35, brightnessTarget: 0.35, spaciousnessTarget: 0.75, duration: [40, 70] },
     peak:      { activeLayers: ALL_LAYERS, densityTarget: 0.5, brightnessTarget: 0.55, spaciousnessTarget: 0.8, duration: [50, 80] },
     breakdown: { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'], densityTarget: 0.25, brightnessTarget: 0.25, spaciousnessTarget: 0.9, duration: [35, 60] },
     groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.4, brightnessTarget: 0.45, spaciousnessTarget: 0.8, duration: [45, 75] },
