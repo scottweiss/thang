@@ -332,15 +332,11 @@ export class DroneLayer implements Layer {
       }
 
       case 'trance': {
-        // Acid-tinged pulsing bass — higher FM and resonance for squelch
+        // Synth bass 1 — punchy, defined sub-bass distinct from string_ensemble harmony
         const tranceBass = generateBassPattern(root, fifth, 'trance', 4, bassDir);
         this.injectApproachNotes(tranceBass, state, root, 2);
         return `note("${tranceBass.join(' ')}")
-          .sound("sawtooth")
-          .fm(${(0.5 + brightness * 1).toFixed(1)})
-          .fmh(0.5)
-          .fmenv("exp")
-          .fmdecay(0.15)
+          .sound("gm_synth_bass_1")
           .attack(0.005)
           .decay(0.15)
           .sustain(0.2)
@@ -398,15 +394,11 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'syro': {
-        // Acid 303-style bass — sawtooth, resonant but controlled to avoid masking upper layers
+        // Synth bass 2 — gritty digital acid bass, IDM character
         const syroBass = generateBassPattern(root, fifth, 'syro', 4, bassDir);
         this.injectApproachNotes(syroBass, state, root, 2);
         return `note("${syroBass.join(' ')}")
-          .sound("sawtooth")
-          .fm(${(0.8 + brightness * 0.5).toFixed(1)})
-          .fmh(0.5)
-          .fmenv("exp")
-          .fmdecay(0.08)
+          .sound("gm_synth_bass_2")
           .attack(0.003)
           .decay(0.12)
           .sustain(0.15)
@@ -445,13 +437,9 @@ export class DroneLayer implements Layer {
       }
 
       case 'flim':
-        // Very soft sine pedal tone — gentle, barely there, slow breathing filter
+        // Electric bass pick — tight, defined, mechanical precision for Autechre aesthetic
         return `note("${root}2")
-          .sound("sine")
-          .fm(${(0.2 + brightness * 0.2).toFixed(1)})
-          .fmh(1)
-          .fmenv("exp")
-          .fmdecay(1.5)
+          .sound("gm_electric_bass_pick")
           .attack(1.5)
           .decay(3)
           .sustain(0.15)
