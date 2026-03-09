@@ -237,14 +237,17 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
-    // Gestural entropy: track gesture types and bias toward target entropy
+    // Last-note shaping: gestural entropy, intervallic variety, and sequence detection
+    // all compete to modify the last note. Only one fires per phrase to prevent fighting.
+    const lastNoteStrategy = state.tick % 3; // rotate: 0=gesture, 1=interval, 2=sequence
+
+    // Always track gesture history (for state continuity) but only apply changes on our turn
     {
       const NOTE_PC_GE: Record<string, number> = {
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
         'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
         'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11,
       };
-      // Classify gestures from current phrase
       const pitches: number[] = [];
       for (const e of elements) {
         if (e === '~') continue;
@@ -257,16 +260,14 @@ export class MelodyLayer extends CachingLayer {
         const interval = pitches[pi] - pitches[pi - 1];
         this.gestureHistory.push(classifyGesture(interval));
       }
-      // Keep history at 16 entries max
       if (this.gestureHistory.length > 16) {
         this.gestureHistory = this.gestureHistory.slice(-16);
       }
-      // Apply entropy bias to last note in phrase
-      if (this.gestureHistory.length >= 4 && elements.length >= 3) {
+      // Only apply gestural entropy changes on our turn
+      if (lastNoteStrategy === 0 && this.gestureHistory.length >= 4 && elements.length >= 3) {
         const lastNoteIdx = elements.length - 1 - [...elements].reverse().findIndex(e => e !== '~');
         if (lastNoteIdx >= 1 && lastNoteIdx < elements.length && elements[lastNoteIdx] !== '~') {
           if (shouldInjectSurprise(this.gestureHistory, mood, state.section)) {
-            // Make last note a leap instead of step (add 5 semitones)
             const match = elements[lastNoteIdx].match(/^([A-Gb#]+)(\d+)$/);
             if (match) {
               const pc = NOTE_PC_GE[match[1]] ?? 0;
@@ -278,7 +279,6 @@ export class MelodyLayer extends CachingLayer {
               elements[lastNoteIdx] = `${pcNames[newPc]}${newOct}`;
             }
           } else if (shouldInjectStability(this.gestureHistory, mood, state.section)) {
-            // Repeat the previous note for stability
             const prevNoteIdx = lastNoteIdx - 1 - [...elements.slice(0, lastNoteIdx)].reverse().findIndex(e => e !== '~');
             if (prevNoteIdx >= 0 && prevNoteIdx < lastNoteIdx && elements[prevNoteIdx] !== '~') {
               elements[lastNoteIdx] = elements[prevNoteIdx];
@@ -288,7 +288,7 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
-    // Intervallic variety: track intervals and bias toward diversity
+    // Always track interval history but only apply changes on our turn
     {
       const NOTE_PC_IV: Record<string, number> = {
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
@@ -309,10 +309,10 @@ export class MelodyLayer extends CachingLayer {
       if (this.recentIntervals.length > 12) {
         this.recentIntervals = this.recentIntervals.slice(-12);
       }
-      if (this.recentIntervals.length >= 4 && varietyAppetite(mood) > 0.15) {
+      // Only apply intervallic variety on our turn
+      if (lastNoteStrategy === 1 && this.recentIntervals.length >= 4 && varietyAppetite(mood) > 0.15) {
         const bias = suggestIntervalBias(this.recentIntervals, mood);
         if (bias !== 'any' && midiNotes.length >= 2) {
-          // Apply bias to last note
           const lastNoteIdx = elements.length - 1 - [...elements].reverse().findIndex(e => e !== '~');
           if (lastNoteIdx >= 0 && lastNoteIdx < elements.length && elements[lastNoteIdx] !== '~') {
             const prevMidi = midiNotes.length >= 2 ? midiNotes[midiNotes.length - 2] : 60;
@@ -329,8 +329,8 @@ export class MelodyLayer extends CachingLayer {
       }
     }
 
-    // Melodic sequence detection: reinforce naturally emerging sequences
-    if (shouldDetectSequence(mood)) {
+    // Only apply sequence detection on our turn
+    if (lastNoteStrategy === 2 && shouldDetectSequence(mood)) {
       const NOTE_PC_SD: Record<string, number> = {
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
         'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
@@ -349,7 +349,6 @@ export class MelodyLayer extends CachingLayer {
         if (interval !== null && interval !== 0) {
           const suggestion = suggestSequenceContinuation(seqMidis, fLen, interval);
           if (suggestion !== null && suggestion >= 36 && suggestion <= 84) {
-            // Bias the last note toward the sequence continuation
             const lastNoteIdx = elements.length - 1 - [...elements].reverse().findIndex(e => e !== '~');
             if (lastNoteIdx >= 0 && lastNoteIdx < elements.length && elements[lastNoteIdx] !== '~') {
               const pcNamesSeq = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
