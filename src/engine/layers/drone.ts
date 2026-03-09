@@ -1,5 +1,5 @@
 import { Layer } from '../layer';
-import { GenerativeState, NoteName, Section } from '../../types';
+import { GenerativeState, Mood, NoteName, Section } from '../../types';
 import { generateBassPattern, bassFollowsChord, shouldBassApproach, bassApproachNotes } from '../../theory/bass-pattern';
 import { suggestBassDirection, shouldApplyContraryMotion } from '../../theory/bass-contrary-motion';
 import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } from '../../theory/pedal-point';
@@ -13,6 +13,7 @@ import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../..
 import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
+import { adaptDroneToChord, phraseRepeatCount } from '../../theory/phrase-persistence';
 
 /** Safe multiply — prevents NaN cascade if regex captures non-numeric text */
 function safeMul(val: string, mult: number, decimals: number = 4): string {
@@ -32,8 +33,35 @@ const SECTION_FILTER_MULT: Record<Section, number> = {
 export class DroneLayer implements Layer {
   name = 'drone';
   orbit = 0;
+  private cachedResult: string | null = null;
+  private lastRoot: string = '';
+  private phraseRepeatsRemaining = 0;
+  private lastMood: Mood | null = null;
 
   generate(state: GenerativeState): string {
+    const needsRegen =
+      !this.cachedResult ||
+      state.mood !== this.lastMood ||
+      state.scaleChanged ||
+      state.sectionChanged ||
+      (state.chordChanged && this.phraseRepeatsRemaining <= 0);
+
+    if (needsRegen) {
+      this.cachedResult = this.buildPatternAndPostProcess(state);
+      this.lastRoot = state.currentChord?.root ?? state.scale.root;
+      this.lastMood = state.mood;
+      this.phraseRepeatsRemaining = phraseRepeatCount(state.mood);
+    } else if (state.chordChanged && this.phraseRepeatsRemaining > 0) {
+      const newRoot = state.currentChord?.root ?? state.scale.root;
+      this.cachedResult = adaptDroneToChord(this.cachedResult!, this.lastRoot, newRoot);
+      this.lastRoot = newRoot;
+      this.phraseRepeatsRemaining--;
+    }
+
+    return this.cachedResult!;
+  }
+
+  private buildPatternAndPostProcess(state: GenerativeState): string {
     let result = this.buildPattern(state);
 
     // Spatial depth: reverb breathes with section progress
