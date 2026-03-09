@@ -205,7 +205,7 @@ export class AtmosphereLayer extends CachingLayer {
         .hpf(${(3000 + brightness * 3000).toFixed(0)})
         .lpf(${(8000 + brightness * 5000).toFixed(0)})
         .crush(${(8 + brightness * 4).toFixed(0)})
-        .pan(sine.range(0.1, 0.9).slow(1.5))
+        .pan(sine.range(0.2, 0.8).slow(5))
         .room(${(room * 0.2).toFixed(2)})
         .roomsize(0.5)
         .orbit(${this.orbit})`;
