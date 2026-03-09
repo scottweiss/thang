@@ -414,7 +414,7 @@ export class DroneLayer implements Layer {
           .slow(6)
           .gain(${(gain * 0.35).toFixed(3)})
           .lpf(sine.range(${(100 + brightness * 80).toFixed(0)}, ${(220 + brightness * 180).toFixed(0)}).slow(21))
-          .pan(sine.range(0.4, 0.6).slow(17))
+          .pan(sine.range(0.4, 0.6).slow(23))
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(2)
           .orbit(${this.orbit})`;
