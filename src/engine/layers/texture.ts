@@ -183,7 +183,7 @@ export class TextureLayer extends CachingLayer {
     if (state.scaleChanged) return true;
     if (state.sectionChanged) return true;
 
-    const loopTicks = { downtempo: 8, lofi: 8, trance: 6, avril: 12, xtal: 10, syro: 4, blockhead: 8, flim: 10, disco: 6 }[state.mood] ?? 8;
+    const loopTicks = { downtempo: 12, lofi: 12, trance: 16, avril: 20, xtal: 14, syro: 8, blockhead: 14, flim: 16, disco: 16 }[state.mood] ?? 12;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
