@@ -111,6 +111,13 @@ export class DroneLayer implements Layer {
           (_, gainExpr) => {
             const num = parseFloat(gainExpr);
             if (!isNaN(num)) return `.gain(${(num * arcMult).toFixed(4)})`;
+            const quoted = gainExpr.match(/^"([^"]+)"$/);
+            if (quoted) {
+              const scaled = quoted[1].split(' ').map((v: string) => {
+                const n = parseFloat(v); return isNaN(n) ? v : (n * arcMult).toFixed(4);
+              }).join(' ');
+              return `.gain("${scaled}")`;
+            }
             return `.gain((${gainExpr}) * ${arcMult.toFixed(4)})`;
           }
         );
@@ -128,12 +135,20 @@ export class DroneLayer implements Layer {
         state.mood
       );
       if (emphasis.gainBoost > 0.01) {
+        const emphMult = 1.0 + emphasis.gainBoost;
         result = result.replace(
           /\.gain\(([^)]+)\)/g,
           (_, gainExpr) => {
             const num = parseFloat(gainExpr);
-            if (!isNaN(num)) return `.gain(${(num * (1.0 + emphasis.gainBoost)).toFixed(4)})`;
-            return `.gain((${gainExpr}) * ${(1.0 + emphasis.gainBoost).toFixed(4)})`;
+            if (!isNaN(num)) return `.gain(${(num * emphMult).toFixed(4)})`;
+            const quoted = gainExpr.match(/^"([^"]+)"$/);
+            if (quoted) {
+              const scaled = quoted[1].split(' ').map((v: string) => {
+                const n = parseFloat(v); return isNaN(n) ? v : (n * emphMult).toFixed(4);
+              }).join(' ');
+              return `.gain("${scaled}")`;
+            }
+            return `.gain((${gainExpr}) * ${emphMult.toFixed(4)})`;
           }
         );
       }
@@ -170,6 +185,13 @@ export class DroneLayer implements Layer {
         (_, gainExpr) => {
           const num = parseFloat(gainExpr);
           if (!isNaN(num)) return `.gain(${(num * combinedMultiplier).toFixed(4)})`;
+          const quoted = gainExpr.match(/^"([^"]+)"$/);
+          if (quoted) {
+            const scaled = quoted[1].split(' ').map((v: string) => {
+              const n = parseFloat(v); return isNaN(n) ? v : (n * combinedMultiplier).toFixed(4);
+            }).join(' ');
+            return `.gain("${scaled}")`;
+          }
           return `.gain((${gainExpr}) * ${combinedMultiplier.toFixed(4)})`;
         }
       );

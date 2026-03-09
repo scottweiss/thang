@@ -1345,7 +1345,7 @@ export class GenerativeController {
           /\.gain\("([^"]+)"\)/,
           (_, gains) => {
             const parts = gains.split(' ').map(Number);
-            const modded = parts.map((g: number, i: number) => (g * mask[i % mask.length]).toFixed(4));
+            const modded = parts.map((g: number, i: number) => (isNaN(g) ? 0.5 : g * mask[i % mask.length]).toFixed(4));
             return `.gain("${modded.join(' ')}")`;
           }
         );
@@ -2403,6 +2403,7 @@ export class GenerativeController {
             /\.fm\((\d+(?:\.\d+)?)\)/,
             (_, val) => {
               const current = parseFloat(val);
+              if (isNaN(current)) return `.fm(${val})`;
               // Blend toward a neutral mid-point (creates smoother transition)
               const blended = crossfadeFm(current * 0.8, current, blend);
               return `.fm(${blended.toFixed(2)})`;
@@ -2437,6 +2438,7 @@ export class GenerativeController {
             (_, lo, hi) => {
               const low = parseFloat(lo);
               const high = parseFloat(hi);
+              if (isNaN(low) || isNaN(high)) return `.pan(sine.range(${lo}, ${hi})`;
               const mid = (low + high) / 2;
               const halfRange = ((high - low) / 2) * modDepth;
               return `.pan(sine.range(${(mid - halfRange).toFixed(2)}, ${(mid + halfRange).toFixed(2)})`;
@@ -3140,11 +3142,14 @@ export class GenerativeController {
         if (ratio !== 1.0) {
           const existing = result.code.match(/\.slow\(([0-9.]+)\)/);
           if (existing) {
-            const newSlow = parseFloat(existing[1]) * ratio;
-            result.code = result.code.replace(
-              /\.slow\(([0-9.]+)\)/,
-              () => `.slow(${newSlow.toFixed(4)})`
-            );
+            const parsed = parseFloat(existing[1]);
+            if (!isNaN(parsed)) {
+              const newSlow = parsed * ratio;
+              result.code = result.code.replace(
+                /\.slow\(([0-9.]+)\)/,
+                () => `.slow(${newSlow.toFixed(4)})`
+              );
+            }
           }
         }
       }
