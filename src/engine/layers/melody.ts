@@ -812,7 +812,7 @@ export class MelodyLayer extends CachingLayer {
           .decay(0.15)
           .sustain(0.01)
           .release(0.1)
-          .slow(4)
+          .slow(3)
           .gain("${applyMelodicDynamics(gain * 0.75, elements)}")
           .hpf(400)
           .lpf(${(3200 + brightness * 3500).toFixed(0)})
