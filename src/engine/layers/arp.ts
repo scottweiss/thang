@@ -332,13 +332,10 @@ export class ArpLayer extends CachingLayer {
       case 'ambient': {
         const notes = this.spreadWithDynamics(baseNotes, 3, 5, state);
         const fill = this.pickFill16(density * sectionMult * 0.3);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, 'up', 16, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, 'up', 16, fill), state);
+        steps = this.clampForSoundfont(steps);
         return `note("${steps.join(' ')}")
-          .sound("triangle")
-          .fm(0.4)
-          .fmh(6)
-          .fmenv("exp")
-          .fmdecay(0.6)
+          .sound("gm_koto")
           .attack(0.05)
           .decay(1.5)
           .sustain(0.02)
@@ -409,15 +406,12 @@ export class ArpLayer extends CachingLayer {
         const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
         const trancePattern = this.pickStyle(mood, section, counterDir);
         const fill = this.pickFill16(density * sectionMult);
-        const steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
+        let steps = this.applyDisplacement(this.buildFromFill(notes, trancePattern, 16, fill), state);
         const tranceGain = 0.16 * (0.5 + density * 0.5);
         const tranceVelGain = this.getVelocityGain(tranceGain, 16, mood, section, progress, steps);
+        steps = this.clampForSoundfont(steps);
         return `note("${steps.join(' ')}")
-          .sound("square")
-          .fm(0.3)
-          .fmh(2)
-          .fmenv("exp")
-          .fmdecay(0.03)
+          .sound("gm_lead_1_square")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.12))}
           .slow(1)
           .gain("${tranceVelGain}")
@@ -519,8 +513,9 @@ export class ArpLayer extends CachingLayer {
           syroVelGain = this.getVelocityGain(syroGain, 16, mood, section, progress, syroSteps);
         }
 
+        syroSteps = this.clampForSoundfont(syroSteps);
         return `note("${syroSteps.join(' ')}")
-          .sound("sawtooth")
+          .sound("gm_shamisen")
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
           .slow(1)
           .gain("${syroVelGain}")
