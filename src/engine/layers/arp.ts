@@ -530,9 +530,9 @@ export class ArpLayer extends CachingLayer {
       }
 
       case 'flim': {
-        // Square click — tiny percussive pips, distinct from triangle melody
+        // Square click — clockwork pips, mechanical/precise feel (Flim-style)
         const notes = this.spreadWithDynamics(baseNotes, 4, 6, state);
-        const fill = this.pickFill16(density * sectionMult * 0.2);
+        const fill = this.pickFill16(density * sectionMult * 0.4);
         const steps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
         return `note("${steps.join(' ')}")
           .sound("square")
@@ -541,7 +541,7 @@ export class ArpLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.03)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.08))}
-          .slow(5)
+          .slow(4)
           .gain(${(0.1 * (0.3 + density * 0.4)).toFixed(3)})
           .hpf(400)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
