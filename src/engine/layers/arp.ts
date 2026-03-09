@@ -307,10 +307,10 @@ export class ArpLayer extends CachingLayer {
           .gain(${(0.12 * (0.4 + density * 0.4)).toFixed(3)})
           .pan(sine.range(0.3, 0.7).slow(11))
           .room(${room.toFixed(2)})
-          .roomsize(5)
-          .delay(0.5)
+          .roomsize(3)
+          .delay(0.4)
           .delaytime(0.66)
-          .delayfeedback(0.5)
+          .delayfeedback(0.35)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
@@ -411,11 +411,11 @@ export class ArpLayer extends CachingLayer {
           .hpf(300)
           .lpf(${(2200 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.35, 0.65).slow(9))
-          .room(${(room * 0.6).toFixed(2)})
-          .roomsize(3)
-          .delay(0.5)
+          .room(${(room * 0.35).toFixed(2)})
+          .roomsize(1.5)
+          .delay(0.35)
           .delaytime(0.66)
-          .delayfeedback(0.45)
+          .delayfeedback(0.3)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
@@ -545,11 +545,11 @@ export class ArpLayer extends CachingLayer {
           .hpf(400)
           .lpf(${(2500 + brightness * 3000).toFixed(0)})
           .pan(sine.range(0.1, 0.9).slow(11))
-          .room(${(room * 0.5).toFixed(2)})
-          .roomsize(2)
-          .delay(0.4)
+          .room(${(room * 0.3).toFixed(2)})
+          .roomsize(1)
+          .delay(0.25)
           .delaytime(0.66)
-          .delayfeedback(0.4)
+          .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
 
