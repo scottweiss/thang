@@ -978,7 +978,7 @@ export class HarmonyLayer implements Layer {
           .room(${room.toFixed(2)})
           .roomsize(3)
           .delay(0.18)
-          .delaytime(0.375)
+          .delaytime(0.334)
           .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
@@ -1040,7 +1040,7 @@ export class HarmonyLayer implements Layer {
           .room(${(room * 0.7).toFixed(2)})
           .roomsize(2.5)
           .delay(0.25)
-          .delaytime(0.5)
+          .delaytime(0.462)
           .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
@@ -1066,7 +1066,7 @@ export class HarmonyLayer implements Layer {
           .room(${(room * 0.7).toFixed(2)})
           .roomsize(3)
           .delay(0.3)
-          .delaytime(0.5)
+          .delaytime(0.428)
           .delayfeedback(0.3)
           .orbit(${this.orbit})`;
 
@@ -1091,7 +1091,7 @@ export class HarmonyLayer implements Layer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .delay(0.4)
-          .delaytime(0.1875)
+          .delaytime(0.216)
           .delayfeedback(0.45)
           .orbit(${this.orbit})`;
 
@@ -1131,7 +1131,7 @@ export class HarmonyLayer implements Layer {
           .room(${(room * 0.8).toFixed(2)})
           .roomsize(3)
           .delay(0.3)
-          .delaytime(0.5)
+          .delaytime(0.469)
           .delayfeedback(0.3)
           .orbit(${this.orbit})`;
 

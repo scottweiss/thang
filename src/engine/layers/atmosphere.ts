@@ -297,7 +297,7 @@ export class AtmosphereLayer extends CachingLayer {
       .room(${(room * 0.4).toFixed(2)})
       .roomsize(2)
       .delay(0.15)
-      .delaytime(0.66)
+      .delaytime(0.469)
       .delayfeedback(0.2)
       .orbit(${this.orbit})`;
   }

@@ -652,7 +652,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.6).toFixed(2)})
           .roomsize(1.5)
           .delay(0.3)
-          .delaytime(0.375)
+          .delaytime(0.334)
           .delayfeedback(0.3)
           .orbit(${this.orbit})`;
 
@@ -677,7 +677,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1)
           .delay(0.2)
-          .delaytime(0.3)
+          .delaytime(0.357)
           .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
@@ -721,7 +721,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.6).toFixed(2)})
           .roomsize(2.5)
           .delay(0.3)
-          .delaytime(0.5)
+          .delaytime(0.462)
           .delayfeedback(0.25)
           .orbit(${this.orbit})`;
 
@@ -745,7 +745,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(2)
           .delay(0.3)
-          .delaytime(0.5)
+          .delaytime(0.428)
           .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 
@@ -770,7 +770,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.25).toFixed(2)})
           .roomsize(1)
           .delay(0.35)
-          .delaytime(0.125)
+          .delaytime(0.144)
           .delayfeedback(0.4)
           .orbit(${this.orbit})`;
 
@@ -818,7 +818,7 @@ export class MelodyLayer extends CachingLayer {
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(1.5)
           .delay(0.25)
-          .delaytime(0.5)
+          .delaytime(0.469)
           .delayfeedback(0.2)
           .orbit(${this.orbit})`;
 

@@ -456,7 +456,7 @@ export class ArpLayer extends CachingLayer {
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
           .delay(0.35)
-          .delaytime(0.5)
+          .delaytime(0.428)
           .delayfeedback(0.3)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
@@ -496,7 +496,7 @@ export class ArpLayer extends CachingLayer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .delay(0.3)
-          .delaytime(0.125)
+          .delaytime(0.144)
           .delayfeedback(0.35)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
@@ -549,7 +549,7 @@ export class ArpLayer extends CachingLayer {
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .delay(0.25)
-          .delaytime(0.66)
+          .delaytime(0.469)
           .delayfeedback(0.2)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
