@@ -186,10 +186,14 @@ export class MelodyLayer extends CachingLayer {
       elements = elements.map(n => constrainToRegister(n, floor, ceiling));
     }
 
-    // Metric consonance: chord tones on strong beats, passing tones on weak
-    elements = applyMetricConsonance(
-      elements, state.currentChord.notes, state.scale.notes, mood
-    );
+    // Chord-tone snapping: metric consonance and pitch gravity both push notes
+    // toward chord tones. Only one fires per tick to avoid over-constraining.
+    if (state.tick % 2 === 0) {
+      // Metric consonance: chord tones on strong beats, passing tones on weak
+      elements = applyMetricConsonance(
+        elements, state.currentChord.notes, state.scale.notes, mood
+      );
+    }
 
     // Melodic economy: constrain to core pitch vocabulary for focused, memorable melodies
     if (shouldApplyEconomy(mood, state.section)) {
@@ -198,8 +202,8 @@ export class MelodyLayer extends CachingLayer {
       elements = constrainToVocabulary(elements, corePitches);
     }
 
-    // Pitch gravity well: bias notes toward tonic/chord tone attractors
-    if (pitchGravityStrength(mood) > 0.1) {
+    // Pitch gravity well: bias notes toward tonic/chord tone attractors (alternate ticks)
+    if (state.tick % 2 === 1 && pitchGravityStrength(mood) > 0.1) {
       const NOTE_PC: Record<string, number> = {
         'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
         'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
