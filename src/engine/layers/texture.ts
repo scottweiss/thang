@@ -407,7 +407,7 @@ export class TextureLayer extends CachingLayer {
       .hpf(60)
       .pan(sine.range(0.3, 0.7).slow(7))
       .room(${(room * 1.0).toFixed(2)})
-      .roomsize(3.5)
+      .roomsize(2.5)
       .delay(0.2)
       .delaytime(0.5)
       .delayfeedback(0.2)
