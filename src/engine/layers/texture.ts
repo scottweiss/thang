@@ -294,7 +294,7 @@ export class TextureLayer extends CachingLayer {
       .gain("${dtGainPattern}")
       .lpf(${(1800 + brightness * 3000).toFixed(0)})
       .pan(sine.range(0.3, 0.7).slow(5))
-      .room(${(room * 1.2).toFixed(2)})
+      .room(${(room * 0.85).toFixed(2)})
       .roomsize(3)
       .delay(0.2)
       .delaytime(0.375)
