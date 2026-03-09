@@ -436,7 +436,7 @@ export class ArpLayer extends CachingLayer {
           xtalSteps = this.applyDisplacement(isoXtal.steps, state);
           xtalGainStr = isoXtal.gainStr;
         } else {
-          const fill = this.pickFill16(density * sectionMult * 0.15);
+          const fill = this.pickFill16(density * sectionMult * 0.3);
           xtalSteps = this.applyDisplacement(this.buildFromFill(notes, 'broken', 16, fill), state);
           xtalGainStr = new Array(16).fill(xtalGain.toFixed(4)).join(' ');
         }
@@ -448,7 +448,7 @@ export class ArpLayer extends CachingLayer {
           .fmenv("exp")
           .fmdecay(0.05)
           ${articulationToStrudel(sectionArticulation(section, tension, 0.15))}
-          .slow(6)
+          .slow(5)
           .gain("${xtalGainStr}")
           .hpf(300)
           .lpf(${(1800 + brightness * 2000).toFixed(0)})
