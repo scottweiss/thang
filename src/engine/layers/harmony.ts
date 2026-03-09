@@ -1044,7 +1044,7 @@ export class HarmonyLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'xtal':
-        // Lush warm pad — very slow attack, wide stereo, heavy reverb
+        // Lush warm pad — very slow attack, wide stereo, moderate reverb
         // SAW 85-92: dreamy, washed-out, nostalgic warmth
         return `${chordStart}
           .sound("sine")
@@ -1059,11 +1059,11 @@ export class HarmonyLayer implements Layer {
           .slow(5)
           .gain(${(gain * 0.6).toFixed(3)})
           .hpf(180)
-          .lpf(sine.range(${(500 + brightness * 300).toFixed(0)}, ${(900 + brightness * 800).toFixed(0)}).slow(17))
+          .lpf(sine.range(${(700 + brightness * 400).toFixed(0)}, ${(1200 + brightness * 1000).toFixed(0)}).slow(17))
           .pan(sine.range(0.1, 0.9).slow(13))
           .detune(sine.range(-2, 2).slow(11))
-          .room(${(room * 0.9).toFixed(2)})
-          .roomsize(4)
+          .room(${(room * 0.7).toFixed(2)})
+          .roomsize(3)
           .delay(0.3)
           .delaytime(0.5)
           .delayfeedback(0.3)
