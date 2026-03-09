@@ -609,21 +609,17 @@ export class MelodyLayer extends CachingLayer {
   ): string {
     switch (mood) {
       case 'ambient':
-        // Triangle to distinguish from sine/4 harmony
+        // Celesta — ethereal bells, distinct from pad_choir harmony
         return `note("${elements.join(' ')}")
-          .sound("triangle")
-          .fm(0.8)
-          .fmh(3)
-          .fmenv("exp")
-          .fmdecay(0.2)
+          .sound("gm_celesta")
           .attack(0.01)
-          .decay(0.6)
+          .decay(0.8)
           .sustain(0.03)
-          .release(0.4)
+          .release(0.6)
           .slow(5)
           .gain("${applyMelodicDynamics(gain * 0.7, elements)}")
-          .hpf(250)
-          .lpf(${(2000 + brightness * 2500).toFixed(0)})
+          .hpf(300)
+          .lpf(${(2500 + brightness * 2500).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(7))
           .room(${(room * 0.5).toFixed(2)})
           .roomsize(2)
@@ -633,18 +629,13 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'downtempo':
-        // Triangle lead — cuts through sine harmony, plucky attack
-        // LPF base 3000 ensures melody stays brighter than harmony sweep ceiling
+        // Vibraphone — warm mallet, distinct from acoustic bass drone
         return `note("${elements.join(' ')}")
-          .sound("triangle")
-          .fm(0.8)
-          .fmh(5)
-          .fmenv("exp")
-          .fmdecay(0.08)
+          .sound("gm_vibraphone")
           .attack(0.001)
-          .decay(0.25)
+          .decay(0.4)
           .sustain(0.02)
-          .release(0.15)
+          .release(0.2)
           .slow(3)
           .gain("${dynamicGain}")
           .hpf(350)
@@ -727,22 +718,17 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'xtal':
-        // Triangle floating tones — distinct from sine harmony, hazy and nostalgic
+        // Music box — crystalline, delicate, distinct from pad_warm harmony
         return `note("${elements.join(' ')}")
-          .sound("triangle")
-          .fm(0.5)
-          .fmh(4)
-          .fmenv("exp")
-          .fmdecay(0.3)
-          .attack(0.01)
-          .decay(0.8)
-          .sustain(0.03)
-          .release(0.6)
+          .sound("gm_music_box")
+          .attack(0.005)
+          .decay(0.6)
+          .sustain(0.02)
+          .release(0.5)
           .slow(4)
           .gain("${applyMelodicDynamics(gain * 0.65, elements)}")
-          .hpf(250)
-          .lpf(${(1500 + brightness * 1500).toFixed(0)})
-          .detune(sine.range(-1.5, 1.5).slow(7))
+          .hpf(300)
+          .lpf(${(2000 + brightness * 2000).toFixed(0)})
           .pan(sine.range(0.15, 0.85).slow(9))
           .room(${(room * 0.4).toFixed(2)})
           .roomsize(2)
@@ -825,15 +811,11 @@ export class MelodyLayer extends CachingLayer {
           .orbit(${this.orbit})`;
 
       case 'disco':
-        // Bright disco lead — triangle, funky and bright, cuts through square harmony
+        // Clavinet — funky, percussive, iconic disco/funk timbre
         return `note("${elements.join(' ')}")
-          .sound("triangle")
-          .fm(0.8)
-          .fmh(5)
-          .fmenv("exp")
-          .fmdecay(0.06)
+          .sound("gm_clavinet")
           .attack(0.001)
-          .decay(0.2)
+          .decay(0.25)
           .sustain(0.03)
           .release(0.1)
           .slow(1)
