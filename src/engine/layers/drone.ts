@@ -367,7 +367,7 @@ export class DroneLayer implements Layer {
           .slow(1)
           .gain(${(gain * 1.0).toFixed(3)})
           .lpf(sine.range(${(300 + brightness * 400).toFixed(0)}, ${(800 + brightness * 1200).toFixed(0)}).slow(1.5))
-          .resonance(${(14 + brightness * 6).toFixed(0)})
+          .resonance(${(10 + brightness * 5).toFixed(0)})
           .hpf(30)
           .detune(sine.range(-5, 5).slow(2))
           .pan(sine.range(0.35, 0.65).slow(3))
