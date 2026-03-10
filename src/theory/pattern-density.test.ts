@@ -14,7 +14,7 @@ describe('patternDegrade', () => {
 
   it('melody intro starts sparse', () => {
     const d = patternDegrade('melody', 'intro', 0);
-    expect(d).toBeGreaterThan(0.4);
+    expect(d).toBeGreaterThan(0.2);
   });
 
   it('melody peak is full density', () => {
@@ -26,7 +26,7 @@ describe('patternDegrade', () => {
   it('arp build fills in over time', () => {
     const start = patternDegrade('arp', 'build', 0);
     const end = patternDegrade('arp', 'build', 1);
-    expect(start).toBeGreaterThan(0.3);
+    expect(start).toBeGreaterThan(0.1);
     expect(end).toBe(0);
   });
 

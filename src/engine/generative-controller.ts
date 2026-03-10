@@ -716,8 +716,17 @@ export class GenerativeController {
       const loop = this.state.progressionLoop;
       const loopBar = this.state.barClock.loopBar;
 
-      if (loopBar % loop.barsPerChord === 0) {
-        const { degree, quality } = getLoopChordAtBar(loop, loopBar);
+      // For builds past 50% progress, halve effective barsPerChord (accelerating harmonic rhythm)
+      let effectiveBarsPerChord = loop.barsPerChord;
+      if (this.state.section === 'build' && (this.state.sectionProgress ?? 0) > 0.5) {
+        effectiveBarsPerChord = Math.max(1, Math.floor(loop.barsPerChord / 2));
+      }
+
+      if (loopBar % effectiveBarsPerChord === 0) {
+        // Compute chord index using effective barsPerChord
+        const chordIndex = Math.floor(loopBar / effectiveBarsPerChord) % loop.degrees.length;
+        const degree = loop.degrees[chordIndex];
+        const quality = loop.qualities[chordIndex];
 
         if (degree !== this.state.currentChord.degree || quality !== this.state.currentChord.quality) {
           this.advanceChordToTarget(degree, quality);
@@ -787,6 +796,12 @@ export class GenerativeController {
         this.state.progressionLoop = deriveLoopForSection(
           this.homeLoop, this.state.section, this.state.mood
         );
+        // Adjust barsPerChord based on harmonicRhythm directive
+        if (this.state.sectionDirectives?.harmonicRhythm === 'slow') {
+          this.state.progressionLoop!.barsPerChord *= 2;
+        } else if (this.state.sectionDirectives?.harmonicRhythm === 'accelerating') {
+          // Start at normal, will accelerate in tick() — handled by build-specific logic
+        }
         this.loopStartBar = this.state.barClock?.currentBar ?? 0;
         this.sectionStartBar = this.loopStartBar;
       }

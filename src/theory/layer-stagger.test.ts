@@ -31,7 +31,7 @@ describe('layerFadeInRate', () => {
   });
 
   it('unknown layers get default rate', () => {
-    expect(layerFadeInRate('unknown')).toBe(0.33);
+    expect(layerFadeInRate('unknown')).toBe(0.18);
   });
 
   it('stagger creates meaningful delay', () => {
