@@ -388,6 +388,7 @@ import { MelodyLayer } from './layers/melody';
 import { TextureLayer } from './layers/texture';
 import { ArpLayer } from './layers/arp';
 import { AtmosphereLayer } from './layers/atmosphere';
+import { generateLoop, deriveLoopForSection, getLoopChordAtBar } from '../theory/progression-loop';
 
 const TICK_INTERVAL = 2000; // ms between evolution ticks
 
@@ -550,6 +551,11 @@ export class GenerativeController {
       this.state.mood, this.state.scale.root, this.state.scale.type
     );
     this.formTrajectory.formLength = this.state.compositionPlan.totalDurationTicks;
+    // Initialize progression loop for harmonic identity
+    this.homeLoop = generateLoop(this.state.mood, [0, 1, 2, 3, 4, 5, 6]);
+    this.state.progressionLoop = deriveLoopForSection(this.homeLoop, 'intro', this.state.mood);
+    this.loopStartBar = 0;
+    this.sectionStartBar = 0;
     await this.rebuildAll();
     this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
   }
@@ -580,6 +586,12 @@ export class GenerativeController {
     this.formTrajectory = { ticksElapsed: 0, formLength: this.state.compositionPlan.totalDurationTicks };
     this.state.section = 'intro';
     this.state.sectionChanged = true;
+    // Initialize progression loop for new mood
+    this.homeLoop = generateLoop(mood, [0, 1, 2, 3, 4, 5, 6]);
+    this.state.progressionLoop = deriveLoopForSection(this.homeLoop, 'intro', mood);
+    this.loopStartBar = 0;
+    this.sectionStartBar = 0;
+    this.lastBar = -1;
     // Reset gain multipliers to intro state
     const introLayers = new Set(this.sections.getIntroLayers(mood));
     this.state.activeLayers = introLayers;
@@ -699,7 +711,24 @@ export class GenerativeController {
       this.state.scaleChanged = true;
     }
 
-    if (chordChange) {
+    // Loop-driven chord advancement on bar boundaries
+    if (isNewBar && this.state.progressionLoop && this.state.barClock) {
+      const loop = this.state.progressionLoop;
+      const loopBar = this.state.barClock.loopBar;
+
+      if (loopBar % loop.barsPerChord === 0) {
+        const { degree, quality } = getLoopChordAtBar(loop, loopBar);
+
+        if (degree !== this.state.currentChord.degree || quality !== this.state.currentChord.quality) {
+          this.advanceChordToTarget(degree, quality);
+          this.state.chordChanged = true;
+          this.state.ticksSinceChordChange = 0;
+        }
+      }
+    }
+
+    // Fallback: evolution timer-based chord changes (when no progression loop)
+    if (!this.state.progressionLoop && chordChange) {
       // Harmonic inertia: resist chord change when voicing is settled
       let allowChange = true;
       if (shouldApplyInertia(this.state.mood, this.state.section)) {
@@ -752,6 +781,14 @@ export class GenerativeController {
         this.modulationRatioStr = modulationRatio(this.prevSection, this.state.section, this.state.mood, this.state.tick);
         this.modulationTotalTicks = modulationWindowTicks(this.state.mood);
         this.modulationTicksRemaining = this.modulationTotalTicks;
+      }
+      // Derive new progression loop for this section
+      if (this.homeLoop) {
+        this.state.progressionLoop = deriveLoopForSection(
+          this.homeLoop, this.state.section, this.state.mood
+        );
+        this.loopStartBar = this.state.barClock?.currentBar ?? 0;
+        this.sectionStartBar = this.loopStartBar;
       }
       this.prevSection = this.state.section;
     } else {
@@ -1259,6 +1296,63 @@ export class GenerativeController {
 
     // Set hint for next chord (melody can use for anticipation)
     this.state.nextChordHint = this.progression.peekNext();
+  }
+
+  /**
+   * Advance to a specific chord degree+quality (loop-driven).
+   * Applies voice leading, inversion, and next-chord hint from the loop.
+   */
+  private advanceChordToTarget(degree: number, quality: import('../types').ChordQuality): void {
+    const prevNotes = this.state.currentChord.notes;
+    const scaleNotes = this.state.scale.notes;
+    const root = scaleNotes[degree % scaleNotes.length];
+    const notes = getChordNotesWithOctave(root, quality, 3);
+    const smoothed = smoothVoicing(prevNotes, notes);
+
+    const nextChord = {
+      symbol: getChordSymbol(root, quality),
+      root,
+      quality,
+      notes: smoothed,
+      degree,
+    };
+
+    // Voice leading: inversion for smooth bass
+    const chordNoteNames = nextChord.notes.map(
+      (n: string) => n.replace(/\d+$/, '')
+    ) as import('../types').NoteName[];
+    const inversion = selectInversion(
+      chordNoteNames, this.prevBassNote,
+      degree, this.state.mood, this.state.section,
+      this.sections.getSectionProgress()
+    );
+    if (inversion !== 0) {
+      nextChord.notes = applyInversion(nextChord.notes, inversion);
+    }
+    this.prevBassNote = extractBassNote(nextChord.notes);
+
+    // Update state
+    this.state.chordHistory.push(this.state.currentChord);
+    if (this.state.chordHistory.length > 16) this.state.chordHistory.shift();
+    this.state.currentChord = nextChord;
+    this.state.progressionIndex++;
+    this.consecutiveSameDegree = 0;
+    this.lastSelectedDegree = degree;
+
+    // Next chord hint from loop
+    if (this.state.progressionLoop && this.state.barClock) {
+      const loop = this.state.progressionLoop;
+      const nextIdx = (this.state.barClock.loopChordIndex + 1) % loop.degrees.length;
+      const nextRoot = scaleNotes[loop.degrees[nextIdx] % scaleNotes.length];
+      const nextQuality = loop.qualities[nextIdx];
+      this.state.nextChordHint = {
+        symbol: getChordSymbol(nextRoot, nextQuality),
+        root: nextRoot,
+        quality: nextQuality,
+        notes: getChordNotesWithOctave(nextRoot, nextQuality, 3),
+        degree: loop.degrees[nextIdx],
+      };
+    }
   }
 
   private async rebuildAll(): Promise<void> {
