@@ -2,9 +2,13 @@ import { Layer } from './layer';
 import { GenerativeState, Mood } from '../types';
 import { stereoWidth } from '../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../theory/micro-timing';
-import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../theory/filter-envelope';
-import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../theory/spatial-depth';
-import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../theory/delay-evolution';
+import {
+  computeFinalRoom, computeFinalRoomsize, computeFinalLpf,
+  computeFinalDelayFeedback, computeFinalDelayWet,
+  applyRoomMultiplier, applyRoomsizeMultiplier, applyLpfMultiplier,
+  applyDelayFeedbackMultiplier, applyDelayWetMultiplier,
+} from './post-processing';
+import type { PostProcessState } from './post-processing';
 import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../theory/timbral-morph';
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../theory/gain-arc';
@@ -17,9 +21,6 @@ import { slowMultiplier, shouldApplyRhythmicAcceleration } from '../theory/rhyth
 import { chorusDepth, shouldApplyChorus } from '../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../theory/density-balance';
-import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../theory/tension-brightness';
-import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../theory/tension-space';
-import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../theory/tension-delay';
 import { moodAccentProfile, applyAccentProfile } from '../theory/metric-accent';
 import { arrivalEmphasis } from '../theory/arrival-emphasis';
 import { syncedDelayTime } from '../theory/delay-sync';
@@ -30,7 +31,7 @@ import { tensionFmh, tensionFmIndex, shouldApplyHarmonicColor } from '../theory/
 import { pitchPanPattern, shouldApplyPitchPan } from '../theory/pitch-pan';
 import { chordLpfMultiplier, chordFmMultiplier, shouldApplyChordTimbre } from '../theory/chord-timbre';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../theory/stereo-placement';
-import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../theory/ensemble-thinning';
+import { ensembleFmMultiplier, shouldApplyEnsembleThinning } from '../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../theory/sidechain-duck';
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../theory/resolution-glow';
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../theory/tension-articulation';
@@ -78,11 +79,18 @@ export abstract class CachingLayer implements Layer {
     // Micro-timing: add subtle timing offsets for human feel
     result = this.applyMicroTiming(result, state);
 
-    // Filter envelope: smooth LPF sweep over section duration
-    result = this.applyFilterEnvelope(result, state);
-
-    // Tension brightness: LPF tracks real-time tension (stacks on filter envelope)
-    result = this.applyTensionBrightness(result, state);
+    // CONSOLIDATED: LPF (replaces individual filter-envelope + tension-brightness)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalLpf = computeFinalLpf(ppState, this.name);
+      result = applyLpfMultiplier(result, finalLpf);
+    }
 
     // Timbral variety: section-specific FM/filter character for sonic evolution
     result = this.applyTimbralVariety(result, state);
@@ -116,7 +124,7 @@ export abstract class CachingLayer implements Layer {
     if (shouldApplyChordTimbre(state.mood)) {
       const quality = state.currentChord.quality;
       const lpfMult = chordLpfMultiplier(quality, state.mood);
-      if (Math.abs(lpfMult - 1.0) > 0.02) {
+      if (Math.abs(lpfMult - 1.0) > 0.05) {
         result = result.replace(
           /\.lpf\((\d+(?:\.\d+)?)\)/,
           (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`
@@ -140,20 +148,38 @@ export abstract class CachingLayer implements Layer {
     // Resonance sweep: filter Q rises in builds, drops in breakdowns
     result = this.applyResonanceSweep(result, state);
 
-    // Spatial depth: reverb breathes with section progress
-    result = this.applySpatialDepth(result, state);
-
-    // Tension space: reverb tracks real-time tension (stacks on spatial depth)
-    result = this.applyTensionSpace(result, state);
+    // CONSOLIDATED: Room + Roomsize (replaces individual spatial-depth + tension-space + ensemble room)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalRoom = computeFinalRoom(ppState, this.name);
+      result = applyRoomMultiplier(result, finalRoom);
+      const finalRoomsize = computeFinalRoomsize(ppState, this.name);
+      result = applyRoomsizeMultiplier(result, finalRoomsize);
+    }
 
     // Delay sync: replace fixed delay times with tempo-synced values
     result = this.applyDelaySync(result, state);
 
-    // Delay evolution: echo intensity builds with section
-    result = this.applyDelayEvolution(result, state);
-
-    // Tension delay: echo feedback tracks real-time tension
-    result = this.applyTensionDelay(result, state);
+    // CONSOLIDATED: Delay feedback + wet (replaces individual delay-evolution + tension-delay + ensemble delay)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalDelay = computeFinalDelayFeedback(ppState, this.name);
+      result = applyDelayFeedbackMultiplier(result, finalDelay);
+      const finalWet = computeFinalDelayWet(ppState, this.name);
+      result = applyDelayWetMultiplier(result, finalWet);
+    }
 
     // Timbral morphing: FM index evolves within sections
     result = this.applyTimbralMorph(result, state);
@@ -332,46 +358,6 @@ export abstract class CachingLayer implements Layer {
     );
   }
 
-  /**
-   * Scale LPF values by section-progress-based envelope.
-   * Builds gradually open the filter, breakdowns close it.
-   */
-  private applyFilterEnvelope(pattern: string, state: GenerativeState): string {
-    if (!shouldApplyFilterEnvelope(state.section)) return pattern;
-
-    const mult = filterEnvelopeMultiplier(
-      state.section,
-      state.sectionProgress ?? 0,
-      state.tension?.overall ?? 0.5
-    );
-
-    // Only modulate if meaningfully different from 1.0
-    if (mult > 0.98) return pattern;
-
-    // Scale static .lpf(NUMBER) values
-    return pattern.replace(
-      /\.lpf\((\d+(?:\.\d+)?)\)/g,
-      (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
-    );
-  }
-
-  /**
-   * Scale LPF by real-time tension for spectral responsiveness.
-   * High tension = brighter (filter opens), low tension = darker.
-   */
-  private applyTensionBrightness(pattern: string, state: GenerativeState): string {
-    if (!shouldApplyTensionBrightness(this.name)) return pattern;
-
-    const tension = state.tension?.overall ?? 0.5;
-    const mult = tensionBrightnessMultiplier(tension, state.mood);
-    if (Math.abs(mult - 1.0) < 0.03) return pattern;
-
-    // Scale static .lpf(NUMBER) values
-    return pattern.replace(
-      /\.lpf\((\d+(?:\.\d+)?)\)/g,
-      (_match, val) => `.lpf(${Math.round(parseFloat(val) * mult)})`
-    );
-  }
 
   /**
    * Apply section-specific timbral variety: FM depth and filter brightness
@@ -456,61 +442,6 @@ export abstract class CachingLayer implements Layer {
     );
   }
 
-  /**
-   * Scale .room() and .roomsize() values by section-progress multipliers.
-   * Builds contract space (pressure), breakdowns expand (ethereal).
-   */
-  private applySpatialDepth(pattern: string, state: GenerativeState): string {
-    if (!shouldApplySpatialDepth(state.section)) return pattern;
-
-    const progress = state.sectionProgress ?? 0;
-    const tension = state.tension?.overall ?? 0.5;
-    const rMult = roomMultiplier(state.section, progress, tension);
-    const sMult = roomsizeMultiplier(state.section, progress);
-
-    let result = pattern;
-
-    // Scale static .room(NUMBER) values
-    if (Math.abs(rMult - 1.0) > 0.02) {
-      result = result.replace(
-        /\.room\((\d+(?:\.\d+)?)\)/g,
-        (_match, val) => `.room(${(parseFloat(val) * rMult).toFixed(2)})`
-      );
-    }
-
-    // Scale static .roomsize(NUMBER) values
-    if (Math.abs(sMult - 1.0) > 0.02) {
-      result = result.replace(
-        /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-        (_match, val) => `.roomsize(${(parseFloat(val) * sMult).toFixed(1)})`
-      );
-    }
-
-    return result;
-  }
-
-  /**
-   * Scale reverb by real-time tension for spatial responsiveness.
-   * High tension = drier (closer), low tension = wetter (distant).
-   */
-  private applyTensionSpace(pattern: string, state: GenerativeState): string {
-    if (!shouldApplyTensionSpace(this.name)) return pattern;
-
-    const tension = state.tension?.overall ?? 0.5;
-    const mult = tensionSpaceMultiplier(tension, state.mood);
-    if (Math.abs(mult - 1.0) < 0.03) return pattern;
-
-    let result = pattern;
-    result = result.replace(
-      /\.room\((\d+(?:\.\d+)?)\)/g,
-      (_match, val) => `.room(${(parseFloat(val) * mult).toFixed(2)})`
-    );
-    result = result.replace(
-      /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-      (_match, val) => `.roomsize(${(parseFloat(val) * mult).toFixed(1)})`
-    );
-    return result;
-  }
 
   /**
    * Replace hardcoded .delaytime() with tempo-synced values.
@@ -528,65 +459,6 @@ export abstract class CachingLayer implements Layer {
     );
   }
 
-  /**
-   * Scale .delay() and .delayfeedback() by section-progress multipliers.
-   * Builds cascade echoes, breakdowns create vast trails.
-   */
-  private applyDelayEvolution(pattern: string, state: GenerativeState): string {
-    if (!shouldApplyDelayEvolution(state.section)) return pattern;
-    // Skip if pattern has no delay
-    if (!pattern.includes('.delay(')) return pattern;
-
-    const progress = state.sectionProgress ?? 0;
-    const wetMult = delayWetMultiplier(state.section, progress);
-    const fbMult = delayFeedbackMultiplier(state.section, progress);
-
-    let result = pattern;
-
-    if (Math.abs(wetMult - 1.0) > 0.02) {
-      result = result.replace(
-        /\.delay\((\d+(?:\.\d+)?)\)/g,
-        (_match, val) => {
-          const scaled = Math.min(1.0, parseFloat(val) * wetMult);
-          return `.delay(${scaled.toFixed(2)})`;
-        }
-      );
-    }
-
-    if (Math.abs(fbMult - 1.0) > 0.02) {
-      result = result.replace(
-        /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-        (_match, val) => {
-          // Cap total feedback at 0.85 to prevent runaway echoes
-          const scaled = Math.min(0.85, parseFloat(val) * fbMult);
-          return `.delayfeedback(${scaled.toFixed(2)})`;
-        }
-      );
-    }
-
-    return result;
-  }
-
-  /**
-   * Scale delay feedback by real-time tension.
-   * High tension = denser echoes, low tension = cleaner.
-   */
-  private applyTensionDelay(pattern: string, state: GenerativeState): string {
-    if (!shouldApplyTensionDelay(this.name)) return pattern;
-    if (!pattern.includes('.delayfeedback(')) return pattern;
-
-    const tension = state.tension?.overall ?? 0.5;
-    const mult = tensionDelayMultiplier(tension, state.mood);
-    if (Math.abs(mult - 1.0) < 0.03) return pattern;
-
-    return pattern.replace(
-      /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-      (_match, val) => {
-        const scaled = Math.min(0.85, parseFloat(val) * mult);
-        return `.delayfeedback(${scaled.toFixed(2)})`;
-      }
-    );
-  }
 
   /**
    * Scale .fm() values by section-progress multiplier for timbral evolution.
@@ -948,8 +820,8 @@ export abstract class CachingLayer implements Layer {
   }
 
   /**
-   * Scale FM, reverb, and delay based on how many layers are active.
-   * More layers → cleaner tones, drier mix. Fewer → richer, more spacious.
+   * Scale FM based on how many layers are active.
+   * More layers → cleaner tones. Room/delay thinning is handled by consolidated post-processing.
    */
   private applyEnsembleThinning(pattern: string, state: GenerativeState): string {
     const count = state.activeLayers.size;
@@ -958,33 +830,12 @@ export abstract class CachingLayer implements Layer {
     let result = pattern;
     const mood = state.mood;
 
-    // FM thinning
+    // FM thinning (room + delay thinning now handled by consolidated computeFinalRoom/computeFinalDelayFeedback)
     const fmMult = ensembleFmMultiplier(count, mood);
     if (Math.abs(fmMult - 1.0) > 0.03 && result.includes('.fm(') && !result.includes('.fm(sine')) {
       result = result.replace(
         /\.fm\((\d+(?:\.\d+)?)\)/g,
         (_, val) => `.fm(${(parseFloat(val) * fmMult).toFixed(1)})`
-      );
-    }
-
-    // Room thinning
-    const roomMult = ensembleRoomMultiplier(count, mood);
-    if (Math.abs(roomMult - 1.0) > 0.03) {
-      result = result.replace(
-        /\.room\((\d+(?:\.\d+)?)\)/g,
-        (_, val) => `.room(${(parseFloat(val) * roomMult).toFixed(2)})`
-      );
-    }
-
-    // Delay feedback thinning
-    const delayMult = ensembleDelayMultiplier(count, mood);
-    if (Math.abs(delayMult - 1.0) > 0.03) {
-      result = result.replace(
-        /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-        (_, val) => {
-          const scaled = Math.min(0.85, parseFloat(val) * delayMult);
-          return `.delayfeedback(${scaled.toFixed(2)})`;
-        }
       );
     }
 
@@ -1101,7 +952,7 @@ export abstract class CachingLayer implements Layer {
 
     // LPF adjustment
     const lpfMult = spectralLpfMultiplier(this.name, state.activeLayers, tension, state.mood);
-    if (Math.abs(lpfMult - 1.0) > 0.02) {
+    if (Math.abs(lpfMult - 1.0) > 0.05) {
       pattern = pattern.replace(
         /\.lpf\((\d+(?:\.\d+)?)\)/g,
         (_, val) => `.lpf(${Math.round(parseFloat(val) * lpfMult)})`

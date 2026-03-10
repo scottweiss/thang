@@ -1,14 +1,18 @@
 import { Layer } from '../layer';
-import { GenerativeState, Section } from '../../types';
+import { GenerativeState, Mood, Section } from '../../types';
 import { findSuspensions, pickBestSuspension, suspensionResolutionPair } from '../../theory/suspension';
 import { getVoicingRange, applyVoicingSpread } from '../../theory/voicing-spread';
 import { findGuideTones } from '../../theory/guide-tones';
 import { adjustChordDensity } from '../../theory/harmonic-density';
 import { stereoWidth } from '../../theory/stereo-field';
 import { generateNudgePattern, shouldApplyMicroTiming } from '../../theory/micro-timing';
-import { filterEnvelopeMultiplier, shouldApplyFilterEnvelope } from '../../theory/filter-envelope';
-import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
-import { delayWetMultiplier, delayFeedbackMultiplier, shouldApplyDelayEvolution } from '../../theory/delay-evolution';
+import {
+  computeFinalRoom, computeFinalRoomsize, computeFinalLpf,
+  computeFinalDelayFeedback, computeFinalDelayWet,
+  applyRoomMultiplier, applyRoomsizeMultiplier, applyLpfMultiplier,
+  applyDelayFeedbackMultiplier, applyDelayWetMultiplier,
+} from '../post-processing';
+import type { PostProcessState } from '../post-processing';
 import { hpfSweepOffset, shouldApplyHpfSweep } from '../../theory/hpf-sweep';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
@@ -18,9 +22,6 @@ import { hpfBandOffset, lpfBandOffset, shouldApplyBandSeparation } from '../../t
 import { chorusDepth, shouldApplyChorus } from '../../theory/chorus-depth';
 import { patternDegrade, shouldApplyDegrade } from '../../theory/pattern-density';
 import { densityBalanceDegrade, shouldApplyDensityBalance } from '../../theory/density-balance';
-import { tensionBrightnessMultiplier, shouldApplyTensionBrightness } from '../../theory/tension-brightness';
-import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
-import { tensionDelayMultiplier, shouldApplyTensionDelay } from '../../theory/tension-delay';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { shouldUsePlaning, planedVoicing } from '../../theory/harmonic-planing';
 import { fmMorphMultiplier, shouldApplyTimbralMorph } from '../../theory/timbral-morph';
@@ -33,7 +34,7 @@ import { pickColorTone, shouldConsiderColorTones } from '../../theory/chord-colo
 import { applyDrop2, applyDrop3, pickDropVoicing } from '../../theory/drop-voicing';
 import { compingPattern, shouldComp } from '../../theory/comping-rhythm';
 import { adjustPanRange, shouldApplyStereoPlacement } from '../../theory/stereo-placement';
-import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
+import { ensembleFmMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { detectResolution, resolutionGlowMultiplier, resolutionGainBoost } from '../../theory/resolution-glow';
 import { tensionDecayMultiplier, tensionSustainMultiplier, tensionAttackMultiplier, shouldApplyTensionArticulation } from '../../theory/tension-articulation';
@@ -91,9 +92,21 @@ export class HarmonyLayer implements Layer {
   private suspensionChain: SuspensionChainPlan | null = null;
   private lastBassNote: string | null = null;
   private ticksSinceBassChange = 0;
+  private cachedPattern: string | null = null;
+  private lastMood: Mood | null = null;
 
   generate(state: GenerativeState): string {
-    let result = this.buildPattern(state);
+    const needsRegen = !this.cachedPattern ||
+      state.mood !== this.lastMood ||
+      state.scaleChanged ||
+      state.chordChanged;
+
+    if (needsRegen) {
+      this.cachedPattern = this.buildPattern(state);
+      this.lastMood = state.mood;
+    }
+
+    let result = this.cachedPattern!;
 
     // Comping rhythm: replace sustained gain with rhythmic chord stabs
     if (shouldComp(state.mood, state.section)) {
@@ -120,30 +133,17 @@ export class HarmonyLayer implements Layer {
       result = result.replace(/\.orbit\((\d+)\)/, `.nudge("${nudge}").orbit($1)`);
     }
 
-    // Filter envelope: smooth LPF sweep over section duration
-    if (shouldApplyFilterEnvelope(state.section)) {
-      const mult = filterEnvelopeMultiplier(
-        state.section,
-        state.sectionProgress ?? 0,
-        state.tension?.overall ?? 0.5
-      );
-      if (mult < 0.98) {
-        result = result.replace(
-          /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.lpf(${safeMul(val, mult, 0)})`
-        );
-      }
-    }
-
-    // Tension brightness: LPF tracks real-time tension
-    if (shouldApplyTensionBrightness(this.name)) {
-      const tbMult = tensionBrightnessMultiplier(state.tension?.overall ?? 0.5, state.mood);
-      if (Math.abs(tbMult - 1.0) >= 0.03) {
-        result = result.replace(
-          /\.lpf\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.lpf(${safeMul(val, tbMult, 0)})`
-        );
-      }
+    // CONSOLIDATED: LPF (replaces individual filter-envelope + tension-brightness)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalLpf = computeFinalLpf(ppState, this.name);
+      result = applyLpfMultiplier(result, finalLpf);
     }
 
     // Tension register brightness: fractional register shift modulates LPF
@@ -195,39 +195,19 @@ export class HarmonyLayer implements Layer {
       }
     }
 
-    // Spatial depth: reverb breathes with section progress
-    if (shouldApplySpatialDepth(state.section)) {
-      const progress = state.sectionProgress ?? 0;
-      const tension = state.tension?.overall ?? 0.5;
-      const rMult = roomMultiplier(state.section, progress, tension);
-      const sMult = roomsizeMultiplier(state.section, progress);
-      if (Math.abs(rMult - 1.0) > 0.02) {
-        result = result.replace(
-          /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${safeMul(val, rMult, 2)})`
-        );
-      }
-      if (Math.abs(sMult - 1.0) > 0.02) {
-        result = result.replace(
-          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${safeMul(val, sMult, 1)})`
-        );
-      }
-    }
-
-    // Tension space: reverb tracks real-time tension
-    if (shouldApplyTensionSpace(this.name)) {
-      const tsMult = tensionSpaceMultiplier(state.tension?.overall ?? 0.5, state.mood);
-      if (Math.abs(tsMult - 1.0) >= 0.03) {
-        result = result.replace(
-          /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${safeMul(val, tsMult, 2)})`
-        );
-        result = result.replace(
-          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${safeMul(val, tsMult, 1)})`
-        );
-      }
+    // CONSOLIDATED: Room + Roomsize (replaces individual spatial-depth + tension-space + ensemble room)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalRoom = computeFinalRoom(ppState, this.name);
+      result = applyRoomMultiplier(result, finalRoom);
+      const finalRoomsize = computeFinalRoomsize(ppState, this.name);
+      result = applyRoomsizeMultiplier(result, finalRoomsize);
     }
 
     // Delay sync: replace fixed delay times with tempo-synced values
@@ -239,34 +219,19 @@ export class HarmonyLayer implements Layer {
       );
     }
 
-    // Delay evolution: echo intensity evolves with section
-    if (shouldApplyDelayEvolution(state.section) && result.includes('.delay(')) {
-      const progress = state.sectionProgress ?? 0;
-      const wetMult = delayWetMultiplier(state.section, progress);
-      const fbMult = delayFeedbackMultiplier(state.section, progress);
-      if (Math.abs(wetMult - 1.0) > 0.02) {
-        result = result.replace(
-          /\.delay\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.delay(${val})` : `.delay(${Math.min(1.0, n * wetMult).toFixed(2)})`; }
-        );
-      }
-      if (Math.abs(fbMult - 1.0) > 0.02) {
-        result = result.replace(
-          /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.delayfeedback(${val})` : `.delayfeedback(${Math.min(0.85, n * fbMult).toFixed(2)})`; }
-        );
-      }
-    }
-
-    // Tension delay: echo feedback tracks real-time tension
-    if (shouldApplyTensionDelay(this.name) && result.includes('.delayfeedback(')) {
-      const tdMult = tensionDelayMultiplier(state.tension?.overall ?? 0.5, state.mood);
-      if (Math.abs(tdMult - 1.0) >= 0.03) {
-        result = result.replace(
-          /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => { const n = parseFloat(val); return isNaN(n) ? `.delayfeedback(${val})` : `.delayfeedback(${Math.min(0.85, n * tdMult).toFixed(2)})`; }
-        );
-      }
+    // CONSOLIDATED: Delay feedback + wet (replaces individual delay-evolution + tension-delay + ensemble delay)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalDelay = computeFinalDelayFeedback(ppState, this.name);
+      result = applyDelayFeedbackMultiplier(result, finalDelay);
+      const finalWet = computeFinalDelayWet(ppState, this.name);
+      result = applyDelayWetMultiplier(result, finalWet);
     }
 
     // Frequency band separation: tighten HPF/LPF when many layers active
@@ -478,7 +443,8 @@ export class HarmonyLayer implements Layer {
       }
     }
 
-    // Ensemble thinning: reduce FM/reverb/delay when many layers play
+    // Ensemble thinning: reduce FM when many layers play
+    // (room + delay thinning now handled by consolidated computeFinalRoom/computeFinalDelayFeedback)
     const layerCount = state.activeLayers.size;
     if (shouldApplyEnsembleThinning(layerCount)) {
       const mood = state.mood;
@@ -487,20 +453,6 @@ export class HarmonyLayer implements Layer {
         result = result.replace(
           /\.fm\((\d+(?:\.\d+)?)\)/g,
           (_, val) => `.fm(${safeMul(val, etFmMult, 1)})`
-        );
-      }
-      const etRoomMult = ensembleRoomMultiplier(layerCount, mood);
-      if (Math.abs(etRoomMult - 1.0) > 0.03) {
-        result = result.replace(
-          /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.room(${safeMul(val, etRoomMult, 2)})`
-        );
-      }
-      const etDelayMult = ensembleDelayMultiplier(layerCount, mood);
-      if (Math.abs(etDelayMult - 1.0) > 0.03) {
-        result = result.replace(
-          /\.delayfeedback\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => { const n = parseFloat(val); return isNaN(n) ? `.delayfeedback(${val})` : `.delayfeedback(${Math.min(0.85, n * etDelayMult).toFixed(2)})`; }
         );
       }
     }

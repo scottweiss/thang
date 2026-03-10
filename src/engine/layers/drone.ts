@@ -4,13 +4,15 @@ import { generateBassPattern, bassFollowsChord, shouldBassApproach, bassApproach
 import { suggestBassDirection, shouldApplyContraryMotion } from '../../theory/bass-contrary-motion';
 import { shouldUsePedal, getPedalNote, pedalGainCurve, pedalConflictTension } from '../../theory/pedal-point';
 import { gainArcMultiplier, shouldApplyGainArc } from '../../theory/gain-arc';
-import { roomMultiplier, roomsizeMultiplier, shouldApplySpatialDepth } from '../../theory/spatial-depth';
+import {
+  computeFinalRoom, computeFinalRoomsize,
+  applyRoomMultiplier, applyRoomsizeMultiplier,
+} from '../post-processing';
+import type { PostProcessState } from '../post-processing';
 import { resonanceSweepMultiplier, shouldApplyResonanceSweep } from '../../theory/resonance-sweep';
 import { anticipationProbability, shouldAnticipate } from '../../theory/harmonic-anticipation';
-import { tensionSpaceMultiplier, shouldApplyTensionSpace } from '../../theory/tension-space';
 import { arrivalEmphasis } from '../../theory/arrival-emphasis';
 import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../../theory/tension-orchestration';
-import { ensembleFmMultiplier, ensembleRoomMultiplier, ensembleDelayMultiplier, shouldApplyEnsembleThinning } from '../../theory/ensemble-thinning';
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 import { adaptDroneToChord, phraseRepeatCount } from '../../theory/phrase-persistence';
@@ -43,7 +45,6 @@ export class DroneLayer implements Layer {
       !this.cachedResult ||
       state.mood !== this.lastMood ||
       state.scaleChanged ||
-      state.sectionChanged ||
       (state.chordChanged && this.phraseRepeatsRemaining <= 0);
 
     if (needsRegen) {
@@ -64,39 +65,19 @@ export class DroneLayer implements Layer {
   private buildPatternAndPostProcess(state: GenerativeState): string {
     let result = this.buildPattern(state);
 
-    // Spatial depth: reverb breathes with section progress
-    if (shouldApplySpatialDepth(state.section)) {
-      const progress = state.sectionProgress ?? 0;
-      const tension = state.tension?.overall ?? 0.5;
-      const rMult = roomMultiplier(state.section, progress, tension);
-      const sMult = roomsizeMultiplier(state.section, progress);
-      if (Math.abs(rMult - 1.0) > 0.02) {
-        result = result.replace(
-          /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${safeMul(val, rMult, 2)})`
-        );
-      }
-      if (Math.abs(sMult - 1.0) > 0.02) {
-        result = result.replace(
-          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${safeMul(val, sMult, 1)})`
-        );
-      }
-    }
-
-    // Tension space: reverb tracks real-time tension
-    if (shouldApplyTensionSpace(this.name)) {
-      const tsMult = tensionSpaceMultiplier(state.tension?.overall ?? 0.5, state.mood);
-      if (Math.abs(tsMult - 1.0) >= 0.03) {
-        result = result.replace(
-          /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.room(${safeMul(val, tsMult, 2)})`
-        );
-        result = result.replace(
-          /\.roomsize\((\d+(?:\.\d+)?)\)/g,
-          (_match, val) => `.roomsize(${safeMul(val, tsMult, 1)})`
-        );
-      }
+    // CONSOLIDATED: Room + Roomsize (replaces individual spatial-depth + tension-space + ensemble room)
+    {
+      const ppState: PostProcessState = {
+        section: state.section,
+        sectionProgress: state.sectionProgress ?? 0,
+        tension: { overall: state.tension?.overall ?? 0.5 },
+        mood: state.mood,
+        activeLayers: state.activeLayers,
+      };
+      const finalRoom = computeFinalRoom(ppState, this.name);
+      result = applyRoomMultiplier(result, finalRoom);
+      const finalRoomsize = computeFinalRoomsize(ppState, this.name);
+      result = applyRoomsizeMultiplier(result, finalRoomsize);
     }
 
     // Resonance sweep: filter Q evolves with section
@@ -122,18 +103,6 @@ export class DroneLayer implements Layer {
           const ducked = duck.map(d => (base * d).toFixed(4)).join(' ');
           result = result.replace(`.gain(${droneSingleGain[1]})`, `.gain("${ducked}")`);
         }
-      }
-    }
-
-    // Ensemble thinning: reduce FM/reverb/delay when many layers play
-    const etCount = state.activeLayers.size;
-    if (shouldApplyEnsembleThinning(etCount)) {
-      const etRoomMult = ensembleRoomMultiplier(etCount, state.mood);
-      if (Math.abs(etRoomMult - 1.0) > 0.03) {
-        result = result.replace(
-          /\.room\((\d+(?:\.\d+)?)\)/g,
-          (_, val) => `.room(${safeMul(val, etRoomMult, 2)})`
-        );
       }
     }
 
