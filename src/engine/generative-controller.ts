@@ -1,4 +1,4 @@
-import { GenerativeState, Mood } from '../types';
+import { GenerativeState, Mood, NoteName, ScaleType, DashboardOverrides, LayerName } from '../types';
 import { evaluate, hush } from '../strudel/bridge';
 import { buildScaleState, getRelatedScales, getScaleNotes } from '../theory/scales';
 import { pickContextualScale } from '../theory/scale-color';
@@ -19,6 +19,7 @@ import { TensionMemory } from '../theory/tension-memory';
 import { phraseCadenceBias } from '../theory/phrase-harmony';
 import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../theory/form-trajectory';
 import type { TrajectoryState } from '../theory/form-trajectory';
+import { generateCompositionPlan, getCurrentPlannedSection, advancePlanSection, planSectionPreference, planHarmonicBias, planTensionCeiling, planGainMultiplier } from './composition-plan';
 import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
 import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theory/tritone-sub';
 import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from '../theory/chromatic-approach';
@@ -403,6 +404,10 @@ function safeP(val: string, fallback: number = 1): number {
 }
 /** Scale gain by multiplier — handles both static .gain(0.12) and dynamic .gain("0.12 0.08 ...") */
 function mulGain(code: string, mult: number): string {
+  // Dead zone: multipliers within 5% of unity are noise that compounds
+  // destructively across 150+ calls. Skip them entirely.
+  if (mult > 0.95 && mult < 1.05) return code;
+
   return code.replace(/\.gain\(([^)]+)\)/g, (match, expr) => {
     // Static: .gain(0.12)
     const num = parseFloat(expr);
@@ -477,6 +482,13 @@ export class GenerativeController {
   private timbralMemory = new TimbralMemoryBank();
   /** Gestalt continuation trajectory history */
   private trajectoryHistory: Record<string, number[]> = {};
+  /** Dashboard overrides for real-time tweaking */
+  private dashboardOverrides: DashboardOverrides | null = null;
+  /** Bar clock tracking */
+  private lastBar = -1;
+  private sectionStartBar = 0;
+  private loopStartBar = 0;
+  private homeLoop: import('../types').ProgressionLoop | null = null;
 
   constructor() {
     const initialScale = buildScaleState('C', 'minor');
@@ -534,6 +546,10 @@ export class GenerativeController {
   }
 
   async start(): Promise<void> {
+    this.state.compositionPlan = generateCompositionPlan(
+      this.state.mood, this.state.scale.root, this.state.scale.type
+    );
+    this.formTrajectory.formLength = this.state.compositionPlan.totalDurationTicks;
     await this.rebuildAll();
     this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
   }
@@ -558,20 +574,16 @@ export class GenerativeController {
     this.consecutiveSameDegree = 0;
     this.lastSelectedDegree = -1;
     this.tonalGravity.reset(this.state.scale.root, this.state.scale.type);
-    this.formTrajectory = { ticksElapsed: 0, formLength: moodFormLength(mood) };
+    this.state.compositionPlan = generateCompositionPlan(
+      mood, this.state.scale.root, this.state.scale.type
+    );
+    this.formTrajectory = { ticksElapsed: 0, formLength: this.state.compositionPlan.totalDurationTicks };
     this.state.section = 'intro';
     this.state.sectionChanged = true;
     // Reset gain multipliers to intro state
     const introLayers = new Set(this.sections.getIntroLayers(mood));
     this.state.activeLayers = introLayers;
-    this.state.layerGainMultipliers = {
-      drone: introLayers.has('drone') ? 1.0 : 0.0,
-      harmony: introLayers.has('harmony') ? 1.0 : 0.0,
-      melody: introLayers.has('melody') ? 1.0 : 0.0,
-      texture: introLayers.has('texture') ? 1.0 : 0.0,
-      arp: introLayers.has('arp') ? 1.0 : 0.0,
-      atmosphere: introLayers.has('atmosphere') ? 1.0 : 0.0,
-    };
+    // Let section manager interpolate gains toward new targets each tick
     this.rebuildAll();
     this.onStateChange?.(this.state);
   }
@@ -593,6 +605,49 @@ export class GenerativeController {
     this.sections.forceAdvance(this.state, this.formTrajectory);
     // Kick-start gain interpolation immediately so new layers aren't silent
     this.sections.evolve(this.state, 0, this.formTrajectory);
+    // Keep composition plan in sync with forced section changes
+    if (this.state.compositionPlan && !this.state.compositionPlan.isComplete) {
+      advancePlanSection(this.state.compositionPlan);
+    }
+    this.rebuildAll();
+    this.onStateChange?.(this.state);
+  }
+
+  setDashboardOverrides(overrides: DashboardOverrides): void {
+    this.dashboardOverrides = overrides;
+    this.rebuildAll();
+  }
+
+  setScaleRoot(root: NoteName): void {
+    const newScale = buildScaleState(root, this.state.scale.type);
+    this.state.scale = newScale;
+    this.state.scaleChanged = true;
+    this.progression.setScale(newScale);
+    // Update plan's current region to match user choice (don't fight user)
+    if (this.state.compositionPlan && !this.state.compositionPlan.isComplete) {
+      const idx = Math.min(this.state.compositionPlan.currentSectionIndex, this.state.compositionPlan.sections.length - 1);
+      this.state.compositionPlan.sections[idx].harmonicRegion.root = root;
+    }
+    this.rebuildAll();
+    this.onStateChange?.(this.state);
+  }
+
+  setScaleType(type: ScaleType): void {
+    const newScale = buildScaleState(this.state.scale.root, type);
+    this.state.scale = newScale;
+    this.state.scaleChanged = true;
+    this.progression.setScale(newScale);
+    // Update plan's current region to match user choice (don't fight user)
+    if (this.state.compositionPlan && !this.state.compositionPlan.isComplete) {
+      const idx = Math.min(this.state.compositionPlan.currentSectionIndex, this.state.compositionPlan.sections.length - 1);
+      this.state.compositionPlan.sections[idx].harmonicRegion.scaleType = type;
+    }
+    this.rebuildAll();
+    this.onStateChange?.(this.state);
+  }
+
+  setTempo(bpm: number): void {
+    this.state.params.tempo = bpm / 240;
     this.rebuildAll();
     this.onStateChange?.(this.state);
   }
@@ -604,6 +659,33 @@ export class GenerativeController {
   private async tick(): Promise<void> {
     const dt = TICK_INTERVAL / 1000;
     const { chordChange, scaleChange } = this.evolution.evolve(this.state, dt);
+
+    // Bar clock: compute current bar from musical time
+    const barDuration = 4 / this.state.params.tempo;
+    const currentBar = Math.floor(this.state.elapsed / barDuration);
+    const barProgress = (this.state.elapsed % barDuration) / barDuration;
+    const isNewBar = currentBar !== this.lastBar;
+
+    this.state.barClock = {
+      currentBar,
+      barDuration,
+      barProgress,
+      sectionBar: currentBar - this.sectionStartBar,
+      loopBar: this.state.progressionLoop
+        ? ((currentBar - this.loopStartBar) % Math.max(1, this.state.progressionLoop.degrees.length * this.state.progressionLoop.barsPerChord))
+        : 0,
+      loopChordIndex: 0,
+    };
+
+    if (this.state.progressionLoop && this.state.barClock) {
+      const loop = this.state.progressionLoop;
+      const totalLoopBars = loop.degrees.length * loop.barsPerChord;
+      this.state.barClock.loopChordIndex = totalLoopBars > 0
+        ? Math.floor(this.state.barClock.loopBar / loop.barsPerChord) % loop.degrees.length
+        : 0;
+    }
+
+    this.lastBar = currentBar;
 
     this.state.chordChanged = false;
     this.state.scaleChanged = false;
@@ -706,7 +788,17 @@ export class GenerativeController {
     this.formTrajectory.ticksElapsed = this.state.tick;
     const ceiling = tensionCeiling(this.formTrajectory);
     if (this.state.tension.overall > ceiling) {
-      this.state.tension.overall = ceiling;
+      this.state.tension.overall += (ceiling - this.state.tension.overall) * 0.3;
+    }
+
+    // Composition plan: advance timer, enforce plan-level tension ceiling
+    const plan = this.state.compositionPlan;
+    if (plan && !plan.isComplete) {
+      plan.ticksInCurrentSection++;
+      const planCeiling = planTensionCeiling(plan);
+      if (this.state.tension.overall > planCeiling) {
+        this.state.tension.overall += (planCeiling - this.state.tension.overall) * 0.3;
+      }
     }
 
     // Emotional memory: store significant musical moments for later recall
@@ -777,6 +869,21 @@ export class GenerativeController {
   private modulateScale(): void {
     const tension = this.state.tension?.overall ?? 0.5;
     const sectionProgress = this.sections.getSectionProgress();
+
+    // Composition plan: steer toward planned harmonic region's key center
+    const plan = this.state.compositionPlan;
+    if (plan && !plan.isComplete) {
+      const target = getCurrentPlannedSection(plan).harmonicRegion;
+      if (this.state.scale.root !== target.root || this.state.scale.type !== target.scaleType) {
+        // 60% chance to follow plan, 40% to let organic modulation happen
+        if (Math.random() < 0.6) {
+          this.state.scale = buildScaleState(target.root, target.scaleType);
+          this.progression.setScale(this.state.scale);
+          this.tonalGravity.record(this.state.scale.root, this.state.scale.type, this.state.tick);
+          return;
+        }
+      }
+    }
 
     // Tonal gravity: if we've wandered too far, pull back home
     if (this.tonalGravity.shouldReturnHome(
@@ -925,6 +1032,8 @@ export class GenerativeController {
         );
         bias *= magneticPull(candidatePc, attractor, this.state.mood, this.state.section);
       }
+      // Composition plan: bias toward chords fitting the planned harmonic region
+      bias *= planHarmonicBias(this.state.compositionPlan, degree);
       // Anti-repetition: penalize current degree to prevent harmonic stagnation.
       // The compound biases above can overwhelm the Markov chain, causing the
       // same degree to be selected repeatedly. Penalty escalates with each
@@ -1161,7 +1270,7 @@ export class GenerativeController {
     );
     if (activeLayers.length === 0) return;
 
-    const layerResults: { name: string; code: string }[] = [];
+    let layerResults: { name: string; code: string }[] = [];
 
     for (const layer of activeLayers) {
       try {
@@ -1395,6 +1504,16 @@ export class GenerativeController {
     if (Math.abs(trajGain - 1.0) > 0.02) {
       for (const result of layerResults) {
         result.code = mulGain(result.code, trajGain);
+      }
+    }
+
+    // Composition plan gain: macro dynamic arc from the plan
+    if (this.state.compositionPlan && !this.state.compositionPlan.isComplete) {
+      const planGain = planGainMultiplier(this.state.compositionPlan);
+      if (Math.abs(planGain - 1.0) > 0.02) {
+        for (const result of layerResults) {
+          result.code = mulGain(result.code, planGain);
+        }
       }
     }
 
@@ -6663,6 +6782,77 @@ export class GenerativeController {
         result.code = result.code.replace(/\bNaN\b/g, '1');
       }
     }
+    // Dashboard overrides: apply user-specified instrument/mix changes
+    if (this.dashboardOverrides) {
+      for (const result of layerResults) {
+        const layerName = result.name as LayerName;
+
+        // Layer gain override
+        const layerOv = this.dashboardOverrides.layers[layerName];
+        if (layerOv?.gain !== undefined) {
+          result.code = mulGain(result.code, layerOv.gain / 100);
+        }
+
+        // Instrument override: replace .sound("xxx") with override
+        if (layerOv?.instrument) {
+          result.code = result.code.replace(
+            /\.sound\("([^"]+)"\)/,
+            `.sound("${layerOv.instrument}")`
+          );
+          // If switching TO a soundfont (gm_*), strip FM synthesis params
+          if (layerOv.instrument.startsWith('gm_')) {
+            result.code = result.code
+              .replace(/\.fm\([^)]*\)/g, '')
+              .replace(/\.fmh\([^)]*\)/g, '')
+              .replace(/\.fmenv\([^)]*\)/g, '')
+              .replace(/\.fmdecay\([^)]*\)/g, '');
+          }
+        }
+
+        // Mix overrides
+        const mixOv = this.dashboardOverrides.mix[layerName];
+        if (mixOv?.room !== undefined) {
+          result.code = result.code.replace(
+            /\.room\([^)]*\)/,
+            `.room(${(mixOv.room / 100).toFixed(2)})`
+          );
+        }
+        if (mixOv?.delay !== undefined) {
+          result.code = result.code.replace(
+            /\.delay\([^)]*\)/,
+            `.delay(${(mixOv.delay / 100).toFixed(2)})`
+          );
+        }
+        if (mixOv?.lpf !== undefined) {
+          const freq = Math.round(200 + (mixOv.lpf / 100) * 11800);
+          result.code = result.code.replace(
+            /\.lpf\([^)]*\)/,
+            `.lpf(${freq})`
+          );
+        }
+        if (mixOv?.pan !== undefined) {
+          result.code = result.code.replace(
+            /\.pan\([^)]*\)/,
+            `.pan(${mixOv.pan.toFixed(2)})`
+          );
+        }
+      }
+
+      // Master gain override
+      if (this.dashboardOverrides.masterGain !== undefined) {
+        const masterMult = this.dashboardOverrides.masterGain / 100;
+        for (const result of layerResults) {
+          result.code = mulGain(result.code, masterMult);
+        }
+      }
+
+      // Layer enable/disable: filter out disabled layers
+      layerResults = layerResults.filter(result => {
+        const layerOv = this.dashboardOverrides!.layers[result.name as LayerName];
+        return layerOv?.enabled !== false;
+      });
+    }
+
     const layerCodes = layerResults.map(r => r.code);
     // Apply rubato: subtle tempo variation based on section and tension
     const rubato = rubatoMultiplier(this.state.mood, this.state.section, this.state.tension?.overall ?? 0.5);
@@ -6719,6 +6909,9 @@ export class GenerativeController {
       await evaluate(fullCode);
     } catch (e) {
       console.warn('Full stack evaluation failed, trying layers individually:', e);
+      // Log broken code so the failing layer can be identified
+      const lines = fullCode.split('\n');
+      console.warn('[rebuildAll] broken code lines near error:', lines.slice(10, 15).map((l, i) => `L${i+11}: ${l}`).join('\n'));
       // Fall back to evaluating layers one at a time to isolate the broken one
       const workingCodes: string[] = [];
       for (const result of layerResults) {
