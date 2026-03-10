@@ -85,4 +85,59 @@ export interface GenerativeState {
   sectionProgress: number;  // 0-1 how far through current section
   activeMotif?: string[];   // current melody motif for cross-layer thematic unity
   melodyDirection?: 'ascending' | 'descending' | 'static';  // melody motion for contrapuntal arp
+  compositionPlan?: import('./engine/composition-plan').CompositionPlan;
+  /** Active progression loop for current section */
+  progressionLoop?: ProgressionLoop;
+  /** Bar-level timing state */
+  barClock?: BarClockState;
+}
+
+/** A repeating chord progression that defines a section's harmonic identity */
+export interface ProgressionLoop {
+  /** Scale degrees (0-based: 0=I, 1=ii, 2=iii, 3=IV, 4=V, 5=vi, 6=vii°) */
+  degrees: number[];
+  /** Chord quality per degree */
+  qualities: ChordQuality[];
+  /** Bars each chord sustains before advancing to next in loop */
+  barsPerChord: number;
+  /** Total times to repeat the full loop (-1 = until section ends) */
+  loopCount: number;
+}
+
+/** Bar clock state tracked in GenerativeState */
+export interface BarClockState {
+  /** Current bar number since piece start */
+  currentBar: number;
+  /** Bar duration in seconds (4 / cps) */
+  barDuration: number;
+  /** Position within current bar (0-1) */
+  barProgress: number;
+  /** Bar number within current section */
+  sectionBar: number;
+  /** Bar number within current progression loop (resets each loop) */
+  loopBar: number;
+  /** Current chord index within the loop (0 to loop.degrees.length-1) */
+  loopChordIndex: number;
+}
+
+export type LayerName = 'drone' | 'harmony' | 'melody' | 'texture' | 'arp' | 'atmosphere';
+
+export interface DashboardOverrides {
+  layers: Partial<Record<LayerName, {
+    enabled?: boolean;
+    gain?: number;
+    instrument?: string;
+  }>>;
+  mix: Partial<Record<LayerName, {
+    room?: number;
+    delay?: number;
+    lpf?: number;
+    pan?: number;
+  }>>;
+  musical: {
+    scaleRoot?: NoteName;
+    scaleType?: ScaleType;
+    tempo?: number;
+  };
+  masterGain?: number;
 }
