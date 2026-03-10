@@ -3,6 +3,7 @@ import { layerFadeInRate, layerFadeOutRate } from '../theory/layer-stagger';
 import { shouldAdvanceEarly } from '../theory/section-timing';
 import { selectNextSection } from '../theory/form-structure';
 import { sectionPreference, type TrajectoryState } from '../theory/form-trajectory';
+import { planSectionPreference, advancePlanSection } from './composition-plan';
 
 interface SectionConfig {
   activeLayers: string[];
@@ -10,6 +11,12 @@ interface SectionConfig {
   brightnessTarget: number;
   spaciousnessTarget: number;
   duration: [number, number]; // min, max seconds
+  /** Compositional behavior for this section */
+  harmonicRhythm?: 'slow' | 'normal' | 'accelerating';
+  /** Whether this section uses contrasting melodic material */
+  contrastingMelody?: boolean;
+  /** Arrangement density: how many layers should be prominent */
+  arrangementDensity?: 'sparse' | 'normal' | 'full';
 }
 
 const ALL_LAYERS = ['drone', 'harmony', 'melody', 'texture', 'arp', 'atmosphere'];
@@ -120,11 +127,11 @@ export class SectionManager {
     const moodScale = moodInterpScale[state.mood] ?? 1.0;
     let interpRate: number;
     if (progress < 0.2) {
-      interpRate = 0.08 * moodScale; // fast settle at section start
+      interpRate = 0.04 * moodScale; // gentle settle at section start
     } else if (progress > 0.85) {
-      interpRate = 0.06 * moodScale; // pre-transition ramp
+      interpRate = 0.03 * moodScale; // subtle pre-transition ramp
     } else {
-      interpRate = 0.04 * moodScale; // gentle mid-section drift
+      interpRate = 0.02 * moodScale; // very gentle mid-section drift
     }
 
     // Steer density, brightness, and spaciousness toward section targets
@@ -156,10 +163,23 @@ export class SectionManager {
     // Check if it's time to transition
     // Tension-responsive: high tension builds resolve sooner, relaxed grooves linger
     const tension = state.tension?.overall ?? 0.5;
-    if (this.sectionElapsed >= this.sectionDuration) {
-      this.advanceSection(state, trajectory);
-    } else if (shouldAdvanceEarly(state.section, progress, tension)) {
-      this.advanceSection(state, trajectory);
+    const wantsTransition =
+      this.sectionElapsed >= this.sectionDuration ||
+      shouldAdvanceEarly(state.section, progress, tension);
+
+    if (wantsTransition) {
+      const barClock = state.barClock;
+      if (barClock) {
+        // Wait for 4-bar phrase boundary for musically coherent transitions
+        const phraseBars = 4;
+        if (barClock.sectionBar % phraseBars === 0) {
+          this.advanceSection(state, trajectory);
+        }
+        // else: wait until next 4-bar boundary
+      } else {
+        // Fallback if no bar clock available
+        this.advanceSection(state, trajectory);
+      }
     }
   }
 
@@ -174,7 +194,25 @@ export class SectionManager {
     } else {
       // Use mood-aware form structure for transition decisions
       const previousSection = state.section;
-      const formPref = trajectory ? sectionPreference(trajectory) : undefined;
+      let formPref = trajectory ? sectionPreference(trajectory) : undefined;
+
+      // Composition plan: merge plan preference with trajectory preference
+      const plan = state.compositionPlan;
+      if (plan && !plan.isComplete) {
+        const planPref = planSectionPreference(plan);
+        const allSections: Section[] = ['intro', 'build', 'peak', 'breakdown', 'groove'];
+        if (formPref) {
+          // Multiply plan preference with trajectory preference
+          formPref = Object.fromEntries(
+            allSections.map(s => [s, (formPref![s] ?? 1.0) * (planPref[s] ?? 1.0)])
+          ) as Record<Section, number>;
+        } else {
+          formPref = planPref as Record<Section, number>;
+        }
+        // Advance the plan's section pointer
+        advancePlanSection(plan);
+      }
+
       nextSection = selectNextSection(state.mood, previousSection, this.cycleCount, formPref);
 
       // Track cycle completions (groove→build/peak = new cycle)
