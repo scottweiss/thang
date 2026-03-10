@@ -62,6 +62,7 @@ import { detectSequence, suggestSequenceContinuation, shouldDetectSequence } fro
 import { weightGainMultiplier, shouldApplyRhythmicWeight } from '../../theory/rhythmic-weight';
 import { shouldPrepare, suggestPreparation, isDissonantAgainstChord } from '../../theory/harmonic-preparation';
 import { adaptMelodyToChord, phraseRepeatCount } from '../../theory/phrase-persistence';
+import { HookManager } from '../../theory/melodic-hook';
 
 type Contour = 'ascending' | 'descending' | 'arch' | 'valley';
 
@@ -98,6 +99,8 @@ export class MelodyLayer extends CachingLayer {
   private lastChordTones: string[] = [];
   /** Flag set by shouldRegenerate when chord adaptation is needed */
   private needsChordAdaptation = false;
+  /** Melodic hook manager for phrase repetition discipline */
+  private hookManager = new HookManager();
 
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
@@ -109,6 +112,7 @@ export class MelodyLayer extends CachingLayer {
       this.gestureHistory = [];
       this.recentIntervals = [];
       this.phraseRepeatsRemaining = 0;
+      this.hookManager.clear();
       return true;
     }
     if (state.scaleChanged) {
@@ -116,8 +120,21 @@ export class MelodyLayer extends CachingLayer {
       return true;
     }
     if (state.sectionChanged) {
+      this.hookManager.clear();
       this.phraseRepeatsRemaining = 0;
       return true;
+    }
+    // Hook repetition: when a hook is stored and phase says "repeat", use cached pattern
+    if (state.barClock && state.progressionLoop) {
+      const hookLength = this.hookManager.getHookLengthBars(state.mood);
+      const totalBars = hookLength * 8; // enough for full establish-confirm-develop-return
+      const phase = this.hookManager.getPhase(
+        state.barClock.sectionBar, totalBars, hookLength
+      );
+      const stored = this.hookManager.getStoredHook(state.mood);
+      if (stored && this.hookManager.shouldRepeatHook(phase)) {
+        return false; // Use cached hook
+      }
     }
     if (state.chordChanged) {
       if (this.phraseRepeatsRemaining > 0) {
@@ -125,10 +142,14 @@ export class MelodyLayer extends CachingLayer {
         this.needsChordAdaptation = true;
         return false;
       }
-      return true;
+      // Adapt to new chord instead of full regeneration most of the time
+      this.needsChordAdaptation = true;
+      // Only fully regenerate every 3rd chord change
+      if (Math.random() < 0.33) return true;
+      return false;
     }
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 4, blockhead: 10, flim: 12, disco: 6 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 16, lofi: 14, trance: 12, avril: 18, xtal: 20, syro: 8, blockhead: 16, flim: 18, disco: 12 }[state.mood] ?? 14;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
@@ -144,6 +165,32 @@ export class MelodyLayer extends CachingLayer {
       const newChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
       this.cachedPattern = adaptMelodyToChord(this.cachedPattern, newChordTones);
       this.lastChordTones = newChordTones;
+    }
+
+    // Hook repetition discipline: store/replay melodic hooks
+    if (state.barClock && state.progressionLoop && this.cachedPattern) {
+      const hookLength = this.hookManager.getHookLengthBars(state.mood);
+      const totalBars = hookLength * 8;
+      const phase = this.hookManager.getPhase(
+        state.barClock.sectionBar, totalBars, hookLength
+      );
+      const stored = this.hookManager.getStoredHook(state.mood);
+
+      if (!stored) {
+        // First generation in this section — this IS the hook
+        // Extract note names from the generated pattern
+        const noteMatch = this.cachedPattern.match(/note\("([^"]+)"\)/);
+        if (noteMatch) {
+          this.hookManager.storeHook(noteMatch[1].split(' '), state.mood);
+        }
+      } else if (this.hookManager.shouldRepeatHook(phase)) {
+        // Replace note content with stored hook
+        this.cachedPattern = this.cachedPattern.replace(
+          /note\("([^"]+)"\)/,
+          `note("${stored.join(' ')}")`
+        );
+      }
+      // 'develop' phase: let the normal motif-transform system handle variation
     }
 
     return this.cachedPattern ?? result;
