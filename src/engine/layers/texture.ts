@@ -180,10 +180,11 @@ export class TextureLayer extends CachingLayer {
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (state.mood === 'ambient') return true;
     if (this.moodChanged(state)) return true;
-    if (state.scaleChanged) return true;
-    if (state.sectionChanged) return true;
+    // Don't regenerate on section changes — let the pattern carry over
+    // and evolve naturally via evolveForSection(). This prevents jarring
+    // random pattern switches at every section boundary.
 
-    const loopTicks = { downtempo: 12, lofi: 12, trance: 16, avril: 20, xtal: 14, syro: 8, blockhead: 14, flim: 16, disco: 16 }[state.mood] ?? 12;
+    const loopTicks = { downtempo: 16, lofi: 16, trance: 20, avril: 24, xtal: 18, syro: 12, blockhead: 18, flim: 20, disco: 20 }[state.mood] ?? 16;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
@@ -200,13 +201,17 @@ export class TextureLayer extends CachingLayer {
     const density = state.params.density;
     const mood = state.mood;
     const tension = state.tension?.overall ?? 0.5;
+    // Energy axis: drums respond to energy (density+brightness) rather than generic tension
+    const energy = state.tension?.energy ?? tension;
     this._section = state.section;
     this._tension = tension;
     this._sectionProgress = state.sectionProgress ?? 0;
     this._tick = state.tick;
     this._mood = mood;
-    // Tension brightens drums, dries reverb, adds presence
-    const gain = 0.3 * density * (0.9 + tension * 0.15);
+    // Energy brightens drums, dries reverb, adds presence
+    // Drum samples are perceptually louder than synthesized sounds at same gain,
+    // so base gain is lower than melodic layers to sit underneath
+    const gain = 0.18 * density * (0.9 + energy * 0.15);
     const room = (0.3 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.2);
     const brightness = state.params.brightness * (0.85 + tension * 0.3);
 
@@ -214,7 +219,7 @@ export class TextureLayer extends CachingLayer {
     if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril' && mood !== 'xtal' && mood !== 'flim') {
       const fill = this.getTransitionFill(state.section);
       if (fill) {
-        const fillGain = gain * (mood === 'trance' ? 1.2 : 0.8);
+        const fillGain = gain * (mood === 'trance' ? 1.0 : 0.7);
         return `sound("${fill}")
           .slow(1)
           .gain(${fillGain.toFixed(3)})
@@ -236,7 +241,7 @@ export class TextureLayer extends CachingLayer {
         return this.buildLofiPattern(density, gain, room * 0.7, brightness, state.section, state.tick);
 
       case 'trance':
-        return this.buildTrancePattern(density, gain * 1.2, room * 0.5, brightness, state.section);
+        return this.buildTrancePattern(density, gain * 1.0, room * 0.5, brightness, state.section);
 
       case 'avril':
         return this.buildAvrilPattern(density, gain, room, brightness);
@@ -245,7 +250,7 @@ export class TextureLayer extends CachingLayer {
         return this.buildXtalPattern(density, gain, room, brightness, state.section, state.tick);
 
       case 'syro':
-        return this.buildSyroPattern(density, gain * 1.1, room * 0.4, brightness, state.section, state.tick);
+        return this.buildSyroPattern(density, gain * 0.9, room * 0.4, brightness, state.section, state.tick);
 
       case 'blockhead':
         return this.buildBlockheadPattern(density, gain, room * 0.7, brightness, state.section, state.tick);
@@ -254,7 +259,7 @@ export class TextureLayer extends CachingLayer {
         return this.buildFlimPattern(density, gain * 0.6, room, brightness, state.section);
 
       case 'disco':
-        return this.buildDiscoPattern(density, gain * 1.1, room * 0.5, brightness, state.section, state.tick);
+        return this.buildDiscoPattern(density, gain * 0.9, room * 0.5, brightness, state.section, state.tick);
     }
   }
 
@@ -606,20 +611,12 @@ export class TextureLayer extends CachingLayer {
     const progress = this._sectionProgress;
     switch (section) {
       case 'build':
-        return evolveDrumPattern(pattern, progress, 'build', 0.6);
+        return evolveDrumPattern(pattern, progress, 'build', 0.3);
       case 'breakdown':
         return evolveDrumPattern(pattern, progress, 'thin', 0.5);
-      case 'peak': {
-        // Peak: densify rests with ghost hats — starts subtle, builds to climax
-        const fillProb = 0.08 + progress * 0.12; // 8% → 20%
-        const steps = pattern.split(' ');
-        for (let i = 0; i < steps.length; i++) {
-          if (steps[i] === '~' && Math.random() < fillProb) {
-            steps[i] = 'hh';
-          }
-        }
-        return steps.join(' ');
-      }
+      case 'peak':
+        // Peak: play at full density — ghost notes already added by addIntelligentGhosts
+        return pattern;
       case 'groove': {
         // Groove: occasional open hat swap for variation (prevents monotony)
         const steps = pattern.split(' ');

@@ -231,9 +231,11 @@ export class DroneLayer implements Layer {
     const sectionGain = SECTION_GAIN[state.section];
     const sectionFilter = SECTION_FILTER_MULT[state.section];
     const tension = state.tension?.overall ?? 0.5;
+    // Intimacy: high intimacy = warmer, closer drone with subtle gain boost
+    const intimacy = state.tension?.intimacy ?? 0.5;
     // Tension adds warmth to bass: opens filter slightly, less reverb at peaks
     // pedalGainMult softens when pedal tone clashes with current chord
-    const gain = 0.18 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1) * pedalGainMult;
+    const gain = 0.18 * (0.5 + state.params.density * 0.5) * sectionGain * (0.95 + tension * 0.1) * pedalGainMult * (0.9 + intimacy * 0.2);
     const room = (0.5 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.15);
     const brightness = state.params.brightness * sectionFilter * (0.9 + tension * 0.2);
 

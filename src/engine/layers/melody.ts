@@ -200,9 +200,11 @@ export class MelodyLayer extends CachingLayer {
     const mood = state.mood;
     const density = state.params.density;
     const tension = state.tension?.overall ?? 0.5;
+    // Resolution pull: melody gains brightness when chord wants to resolve (V→I, vii°→I)
+    const pull = state.tension?.resolutionPull ?? 0.3;
     // Tension brightens melody, reduces reverb wash, adds presence
     const room = (0.5 + state.params.spaciousness * 0.4) * (1.15 - tension * 0.25);
-    const brightness = state.params.brightness * (0.85 + tension * 0.3);
+    const brightness = state.params.brightness * (0.85 + tension * 0.3) * (1.0 + pull * 0.15);
     const gain = 0.30 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
 
     // Build melodic phrase

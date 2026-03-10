@@ -553,6 +553,8 @@ export class GenerativeController {
       this.state.mood, this.state.scale.root, this.state.scale.type
     );
     this.formTrajectory.formLength = this.state.compositionPlan.totalDurationTicks;
+    // Select narrative arc for emotional journey
+    this.state.narrativeArc = selectArc(this.state.mood);
     // Initialize progression loop for harmonic identity
     this.homeLoop = generateLoop(this.state.mood, [0, 1, 2, 3, 4, 5, 6]);
     this.state.progressionLoop = deriveLoopForSection(this.homeLoop, 'intro', this.state.mood);
@@ -588,6 +590,8 @@ export class GenerativeController {
       mood, this.state.scale.root, this.state.scale.type
     );
     this.formTrajectory = { ticksElapsed: 0, formLength: this.state.compositionPlan.totalDurationTicks };
+    // Select narrative arc for emotional journey
+    this.state.narrativeArc = selectArc(mood);
     this.state.section = 'intro';
     this.state.sectionChanged = true;
     // Initialize progression loop for new mood
