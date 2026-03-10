@@ -4,6 +4,7 @@ import { shouldAdvanceEarly } from '../theory/section-timing';
 import { selectNextSection } from '../theory/form-structure';
 import { sectionPreference, type TrajectoryState } from '../theory/form-trajectory';
 import { planSectionPreference, advancePlanSection } from './composition-plan';
+import { arcSectionPreference } from '../theory/narrative-arc';
 
 interface SectionConfig {
   activeLayers: string[];
@@ -218,6 +219,20 @@ export class SectionManager {
         }
         // Advance the plan's section pointer
         advancePlanSection(plan);
+      }
+
+      // Narrative arc: blend arc section preferences with existing preferences
+      if (state.narrativeArc) {
+        const arcProgress = state.elapsed / ((state.compositionPlan?.totalDurationTicks ?? 60) * 2);
+        const arcPref = arcSectionPreference(state.narrativeArc, Math.min(1, arcProgress));
+        const allSections: Section[] = ['intro', 'build', 'peak', 'breakdown', 'groove'];
+        if (formPref) {
+          formPref = Object.fromEntries(
+            allSections.map(s => [s, (formPref![s] ?? 1.0) * (arcPref[s] ?? 1.0)])
+          ) as Record<Section, number>;
+        } else {
+          formPref = arcPref as Record<Section, number>;
+        }
       }
 
       nextSection = selectNextSection(state.mood, previousSection, this.cycleCount, formPref);

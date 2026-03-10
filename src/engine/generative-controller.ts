@@ -867,6 +867,15 @@ export class GenerativeController {
       }
     }
 
+    // Narrative arc: cap tension based on emotional journey phase
+    if (this.state.narrativeArc) {
+      const arcProgress = this.state.elapsed / (moodFormLength(this.state.mood) * 2);
+      const arcCeiling = arcTensionCeiling(this.state.narrativeArc, Math.min(1, arcProgress));
+      if (this.state.tension.overall > arcCeiling) {
+        this.state.tension.overall += (arcCeiling - this.state.tension.overall) * 0.3;
+      }
+    }
+
     // Emotional memory: store significant musical moments for later recall
     const landmark = isEmotionalLandmark(
       this.state.tension.overall,
