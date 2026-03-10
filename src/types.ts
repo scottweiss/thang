@@ -86,6 +86,12 @@ export interface GenerativeState {
   activeMotif?: string[];   // current melody motif for cross-layer thematic unity
   melodyDirection?: 'ascending' | 'descending' | 'static';  // melody motion for contrapuntal arp
   compositionPlan?: import('./engine/composition-plan').CompositionPlan;
+  /** Current section's compositional directives */
+  sectionDirectives?: {
+    harmonicRhythm: 'slow' | 'normal' | 'accelerating';
+    contrastingMelody: boolean;
+    arrangementDensity: 'sparse' | 'normal' | 'full';
+  };
   /** Active progression loop for current section */
   progressionLoop?: ProgressionLoop;
   /** Bar-level timing state */
