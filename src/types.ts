@@ -57,6 +57,10 @@ export interface TensionState {
   harmonic: number;     // from chord distance to tonic (0-1)
   rhythmic: number;     // from density (0-1)
   overall: number;      // weighted combination (0-1)
+  /** Independent emotional axes */
+  energy?: number;        // density + volume + tempo feel (0-1)
+  intimacy?: number;      // inverse of spaciousness + arrangement density (0-1, high = intimate/close)
+  resolutionPull?: number; // how strongly current chord wants to resolve (0-1)
 }
 
 export interface GenerativeState {
@@ -85,6 +89,8 @@ export interface GenerativeState {
   sectionProgress: number;  // 0-1 how far through current section
   activeMotif?: string[];   // current melody motif for cross-layer thematic unity
   melodyDirection?: 'ascending' | 'descending' | 'static';  // melody motion for contrapuntal arp
+  /** Core rhythmic cell for cross-layer unity */
+  rhythmAnchor?: boolean[];
   compositionPlan?: import('./engine/composition-plan').CompositionPlan;
   /** Current section's compositional directives */
   sectionDirectives?: {
@@ -94,6 +100,8 @@ export interface GenerativeState {
   };
   /** Active progression loop for current section */
   progressionLoop?: ProgressionLoop;
+  /** Active narrative arc for emotional journey */
+  narrativeArc?: import('./theory/narrative-arc').NarrativeArc;
   /** Bar-level timing state */
   barClock?: BarClockState;
 }

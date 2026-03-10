@@ -43,6 +43,7 @@ import { spectralLpfMultiplier, spectralHpfOffset, shouldApplySpectralBalance } 
 import { breathSyncGainPattern, shouldApplyBreathSync } from '../theory/rhythmic-breath-sync';
 import { sectionTimbre, shouldApplyTimbralVariety } from '../theory/timbral-variety';
 import { shouldApplyResultant, resultantGainMask } from '../theory/resultant-rhythm';
+import { anchorGainBias, layerAdherence, sectionAdherenceMultiplier } from '../theory/rhythmic-anchor';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -268,6 +269,21 @@ export abstract class CachingLayer implements Layer {
 
     // Arrival emphasis: cadential resolution accent (gain + brightness boost)
     result = this.applyArrivalEmphasis(result, state);
+
+    // Rhythmic anchor: bias note gains toward the shared rhythmic cell
+    if (state.rhythmAnchor && state.barClock) {
+      const adherence = layerAdherence(this.name, state.mood) * sectionAdherenceMultiplier(state.section);
+      if (adherence > 0.05) {
+        const stepInBar = Math.floor(state.barClock.barProgress * 16) % 16;
+        const bias = anchorGainBias(state.rhythmAnchor, stepInBar, adherence);
+        if (Math.abs(bias - 1.0) > 0.02) {
+          result = result.replace(
+            /\.gain\((\d+(?:\.\d+)?)\)/g,
+            (_, val) => `.gain(${(parseFloat(val) * bias).toFixed(3)})`
+          );
+        }
+      }
+    }
 
     // Rhythmic phase offset: shift arp timing for inter-layer phasing (not drums)
     if (this.name !== 'texture' && shouldApplyPhaseOffset(this.name, state.mood)) {

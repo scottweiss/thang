@@ -20,6 +20,7 @@ import { phraseCadenceBias } from '../theory/phrase-harmony';
 import { tensionCeiling, trajectoryGainMultiplier, moodFormLength } from '../theory/form-trajectory';
 import type { TrajectoryState } from '../theory/form-trajectory';
 import { generateCompositionPlan, getCurrentPlannedSection, advancePlanSection, planSectionPreference, planHarmonicBias, planTensionCeiling, planGainMultiplier } from './composition-plan';
+import { selectArc, arcTensionCeiling } from '../theory/narrative-arc';
 import { shouldInsertSecondaryDominant, secondaryDominantRoot, secondaryDominantNotes, secondaryDominantSymbol } from '../theory/secondary-dominant';
 import { shouldApplyTritoneSub, tritoneSubRoot, tritoneSubNotes } from '../theory/tritone-sub';
 import { shouldInsertApproachChord, approachChordRoot, approachChordNotes } from '../theory/chromatic-approach';
@@ -389,6 +390,7 @@ import { TextureLayer } from './layers/texture';
 import { ArpLayer } from './layers/arp';
 import { AtmosphereLayer } from './layers/atmosphere';
 import { generateLoop, deriveLoopForSection, getLoopChordAtBar } from '../theory/progression-loop';
+import { generateRhythmCell } from '../theory/rhythmic-anchor';
 
 const TICK_INTERVAL = 2000; // ms between evolution ticks
 
@@ -556,6 +558,8 @@ export class GenerativeController {
     this.state.progressionLoop = deriveLoopForSection(this.homeLoop, 'intro', this.state.mood);
     this.loopStartBar = 0;
     this.sectionStartBar = 0;
+    // Generate rhythmic anchor cell for cross-layer rhythmic unity
+    this.state.rhythmAnchor = generateRhythmCell(this.state.mood);
     await this.rebuildAll();
     this.tickTimer = setInterval(() => this.tick(), TICK_INTERVAL);
   }
@@ -592,6 +596,8 @@ export class GenerativeController {
     this.loopStartBar = 0;
     this.sectionStartBar = 0;
     this.lastBar = -1;
+    // Generate new rhythmic anchor cell for cross-layer rhythmic unity
+    this.state.rhythmAnchor = generateRhythmCell(mood);
     // Reset gain multipliers to intro state
     const introLayers = new Set(this.sections.getIntroLayers(mood));
     this.state.activeLayers = introLayers;
@@ -827,6 +833,10 @@ export class GenerativeController {
       this.state.params.density,
       this.state.params.brightness,
       harmonicDistance,
+      this.state.params.spaciousness,
+      this.state.activeLayers.size,
+      this.state.currentChord.degree,
+      this.state.currentChord.quality,
     );
 
     // Tension memory: longer-form arcs — nudge tension to avoid plateaus
