@@ -14,8 +14,8 @@ describe('formPosition', () => {
     expect(formPosition({ ticksElapsed: 0, formLength: 100 })).toBe(0);
   });
 
-  it('wraps at end to start new cycle', () => {
-    expect(formPosition({ ticksElapsed: 100, formLength: 100 })).toBe(0);
+  it('clamps at end instead of cycling', () => {
+    expect(formPosition({ ticksElapsed: 100, formLength: 100 })).toBe(1.0);
     // Just before end should be near 1
     expect(formPosition({ ticksElapsed: 99, formLength: 100 })).toBeCloseTo(0.99);
   });
@@ -24,9 +24,9 @@ describe('formPosition', () => {
     expect(formPosition({ ticksElapsed: 50, formLength: 100 })).toBe(0.5);
   });
 
-  it('cycles beyond form length', () => {
-    expect(formPosition({ ticksElapsed: 200, formLength: 100 })).toBe(0);
-    expect(formPosition({ ticksElapsed: 150, formLength: 100 })).toBe(0.5);
+  it('stays at 1.0 beyond form length', () => {
+    expect(formPosition({ ticksElapsed: 200, formLength: 100 })).toBe(1.0);
+    expect(formPosition({ ticksElapsed: 150, formLength: 100 })).toBe(1.0);
   });
 
   it('handles zero form length', () => {

@@ -8,10 +8,11 @@ export class AtmosphereLayer extends CachingLayer {
   protected shouldRegenerate(state: GenerativeState): boolean {
     if (this.moodChanged(state)) return true;
     if (state.scaleChanged) return true;
-    if (state.sectionChanged) return true;
+    // Atmosphere should NOT regenerate on section changes — it's ambient background
+    // that provides continuity through transitions
 
     // Atmosphere is slow-evolving, regenerate infrequently
-    const maxTicks = { ambient: 15, downtempo: 12, lofi: 10, trance: 6, avril: 15, xtal: 15, syro: 5, blockhead: 12, flim: 15, disco: 8 }[state.mood] ?? 12;
+    const maxTicks = { ambient: 20, downtempo: 18, lofi: 16, trance: 12, avril: 20, xtal: 20, syro: 10, blockhead: 18, flim: 20, disco: 14 }[state.mood] ?? 16;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 

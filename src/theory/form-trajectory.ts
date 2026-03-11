@@ -41,7 +41,7 @@ export type FormPhase = 'establishing' | 'rising' | 'climax' | 'denouement';
  */
 export function formPosition(state: TrajectoryState): number {
   if (state.formLength <= 0) return 0.5;
-  return (state.ticksElapsed % state.formLength) / state.formLength;
+  return Math.min(1.0, state.ticksElapsed / state.formLength);
 }
 
 /**

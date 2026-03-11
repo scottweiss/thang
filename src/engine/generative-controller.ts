@@ -28,7 +28,7 @@ import { selectInversion, applyInversion, extractBassNote } from '../theory/chor
 import { shouldApplyRelativeSub, relativeSubChord } from '../theory/relative-sub';
 import { reharmCooldown } from '../theory/reharm-density';
 import { functionalBias } from '../theory/functional-harmony';
-import { shouldStartCadentialSequence, createCadentialPlan, nextCadentialDegree, advanceCadentialPlan, isCadentialPlanActive } from '../theory/cadential-sequence';
+import { shouldStartCadentialSequence, createCadentialPlan, nextCadentialDegree, advanceCadentialPlan, isCadentialPlanActive, cadentialQuality } from '../theory/cadential-sequence';
 import type { CadentialPlan } from '../theory/cadential-sequence';
 import { targetKeyArea, journeyBias, shouldModulate } from '../theory/harmonic-journey';
 import { tempoFeelMultiplier, shouldApplyTempoFeel } from '../theory/tempo-feel';
@@ -39,6 +39,8 @@ import { bestPivotChord, shouldUsePivot } from '../theory/pivot-modulation';
 import { macroDynamicGain, transitionDynamicAccent, shouldApplyMacroDynamics } from '../theory/macro-dynamics';
 import { shouldApplyNR, suggestNRMove } from '../theory/neo-riemannian';
 import { shouldGrandPause, gpDuration } from '../theory/grand-pause';
+import { checkArrangementMoment, momentGainMultiplier } from '../theory/arrangement-moment';
+import type { ArrangementMoment } from '../theory/arrangement-moment';
 import { shouldApplySymmetric, selectAxisType, suggestSymmetricMove } from '../theory/symmetric-division';
 import { shouldApplyUnison, selectUnisonPattern, unisonAccentMask, unisonIntensity } from '../theory/rhythmic-unison';
 import { shouldApplySaturation, saturationLevel, motifInjectionCount, selectMotifFragment, saturatedLayers } from '../theory/motivic-saturation';
@@ -97,6 +99,7 @@ import { registerCollision, suggestOctaveShift, collisionGainReduction, shouldAv
 import { coherenceFmMultiplier, shouldApplyCoherence } from '../theory/spectral-temporal-coherence';
 import { shouldApplyFugato, fugatoEntryDelay, fugatoOctaveOffset, transposeMotif } from '../theory/cross-layer-fugato';
 import { harmonicInertia, changeReluctance, cadentialEscape, shouldApplyInertia } from '../theory/harmonic-inertia';
+import { isReharmAllowed } from '../theory/reharm-whitelist';
 import { noteSalience, salienceGainBoost, backgroundGainReduction, shouldApplySalience } from '../theory/auditory-salience';
 import { chordDistance, distanceBias, shouldApplyTopology } from '../theory/harmonic-topology';
 import { trajectoryMomentum, continuationBias, shouldApplyContinuation } from '../theory/gestalt-continuation';
@@ -460,6 +463,11 @@ export class GenerativeController {
   private cadentialPlan: CadentialPlan | null = null;
   /** Track consecutive same-degree selections for anti-repetition escalation */
   private consecutiveSameDegree = 0;
+  /** Deterministic chord hold counter — replaces hash-based probability gate */
+  private chordHoldTicks = 0;
+  /** Active arrangement moment (drop/spotlight) at section transitions */
+  private arrangementMoment: ArrangementMoment | null = null;
+  private arrangementBarsRemaining = 0;
   private lastSelectedDegree = -1;
   private ticksSinceLastSurprise = 20; // start with cooldown expired
   private sectionTickAge = 0; // ticks since last section change
@@ -726,14 +734,36 @@ export class GenerativeController {
       const loop = this.state.progressionLoop;
       const loopBar = this.state.barClock.loopBar;
 
-      // For builds past 50% progress, halve effective barsPerChord (accelerating harmonic rhythm)
+      // Smooth harmonic rhythm acceleration in builds: ramp from 30%→100% progress
       let effectiveBarsPerChord = loop.barsPerChord;
-      if (this.state.section === 'build' && (this.state.sectionProgress ?? 0) > 0.5) {
-        effectiveBarsPerChord = Math.max(1, Math.floor(loop.barsPerChord / 2));
+      if (this.state.section === 'build') {
+        const progress = this.state.sectionProgress ?? 0;
+        const accelCurve = Math.max(0, (progress - 0.3) / 0.7); // 0→1 from 30%→100%
+        effectiveBarsPerChord = Math.max(1, Math.round(loop.barsPerChord * (1 - accelCurve * 0.5)));
       }
 
-      if (loopBar % effectiveBarsPerChord === 0) {
-        // Compute chord index using effective barsPerChord
+      // Cadential override: near section end, let cadential plan temporarily override the loop
+      const sectionProgress = this.state.sectionProgress ?? 0;
+      let cadentialTarget: number | null = null;
+      if (isCadentialPlanActive(this.cadentialPlan)) {
+        cadentialTarget = nextCadentialDegree(this.cadentialPlan!);
+        advanceCadentialPlan(this.cadentialPlan!);
+      } else if (shouldStartCadentialSequence(sectionProgress, this.state.section, this.cadentialPlan)) {
+        this.cadentialPlan = createCadentialPlan(this.state.mood, this.state.currentChord.degree);
+        if (isCadentialPlanActive(this.cadentialPlan)) {
+          cadentialTarget = nextCadentialDegree(this.cadentialPlan!);
+          advanceCadentialPlan(this.cadentialPlan!);
+        }
+      }
+
+      if (cadentialTarget !== null && loopBar % effectiveBarsPerChord === 0) {
+        // Override loop chord with cadential target
+        this.advanceChordToTarget(cadentialTarget, cadentialQuality(cadentialTarget, this.state.mood));
+        this.state.chordChanged = true;
+        this.state.ticksSinceChordChange = 0;
+        this.chordHoldTicks = 0;
+      } else if (loopBar % effectiveBarsPerChord === 0) {
+        // Normal loop-driven chord advancement
         const chordIndex = Math.floor(loopBar / effectiveBarsPerChord) % loop.degrees.length;
         const degree = loop.degrees[chordIndex];
         const quality = loop.qualities[chordIndex];
@@ -742,6 +772,7 @@ export class GenerativeController {
           this.advanceChordToTarget(degree, quality);
           this.state.chordChanged = true;
           this.state.ticksSinceChordChange = 0;
+          this.chordHoldTicks = 0;
         }
       }
     }
@@ -764,10 +795,21 @@ export class GenerativeController {
         );
         const escape = cadentialEscape(this.state.sectionProgress ?? 0, this.state.mood);
         const effectiveInertia = Math.max(0, inertia + escape);
-        // Hash-based probability gate (deterministic)
-        const hash = ((this.state.tick * 2654435761 + 7919) >>> 0) / 4294967296;
-        if (hash < effectiveInertia * 0.5) {
-          allowChange = false; // inertia blocks this chord change
+        // Deterministic hold counter: blocks chord change until mood-specific limit reached
+        this.chordHoldTicks++;
+        const maxHold: Record<string, number> = {
+          ambient: 40, avril: 30, xtal: 30, flim: 20,
+          downtempo: 20, lofi: 15, blockhead: 12,
+          trance: 10, disco: 10, syro: 8,
+        };
+        const sectionMult: Record<string, number> = {
+          intro: 1.5, build: 0.7, peak: 0.8, breakdown: 1.3, groove: 1.0,
+        };
+        const holdLimit = Math.round((maxHold[this.state.mood] ?? 15) * (sectionMult[this.state.section] ?? 1.0));
+        if (effectiveInertia > 0.3 && this.chordHoldTicks < holdLimit) {
+          allowChange = false;
+        } else if (this.chordHoldTicks >= holdLimit) {
+          allowChange = true;
         }
       }
       if (allowChange) {
@@ -775,6 +817,7 @@ export class GenerativeController {
         this.evolution.commitChordChange(this.state);
         this.state.chordChanged = true;
         this.state.ticksSinceChordChange = 0;
+        this.chordHoldTicks = 0;
       }
     }
 
@@ -800,6 +843,12 @@ export class GenerativeController {
         this.modulationRatioStr = modulationRatio(this.prevSection, this.state.section, this.state.mood, this.state.tick);
         this.modulationTotalTicks = modulationWindowTicks(this.state.mood);
         this.modulationTicksRemaining = this.modulationTotalTicks;
+      }
+      // Arrangement moment: drops (1-bar silence) and spotlights (solo layer) at transitions
+      const moment = checkArrangementMoment(this.prevSection, this.state.section, this.state.mood);
+      if (moment) {
+        this.arrangementMoment = moment;
+        this.arrangementBarsRemaining = moment.durationBars || 1;
       }
       // Derive new progression loop for this section
       if (this.homeLoop) {
@@ -850,30 +899,24 @@ export class GenerativeController {
       this.state.tension.overall = Math.max(0, Math.min(1, this.state.tension.overall + tensionMod));
     }
 
-    // Form trajectory: cap tension based on position in the overall arc
+    // Merged tension ceiling: weighted blend of form trajectory, composition plan, and narrative arc.
+    // Previously three sequential clamps fought each other, locking tension to the minimum.
+    // Now a single weighted merge allows secondary climaxes and nuanced tension arcs.
     this.formTrajectory.ticksElapsed = this.state.tick;
-    const ceiling = tensionCeiling(this.formTrajectory);
-    if (this.state.tension.overall > ceiling) {
-      this.state.tension.overall += (ceiling - this.state.tension.overall) * 0.3;
-    }
+    const formCeiling = tensionCeiling(this.formTrajectory);
 
-    // Composition plan: advance timer, enforce plan-level tension ceiling
     const plan = this.state.compositionPlan;
-    if (plan && !plan.isComplete) {
-      plan.ticksInCurrentSection++;
-      const planCeiling = planTensionCeiling(plan);
-      if (this.state.tension.overall > planCeiling) {
-        this.state.tension.overall += (planCeiling - this.state.tension.overall) * 0.3;
-      }
-    }
+    if (plan && !plan.isComplete) plan.ticksInCurrentSection++;
+    const planCeil = (plan && !plan.isComplete) ? planTensionCeiling(plan) : 1.0;
 
-    // Narrative arc: cap tension based on emotional journey phase
-    if (this.state.narrativeArc) {
-      const arcProgress = this.state.elapsed / (moodFormLength(this.state.mood) * 2);
-      const arcCeiling = arcTensionCeiling(this.state.narrativeArc, Math.min(1, arcProgress));
-      if (this.state.tension.overall > arcCeiling) {
-        this.state.tension.overall += (arcCeiling - this.state.tension.overall) * 0.3;
-      }
+    const arcCeil = this.state.narrativeArc
+      ? arcTensionCeiling(this.state.narrativeArc, Math.min(1, this.state.elapsed / (moodFormLength(this.state.mood) * 2)))
+      : 1.0;
+
+    // Weighted merge: narrative=0.45, form=0.30, plan=0.25
+    const mergedCeiling = arcCeil * 0.45 + formCeiling * 0.30 + planCeil * 0.25;
+    if (this.state.tension.overall > mergedCeiling) {
+      this.state.tension.overall += (mergedCeiling - this.state.tension.overall) * 0.3;
     }
 
     // Emotional memory: store significant musical moments for later recall
@@ -935,6 +978,15 @@ export class GenerativeController {
     )) {
       this.gpActive = true;
       this.gpTicksRemaining = gpDuration(this.state.mood);
+    }
+
+    // Arrangement moment: apply gain multipliers for drops/spotlights
+    if (this.arrangementMoment && this.arrangementBarsRemaining > 0) {
+      for (const layer of ['drone', 'harmony', 'melody', 'texture', 'arp', 'atmosphere'] as const) {
+        this.state.layerGainMultipliers[layer] *= momentGainMultiplier(this.arrangementMoment, layer);
+      }
+      if (isNewBar) this.arrangementBarsRemaining--;
+      if (this.arrangementBarsRemaining <= 0) this.arrangementMoment = null;
     }
 
     await this.rebuildAll();
@@ -1176,7 +1228,7 @@ export class GenerativeController {
     // Skip when cadential steering is active — don't disrupt cadences.
     const tension = this.state.tension?.overall ?? 0.5;
     const borrowProbability = tension * 0.25 * reharmGate;
-    if (Math.random() < borrowProbability && cadentialTarget === null) {
+    if (Math.random() < borrowProbability && cadentialTarget === null && isReharmAllowed(this.state.mood, 'modalInterchange')) {
       const borrowed = getBorrowedChords(this.state.scale.type);
       if (borrowed.length > 0) {
         // Prefer a borrowed chord matching the current degree; fall back to random
@@ -1201,6 +1253,7 @@ export class GenerativeController {
     // Relative substitution: replace major→relative minor or vice versa
     // (e.g., C major → A minor for wistful color)
     if (cadentialTarget === null &&
+        isReharmAllowed(this.state.mood, 'relativeSub') &&
         shouldApplyRelativeSub(nextChord.degree, nextChord.quality, this.state.mood, this.state.section)) {
       const sub = relativeSubChord(nextChord.root, nextChord.quality, 3);
       nextChord = {
@@ -1216,6 +1269,7 @@ export class GenerativeController {
     // Creates chromatic pull (e.g., D7 → G instead of direct jump to G)
     const sectionProg = this.sections.getSectionProgress();
     if (cadentialTarget === null &&
+        isReharmAllowed(this.state.mood, 'secondaryDominant') &&
         shouldInsertSecondaryDominant(nextChord.degree, this.state.mood, this.state.section, sectionProg)) {
       const secDomRoot = secondaryDominantRoot(nextChord.root);
       nextChord = {
@@ -1230,6 +1284,7 @@ export class GenerativeController {
     // Negative harmony: mirror the chord root around the tonal axis
     // for an emotionally "inverted" substitution (bright → dark, tense → relaxed)
     if (cadentialTarget === null &&
+        isReharmAllowed(this.state.mood, 'negativeHarmony') &&
         shouldApplyNegativeHarmony(this.state.tick, this.state.mood, this.state.section) &&
         Math.random() < reharmGate) {
       const mirroredRoot = negativeRoot(nextChord.root, this.state.scale.root);
@@ -1253,6 +1308,7 @@ export class GenerativeController {
     // Neo-Riemannian navigation: geometric P/R/L transformations
     // for smooth, non-functional chord movement (dreamy/ambient sections)
     if (cadentialTarget === null &&
+        isReharmAllowed(this.state.mood, 'neoRiemannian') &&
         shouldApplyNR(this.state.tick, this.state.mood, this.state.section) &&
         Math.random() < reharmGate) {
       const move = suggestNRMove(nextChord.root, nextChord.quality, this.state.mood, this.state.tick);
@@ -1267,7 +1323,8 @@ export class GenerativeController {
 
     // Tritone substitution: replace dominant chords with ♭II7 for
     // chromatic bass motion (e.g., Dm → Db7 → C instead of Dm → G7 → C)
-    if (shouldApplyTritoneSub(nextChord.degree, nextChord.quality, this.state.mood, this.state.section)) {
+    if (isReharmAllowed(this.state.mood, 'tritoneSub') &&
+        shouldApplyTritoneSub(nextChord.degree, nextChord.quality, this.state.mood, this.state.section)) {
       const subRoot = tritoneSubRoot(nextChord.root);
       nextChord = {
         symbol: getChordSymbol(subRoot, 'dom7'),
@@ -1281,6 +1338,7 @@ export class GenerativeController {
     // Chromatic approach: insert a passing dim7 chord before the target
     // (e.g., C → C#dim7 → Dm for ascending chromatic bass)
     if (cadentialTarget === null &&
+        isReharmAllowed(this.state.mood, 'chromaticApproach') &&
         shouldInsertApproachChord(this.state.currentChord.root, nextChord.root, this.state.mood, this.state.section)) {
       const appRoot = approachChordRoot(this.state.currentChord.root, nextChord.root);
       nextChord = {

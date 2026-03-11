@@ -6,6 +6,7 @@ import { applyDrumDynamics, TRANCE_VELOCITIES, AVRIL_VELOCITIES } from '../../th
 import { addIntelligentGhosts, moodGhostDensity } from '../../theory/ghost-notes';
 import { shouldApplyAdditive, selectGrouping, additiveAccentMask } from '../../theory/additive-rhythm';
 import { shouldApplyDNA, selectDNACell, dnaAccentMask } from '../../theory/rhythmic-dna';
+import { shouldPlayFill, getDrumFill } from '../../theory/drum-fill';
 
 // Curated pattern templates per genre
 // 16 steps: bd=kick, sd=snare, cp=clap, hh=hi-hat, ~=rest
@@ -192,6 +193,7 @@ export class TextureLayer extends CachingLayer {
 
   // Stored per buildPattern call for applyVelocity and evolveForSection to use
   private _section: Section = 'intro';
+  private _prevSection: Section = 'intro';
   private _tension = 0.5;
   private _sectionProgress = 0;
   private _tick = 0;
@@ -215,19 +217,20 @@ export class TextureLayer extends CachingLayer {
     const room = (0.3 + state.params.spaciousness * 0.3) * (1.1 - tension * 0.2);
     const brightness = state.params.brightness * (0.85 + tension * 0.3);
 
-    // Play a transition fill on section changes (not for ambient/avril/xtal)
-    if (state.sectionChanged && mood !== 'ambient' && mood !== 'avril' && mood !== 'xtal' && mood !== 'flim') {
-      const fill = this.getTransitionFill(state.section);
-      if (fill) {
-        const fillGain = gain * (mood === 'trance' ? 1.0 : 0.7);
-        return `sound("${fill}")
+    // Play a transition fill on section changes using drum-fill module
+    if (state.sectionChanged) {
+      if (shouldPlayFill(this._prevSection, state.section, mood)) {
+        const fillPattern = getDrumFill(this._prevSection, state.section, mood);
+        const fillGain = gain * (mood === 'trance' || mood === 'disco' ? 1.0 : 0.7);
+        this._prevSection = state.section;
+        return `${fillPattern}
           .slow(1)
-          .gain(${fillGain.toFixed(3)})
           .lpf(${(2000 + brightness * 4000).toFixed(0)})
           .room(${(room * 0.3).toFixed(2)})
           .roomsize(1)
           .orbit(${this.orbit})`;
       }
+      this._prevSection = state.section;
     }
 
     switch (mood) {

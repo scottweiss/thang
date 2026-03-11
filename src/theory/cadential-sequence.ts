@@ -138,3 +138,23 @@ export function isCadentialPlanActive(plan: CadentialPlan | null): boolean {
   if (!plan) return false;
   return plan.position < plan.degrees.length;
 }
+
+/**
+ * Return the appropriate chord quality for a cadential target degree.
+ * V → dom7, vii → dim, ii → min/min7 (jazz moods), IV → maj, I → maj.
+ */
+export function cadentialQuality(
+  degree: number,
+  mood: Mood
+): import('../types').ChordQuality {
+  const jazzMoods: Set<Mood> = new Set(['lofi', 'downtempo', 'flim']);
+  switch (degree) {
+    case 4: return 'dom7'; // V
+    case 6: return 'dim';  // vii°
+    case 1: return jazzMoods.has(mood) ? 'min7' : 'min'; // ii
+    case 5: return 'min';  // vi
+    case 3: return 'maj';  // IV
+    case 0: return 'maj';  // I
+    default: return 'maj';
+  }
+}

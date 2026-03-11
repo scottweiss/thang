@@ -57,20 +57,20 @@ export function densityBalanceDegrade(
   if (activeCount <= 3) return 0;
 
   // Base thinning: increases with layer count
-  // 4 layers: slight, 5: moderate, 6: significant
-  const countFactor = (activeCount - 3) * 0.08;
+  // 4 layers: slight, 5: moderate, 6: gentle
+  const countFactor = (activeCount - 3) * 0.04;
 
   // Priority scaling: lower-priority layers get thinned more
-  // priority 2 (drone): 0.3x, priority 3 (arp): 0.6x, priority 4 (texture): 0.8x, priority 5 (atmo): 1.0x
-  const priorityScale = Math.max(0, (priority - 1) * 0.25);
+  // priority 2 (drone): 0.2x, priority 3 (arp): 0.4x, priority 4 (texture): 0.6x, priority 5 (atmo): 0.8x
+  const priorityScale = Math.max(0, (priority - 1) * 0.2);
 
   // Tension reduces thinning — high tension sections can handle density
-  const tensionRelief = tension * 0.5;
+  const tensionRelief = tension * 0.6;
 
   const amount = countFactor * priorityScale * (1 - tensionRelief);
 
-  // Clamp to 0-0.4 range (never more than 40% additional thinning)
-  return Math.max(0, Math.min(0.4, amount));
+  // Clamp to 0-0.2 range (never more than 20% additional thinning)
+  return Math.max(0, Math.min(0.2, amount));
 }
 
 /**

@@ -32,32 +32,32 @@ const NO_DEGRADE: DegradeShape = { startDegrade: 0, endDegrade: 0 };
  */
 const LAYER_DEGRADE: Record<string, Record<Section, DegradeShape>> = {
   melody: {
-    intro: { startDegrade: 0.5, endDegrade: 0.35 },
-    build: { startDegrade: 0.3, endDegrade: 0.0 },
+    intro: { startDegrade: 0.25, endDegrade: 0.15 },
+    build: { startDegrade: 0.1, endDegrade: 0.0 },
     peak: NO_DEGRADE,
-    breakdown: { startDegrade: 0.05, endDegrade: 0.35 },
-    groove: { startDegrade: 0.1, endDegrade: 0.1 },
+    breakdown: { startDegrade: 0.0, endDegrade: 0.15 },
+    groove: NO_DEGRADE,
   },
   arp: {
-    intro: { startDegrade: 0.6, endDegrade: 0.4 },
-    build: { startDegrade: 0.35, endDegrade: 0.0 },
-    peak: NO_DEGRADE,
-    breakdown: { startDegrade: 0.1, endDegrade: 0.45 },
-    groove: { startDegrade: 0.08, endDegrade: 0.08 },
-  },
-  harmony: {
-    intro: { startDegrade: 0.25, endDegrade: 0.15 },
+    intro: { startDegrade: 0.3, endDegrade: 0.2 },
     build: { startDegrade: 0.15, endDegrade: 0.0 },
     peak: NO_DEGRADE,
-    breakdown: { startDegrade: 0.0, endDegrade: 0.2 },
-    groove: { startDegrade: 0.05, endDegrade: 0.05 },
+    breakdown: { startDegrade: 0.05, endDegrade: 0.2 },
+    groove: NO_DEGRADE,
+  },
+  harmony: {
+    intro: { startDegrade: 0.1, endDegrade: 0.05 },
+    build: { startDegrade: 0.05, endDegrade: 0.0 },
+    peak: NO_DEGRADE,
+    breakdown: { startDegrade: 0.0, endDegrade: 0.1 },
+    groove: NO_DEGRADE,
   },
   texture: {
-    intro: { startDegrade: 0.3, endDegrade: 0.2 },
-    build: { startDegrade: 0.2, endDegrade: 0.0 },
+    intro: { startDegrade: 0.15, endDegrade: 0.1 },
+    build: { startDegrade: 0.1, endDegrade: 0.0 },
     peak: NO_DEGRADE,
-    breakdown: { startDegrade: 0.05, endDegrade: 0.25 },
-    groove: { startDegrade: 0.1, endDegrade: 0.1 },
+    breakdown: { startDegrade: 0.0, endDegrade: 0.15 },
+    groove: NO_DEGRADE,
   },
 };
 

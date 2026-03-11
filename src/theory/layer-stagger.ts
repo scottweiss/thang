@@ -24,13 +24,13 @@
  */
 export function layerFadeInRate(layerName: string): number {
   switch (layerName) {
-    case 'texture':     return 0.50;  // drums hit first — immediate impact
-    case 'drone':       return 0.45;  // bass follows quickly — grounds the rhythm
-    case 'atmosphere':  return 0.40;  // texture fills in
-    case 'harmony':     return 0.33;  // chords establish — standard rate
-    case 'arp':         return 0.28;  // arpeggio enters after chords
-    case 'melody':      return 0.22;  // melody last — the reveal
-    default:            return 0.33;
+    case 'texture':     return 0.25;  // drums enter over ~4 ticks (8s)
+    case 'drone':       return 0.22;  // bass follows — grounds the rhythm
+    case 'atmosphere':  return 0.20;  // texture fills in gently
+    case 'harmony':     return 0.18;  // chords establish gradually
+    case 'arp':         return 0.15;  // arpeggio enters after chords
+    case 'melody':      return 0.12;  // melody last — the reveal over ~8 ticks (16s)
+    default:            return 0.18;
   }
 }
 
@@ -42,12 +42,12 @@ export function layerFadeInRate(layerName: string): number {
  */
 export function layerFadeOutRate(layerName: string): number {
   switch (layerName) {
-    case 'melody':      return 0.55;  // melody exits first — the reveal unwound
-    case 'arp':         return 0.45;  // arpeggio follows melody out
-    case 'harmony':     return 0.40;  // chords thin next
-    case 'atmosphere':  return 0.35;  // texture fades
-    case 'drone':       return 0.30;  // bass holds longer — grounds the transition
-    case 'texture':     return 0.25;  // drums last out — holds groove through change
-    default:            return 0.40;
+    case 'melody':      return 0.25;  // melody exits first over ~4 ticks (8s)
+    case 'arp':         return 0.22;  // arpeggio follows melody out
+    case 'harmony':     return 0.20;  // chords thin gradually
+    case 'atmosphere':  return 0.18;  // texture fades slowly
+    case 'drone':       return 0.15;  // bass holds longest — grounds the transition
+    case 'texture':     return 0.12;  // drums last out — holds groove through change
+    default:            return 0.20;
   }
 }

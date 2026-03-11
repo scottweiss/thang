@@ -33,12 +33,12 @@ export function densityEnvelope(
   // 4 bars = 4 cycles, so period = 4/tempo seconds
   const fastPeriod = 4 / Math.max(0.1, tempo);
   const fastPhase = (sectionTime % fastPeriod) / fastPeriod;
-  const fastWave = Math.sin(fastPhase * Math.PI * 2) * 0.08;
+  const fastWave = Math.sin(fastPhase * Math.PI * 2) * 0.04;
 
   // Medium wave: ~16 bars
   const medPeriod = 16 / Math.max(0.1, tempo);
   const medPhase = (sectionTime % medPeriod) / medPeriod;
-  const medWave = Math.sin(medPhase * Math.PI * 2) * 0.12;
+  const medWave = Math.sin(medPhase * Math.PI * 2) * 0.06;
 
   // Slow section arc: build up over first 40%, sustain 40%, relax last 20%
   // (sectionTime is relative so this auto-scales to section length)

@@ -16,6 +16,7 @@ import { tensionOrchestrationGain, shouldApplyTensionOrchestration } from '../..
 import { sidechainGainPattern, shouldDuckLayer, shouldApplySidechainDuck } from '../../theory/sidechain-duck';
 import { ensembleBreathMultiplier, shouldApplyEnsembleBreath } from '../../theory/ensemble-breath';
 import { adaptDroneToChord, phraseRepeatCount } from '../../theory/phrase-persistence';
+import { getBassStyle, composeBassLine } from '../../theory/bass-composition';
 
 /** Safe multiply — prevents NaN cascade if regex captures non-numeric text */
 function safeMul(val: string, mult: number, decimals: number = 4): string {
@@ -264,10 +265,10 @@ export class DroneLayer implements Layer {
           .orbit(${this.orbit})`;
 
       case 'downtempo': {
-        // Acoustic upright bass — warm, natural, pairs with Rhodes harmony
-        // 4-step at .slow(3) = ~2s per note at 90 BPM — walking half-note feel
-        const dtBass = generateBassPattern(root, fifth, 'downtempo', 4, bassDir);
-        this.injectApproachNotes(dtBass, state, root, 2);
+        // Acoustic upright bass — walking bass line via bass-composition module
+        const dtChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+        const dtNextRoot = state.nextChordHint?.root ?? null;
+        const dtBass = composeBassLine(getBassStyle('downtempo'), root, dtChordTones, dtNextRoot, 4, 2);
         return `note("${dtBass.join(' ')}")
           .sound("gm_acoustic_bass")
           .attack(0.02)
@@ -284,9 +285,10 @@ export class DroneLayer implements Layer {
       }
 
       case 'lofi': {
-        // Fretless bass — smooth, warm, sliding jazz tone over Rhodes chords
-        const lofiBass = generateBassPattern(root, fifth, 'lofi', 4, bassDir);
-        this.injectApproachNotes(lofiBass, state, root, 2);
+        // Fretless bass — walking bass line via bass-composition module
+        const lofiChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+        const lofiNextRoot = state.nextChordHint?.root ?? null;
+        const lofiBass = composeBassLine(getBassStyle('lofi'), root, lofiChordTones, lofiNextRoot, 4, 2);
         return `note("${lofiBass.join(' ')}")
           .sound("gm_fretless_bass")
           .attack(0.01)
@@ -387,12 +389,11 @@ export class DroneLayer implements Layer {
       }
 
       case 'blockhead': {
-        // Fingered electric bass — punchy, funky, pairs with organ harmony
-        // 8-step at .slow(1) to lock with 16-step drum grid
-        const bhBass = generateBassPattern(root, fifth, 'blockhead', 4, bassDir);
-        const bhExpanded = [bhBass[0], '~', bhBass[1], bhBass[2], bhBass[3], '~', bhBass[0], '~'];
-        this.injectApproachNotes(bhExpanded, state, root, 2);
-        return `note("${bhExpanded.join(' ')}")
+        // Fingered electric bass — syncopated bass via bass-composition module
+        const bhChordTones = state.currentChord.notes.map(n => n.replace(/\d+$/, ''));
+        const bhNextRoot = state.nextChordHint?.root ?? null;
+        const bhBass = composeBassLine(getBassStyle('blockhead'), root, bhChordTones, bhNextRoot, 8, 2);
+        return `note("${bhBass.join(' ')}")
           .sound("gm_electric_bass_finger")
           .attack(0.005)
           .decay(0.4)

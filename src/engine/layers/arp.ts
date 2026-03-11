@@ -86,8 +86,10 @@ export class ArpLayer extends CachingLayer {
       return true;
     }
     if (state.sectionChanged) {
-      this.phraseRepeatsRemaining = 0;
-      return true;
+      // Don't fully regenerate on section change — adapt instead
+      // Arps should maintain their pattern through transitions
+      this.needsChordAdaptation = true;
+      return false;
     }
     if (state.chordChanged) {
       if (this.phraseRepeatsRemaining > 0) {
@@ -95,10 +97,13 @@ export class ArpLayer extends CachingLayer {
         this.needsChordAdaptation = true;
         return false;
       }
-      return true;
+      // Adapt to chord instead of regenerating — only regenerate occasionally
+      this.needsChordAdaptation = true;
+      if (Math.random() < 0.25) return true;
+      return false;
     }
 
-    const maxTicks = { downtempo: 10, lofi: 8, trance: 6, avril: 12, xtal: 14, syro: 3, blockhead: 10, flim: 14, disco: 6 }[state.mood] ?? 8;
+    const maxTicks = { downtempo: 16, lofi: 14, trance: 12, avril: 18, xtal: 20, syro: 6, blockhead: 16, flim: 18, disco: 14 }[state.mood] ?? 14;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 

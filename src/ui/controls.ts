@@ -85,6 +85,7 @@ export function setupUI(app: HTMLElement, callbacks: ControlsCallbacks): {
         <span class="shortcut-key">&uarr;&darr;</span> density
         <span class="shortcut-key">&larr;&rarr;</span> bright
         <span class="shortcut-key">f</span> immersive
+        <span class="shortcut-key">d</span> dashboard
       </div>
     </div>
 
