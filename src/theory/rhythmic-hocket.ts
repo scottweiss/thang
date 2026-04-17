@@ -26,7 +26,8 @@ const HOCKET_STRENGTH: Record<Mood, number> = {
   flim:      0.60,  // organic trading
   xtal:      0.50,  // floating independence
   syro:      0.35,  // complex but coordinated
-  ambient:   0.25,  // gentle separation
+  ambient:   0.25,  // gentle separation,
+  plantasia: 0.25,
 };
 
 /**

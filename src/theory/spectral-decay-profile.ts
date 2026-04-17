@@ -24,7 +24,8 @@ const DECAY_RATE: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.30,  // moderate — crystalline decay
   syro:      0.20,  // moderate
-  ambient:   0.50,  // strongest — natural darkening
+  ambient:   0.50,  // strongest — natural darkening,
+  plantasia: 0.50,
 };
 
 /**

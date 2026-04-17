@@ -22,7 +22,8 @@ const VOICE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.50,  // moderate
   xtal:      0.45,  // moderate
   syro:      0.35,  // low — dense OK
-  ambient:   0.60,  // high — sparse sections important
+  ambient:   0.60,  // high — sparse sections important,
+  plantasia: 0.60,
 };
 
 /**

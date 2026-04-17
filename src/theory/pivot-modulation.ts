@@ -41,7 +41,8 @@ const PIVOT_TENDENCY: Record<Mood, number> = {
   downtempo: 0.25,  // smooth transitions
   flim:      0.20,  // organic key shifts
   xtal:      0.18,  // dreamy wander
-  ambient:   0.15,  // gradual drift
+  ambient:   0.15,  // gradual drift,
+  plantasia: 0.15,
   syro:      0.12,  // IDM — abrupt is OK
   blockhead: 0.10,  // hip-hop
   disco:     0.08,  // functional harmony

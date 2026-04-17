@@ -29,7 +29,8 @@ const APPROACH_TENDENCY: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.30,  // floating approach
   syro:      0.20,  // complex but angular
-  ambient:   0.10,  // barely approaches
+  ambient:   0.10,  // barely approaches,
+  plantasia: 0.10,
 };
 
 /**

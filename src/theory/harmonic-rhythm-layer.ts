@@ -25,7 +25,8 @@ const SUPERPOSITION_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // organic, layered
   xtal:      0.40,  // floating independence
   syro:      0.55,  // complex, polyrhythmic
-  ambient:   0.25,  // gentle layering
+  ambient:   0.25,  // gentle layering,
+  plantasia: 0.25,
 };
 
 /**

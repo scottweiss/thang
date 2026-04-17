@@ -107,7 +107,8 @@ const AUG_DIM_TENDENCY: Record<Mood, number> = {
   downtempo: 0.12,  // subtle
   avril:     0.10,  // occasional
   xtal:      0.08,  // gentle
-  ambient:   0.05,  // minimal
+  ambient:   0.05,  // minimal,
+  plantasia: 0.05,
 };
 
 /** Section drives augmentation vs diminution */

@@ -24,7 +24,8 @@ const SEQUENCE_APPRECIATION: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.15,  // weakest — avoid repetition
-  ambient:   0.25,  // low — flowing
+  ambient:   0.25,  // low — flowing,
+  plantasia: 0.25,
 };
 
 /**

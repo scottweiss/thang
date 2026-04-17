@@ -19,7 +19,8 @@ import { isCadentialArrival } from './arrival-emphasis';
  * Some moods (trance, disco) need strict tempo; others benefit from flexibility.
  */
 const MOOD_RUBATO_AMOUNT: Record<Mood, number> = {
-  ambient: 0.06,     // gentle breathing
+  ambient: 0.06,     // gentle breathing,
+  plantasia: 0.06,
   downtempo: 0.04,   // subtle sway
   lofi: 0.05,        // human feel
   trance: 0.01,      // near-metronomic
@@ -75,7 +76,8 @@ export function rubatoMultiplier(
  * Expressive moods get more; rigid moods get almost none.
  */
 const MOOD_CADENTIAL_DEPTH: Partial<Record<Mood, number>> = {
-  ambient: 0.04,       // gentle settling
+  ambient: 0.04,       // gentle settling,
+  plantasia: 0.04,
   downtempo: 0.03,     // subtle breath
   lofi: 0.035,         // human feel
   trance: 0.008,       // near-rigid

@@ -96,7 +96,8 @@ const MOOD_DOUBLING_SENSITIVITY: Record<Mood, number> = {
   lofi:      0.1,   // rare
   downtempo: 0.1,   // rare
   xtal:      0.05,  // very rare
-  ambient:   0.0,   // never
+  ambient:   0.0,   // never,
+  plantasia: 0.0,
   avril:     0.0,   // never — intimate
   flim:      0.05,  // very rare
 };

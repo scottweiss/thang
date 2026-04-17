@@ -24,7 +24,8 @@ const ARCH_PREFERENCE: Record<Mood, number> = {
   flim:      0.55,  // high — delicate arches
   xtal:      0.50,  // moderate
   syro:      0.15,  // lowest — erratic preferred
-  ambient:   0.40,  // moderate — flowing arches
+  ambient:   0.40,  // moderate — flowing arches,
+  plantasia: 0.40,
 };
 
 /**

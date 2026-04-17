@@ -201,6 +201,7 @@ const REPEAT_RANGES: Record<Mood, [number, number]> = {
   xtal:      [2, 3],
   syro:      [1, 2],
   ambient:   [1, 1],
+  plantasia: [1, 1],
 };
 
 export function phraseRepeatCount(mood: Mood): number {

@@ -27,7 +27,8 @@ const FATIGUE_RATE: Record<Mood, number> = {
   flim:      0.25,  // organic movement
   xtal:      0.30,  // floating, needs drift
   syro:      0.35,  // hungers for change
-  ambient:   0.15,  // slow but steady fatigue
+  ambient:   0.15,  // slow but steady fatigue,
+  plantasia: 0.15,
 };
 
 /**

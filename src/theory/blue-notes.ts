@@ -105,6 +105,12 @@ const MOOD_BLUE_NOTES: Record<Mood, BlueNoteConfig> = {
       { degree: 6, shift: -1, weight: 1 },  // ♭7 — very rare
     ],
   },
+  plantasia: {
+    probability: 0.03,
+    inflections: [
+      { degree: 6, shift: -1, weight: 1 },  // ♭7 — very rare
+    ],
+  },
   trance: {
     probability: 0.02,
     inflections: [

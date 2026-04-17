@@ -92,7 +92,8 @@ function approxPitch(note: string): number {
 
 /** Pan width per mood (±this value from center) */
 const MOOD_PAN_WIDTH: Record<Mood, number> = {
-  ambient:   0.15,   // wide — immersive spatial field
+  ambient:   0.15,   // wide — immersive spatial field,
+  plantasia: 0.15,
   xtal:      0.14,   // wide — dreamy movement
   flim:      0.12,   // moderate — delicate spatial play
   avril:     0.10,   // moderate — intimate but spatial

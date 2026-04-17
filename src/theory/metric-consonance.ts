@@ -55,7 +55,8 @@ const METRIC_CONSONANCE_STRENGTH: Record<Mood, number> = {
   lofi:      0.35,  // jazz — some freedom
   flim:      0.30,  // organic
   xtal:      0.25,  // dreamy — less strict
-  ambient:   0.15,  // floating — any note anywhere
+  ambient:   0.15,  // floating — any note anywhere,
+  plantasia: 0.15,
   syro:      0.12,  // IDM — intentionally violates metric norms
 };
 

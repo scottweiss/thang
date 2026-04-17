@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodColorRange: Record<Mood, number> = {
   ambient: 0.55,
+  plantasia: 0.55,
   downtempo: 0.40,
   lofi: 0.50,
   trance: 0.35,

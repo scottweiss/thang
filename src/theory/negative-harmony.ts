@@ -39,7 +39,8 @@ const NEGATIVE_TENDENCY: Record<Mood, number> = {
   blockhead: 0.15,   // hip-hop — neo-soul color
   xtal:      0.12,   // dreamy mirror
   avril:     0.10,   // songwriter — occasional
-  ambient:   0.08,   // subtle
+  ambient:   0.08,   // subtle,
+  plantasia: 0.08,
   disco:     0.05,   // functional harmony preferred
   trance:    0.03,   // minimal deviation
 };

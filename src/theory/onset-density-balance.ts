@@ -22,7 +22,8 @@ const BALANCE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.55,  // high — delicate separation
   xtal:      0.50,  // moderate
   syro:      0.40,  // moderate
-  ambient:   0.65,  // highest — space between events
+  ambient:   0.65,  // highest — space between events,
+  plantasia: 0.65,
 };
 
 /**

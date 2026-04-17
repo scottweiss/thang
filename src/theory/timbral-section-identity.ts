@@ -21,7 +21,8 @@ const IDENTITY_STRENGTH: Record<Mood, number> = {
   flim:      0.55,  // high — delicate timbres
   xtal:      0.60,  // highest — atmospheric color
   syro:      0.30,  // low — random timbres anyway
-  ambient:   0.55,  // high — slow bloom
+  ambient:   0.55,  // high — slow bloom,
+  plantasia: 0.55,
 };
 
 /**

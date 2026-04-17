@@ -23,7 +23,8 @@ const ACCEL_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.15,  // weakest — independent timing
-  ambient:   0.30,  // moderate — gentle acceleration
+  ambient:   0.30,  // moderate — gentle acceleration,
+  plantasia: 0.30,
 };
 
 /**

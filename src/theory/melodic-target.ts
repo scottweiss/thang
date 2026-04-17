@@ -27,7 +27,8 @@ const TARGETING_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.20,  // floating, less directed
   syro:      0.15,  // ambiguous targets
-  ambient:   0.10,  // barely directed
+  ambient:   0.10,  // barely directed,
+  plantasia: 0.10,
 };
 
 /**

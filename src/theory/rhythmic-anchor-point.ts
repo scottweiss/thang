@@ -22,7 +22,8 @@ const ANCHOR_STRENGTH: Record<Mood, number> = {
   flim:      0.25,  // low — IDM freedom
   xtal:      0.20,  // low — floating
   syro:      0.15,  // lowest — deliberately unanchored
-  ambient:   0.10,  // lowest — timeless
+  ambient:   0.10,  // lowest — timeless,
+  plantasia: 0.10,
 };
 
 /**

@@ -17,6 +17,7 @@ export type HookPhase = 'establish' | 'confirm' | 'develop' | 'return';
 
 const HOOK_LENGTH_BARS: Record<Mood, number> = {
   ambient: 4,
+  plantasia: 4,
   downtempo: 4,
   lofi: 4,
   trance: 2,
@@ -30,6 +31,7 @@ const HOOK_LENGTH_BARS: Record<Mood, number> = {
 
 const PHASE_REPS: Record<Mood, number> = {
   ambient: 2,
+  plantasia: 2,
   downtempo: 2,
   lofi: 2,
   trance: 4,

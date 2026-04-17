@@ -24,7 +24,8 @@ const VELOCITY_SENSITIVITY: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.30,  // moderate
   syro:      0.40,  // strong — IDM dramatic shifts
-  ambient:   0.20,  // weak — smooth transitions preferred
+  ambient:   0.20,  // weak — smooth transitions preferred,
+  plantasia: 0.20,
 };
 
 /**

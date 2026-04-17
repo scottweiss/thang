@@ -24,7 +24,8 @@ const VIOLATION_APPETITE: Record<Mood, number> = {
   flim:      0.60,  // highest — glitchy timing
   xtal:      0.45,  // moderate-high
   syro:      0.65,  // highest — erratic
-  ambient:   0.20,  // low — flowing
+  ambient:   0.20,  // low — flowing,
+  plantasia: 0.20,
 };
 
 /**

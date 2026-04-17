@@ -23,7 +23,8 @@ const GRANULARITY_RANGE: Record<Mood, number> = {
   flim:      0.60,  // high — micro-detail
   xtal:      0.65,  // highest — crystalline grains
   syro:      0.50,  // moderate — IDM texture
-  ambient:   0.45,  // moderate — evolving textures
+  ambient:   0.45,  // moderate — evolving textures,
+  plantasia: 0.45,
 };
 
 /**

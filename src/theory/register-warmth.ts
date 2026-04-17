@@ -25,7 +25,8 @@ const REGISTER_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // organic timbral range
   xtal:      0.35,  // gentle variation
   syro:      0.15,  // uniform electronic
-  ambient:   0.40,  // warm, spacious
+  ambient:   0.40,  // warm, spacious,
+  plantasia: 0.40,
 };
 
 /**

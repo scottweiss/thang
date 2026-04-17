@@ -51,7 +51,8 @@ const GRAVITY_STRENGTH: Record<Mood, number> = {
   flim:      0.25,   // delicate meter
   syro:      0.15,   // intentionally off-grid
   xtal:      0.15,   // dreamy floating
-  ambient:   0.05,   // nearly timeless
+  ambient:   0.05,   // nearly timeless,
+  plantasia: 0.05,
 };
 
 /** Mood-specific gravity modifications */
@@ -66,6 +67,7 @@ const GRAVITY_SHIFT: Record<Mood, Record<number, number>> = {
   blockhead: { 0: 1.0, 8: 0.85, 6: 0.45, 14: 0.45 },
   // Others use default hierarchy
   ambient:   {},
+  plantasia: {},
   downtempo: {},
   avril:     {},
   xtal:      {},

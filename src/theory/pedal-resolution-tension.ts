@@ -24,7 +24,8 @@ const PEDAL_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // high — crystalline tension
   syro:      0.25,  // low
-  ambient:   0.60,  // highest — drone-based tension
+  ambient:   0.60,  // highest — drone-based tension,
+  plantasia: 0.60,
 };
 
 /**

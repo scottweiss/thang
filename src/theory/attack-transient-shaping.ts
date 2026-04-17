@@ -23,7 +23,8 @@ const ATTACK_SHARPNESS: Record<Mood, number> = {
   flim:      0.40,  // moderate — delicate
   xtal:      0.35,  // soft — crystalline
   syro:      0.45,  // moderate
-  ambient:   0.20,  // softest — smooth
+  ambient:   0.20,  // softest — smooth,
+  plantasia: 0.20,
 };
 
 /**

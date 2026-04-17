@@ -29,7 +29,8 @@ const CADENCE_TENDENCY: Record<Mood, number> = {
   flim:      0.40,  // organic endings
   xtal:      0.35,  // gentle closures
   downtempo: 0.30,  // clear endings
-  ambient:   0.25,  // some boundary marking
+  ambient:   0.25,  // some boundary marking,
+  plantasia: 0.25,
   blockhead: 0.20,  // hip-hop — less melodic cadence
   disco:     0.15,  // loops — less phrase-oriented
   syro:      0.12,  // IDM — subverts expectations
@@ -66,6 +67,7 @@ export function selectCadenceType(mood: Mood, tick: number): CadenceType {
     xtal:      { agogic: 3, deceleration: 3, terminal: 3, rhyme: 1 },
     downtempo: { agogic: 3, deceleration: 2, terminal: 2, rhyme: 1 },
     ambient:   { agogic: 2, deceleration: 3, terminal: 3, rhyme: 1 },
+    plantasia: { agogic: 2, deceleration: 3, terminal: 3, rhyme: 1 },
     blockhead: { agogic: 2, deceleration: 1, terminal: 3, rhyme: 2 },
     disco:     { agogic: 2, deceleration: 1, terminal: 2, rhyme: 3 },
     syro:      { agogic: 1, deceleration: 2, terminal: 2, rhyme: 1 },

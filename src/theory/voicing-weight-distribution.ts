@@ -24,7 +24,8 @@ const GROUNDING_PREFERENCE: Record<Mood, number> = {
   flim:      0.25,  // weak — floating
   xtal:      0.20,  // weak — ethereal
   syro:      0.15,  // weakest — ungrounded OK
-  ambient:   0.30,  // moderate — some grounding
+  ambient:   0.30,  // moderate — some grounding,
+  plantasia: 0.30,
 };
 
 /**

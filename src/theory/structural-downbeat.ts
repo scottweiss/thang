@@ -30,7 +30,8 @@ const DOWNBEAT_EMPHASIS: Record<Mood, number> = {
   flim:      0.20,  // organic
   xtal:      0.15,  // gentle
   syro:      0.10,  // intentionally unemphasized
-  ambient:   0.05,  // barely any emphasis
+  ambient:   0.05,  // barely any emphasis,
+  plantasia: 0.05,
 };
 
 /**

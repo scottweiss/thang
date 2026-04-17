@@ -23,7 +23,8 @@ const COLLISION_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.60,  // maximum clarity
   syro:      0.30,  // IDM — some collision OK
-  ambient:   0.65,  // strongest avoidance
+  ambient:   0.65,  // strongest avoidance,
+  plantasia: 0.65,
 };
 
 /**

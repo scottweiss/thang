@@ -24,7 +24,8 @@ const COLORING_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // strong — Aphex modal play
   xtal:      0.50,  // strong — ambient modes
   syro:      0.30,  // moderate — IDM chromatic > modal
-  ambient:   0.45,  // strong — Lydian/Dorian pads
+  ambient:   0.45,  // strong — Lydian/Dorian pads,
+  plantasia: 0.45,
 };
 
 /**

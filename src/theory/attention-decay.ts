@@ -23,7 +23,8 @@ const NOVELTY_THRESHOLD: Record<Mood, number> = {
   flim:      0.42,  // moderate-high
   xtal:      0.40,  // moderate
   syro:      0.55,  // highest — IDM demands novelty
-  ambient:   0.15,  // lowest — meditative stability
+  ambient:   0.15,  // lowest — meditative stability,
+  plantasia: 0.15,
 };
 
 /**
@@ -39,7 +40,8 @@ const DECAY_RATE: Record<Mood, number> = {
   flim:      0.11,  // moderate
   xtal:      0.10,  // moderate
   syro:      0.15,  // fast — attention drops quickly
-  ambient:   0.03,  // slowest — peaceful sustained focus
+  ambient:   0.03,  // slowest — peaceful sustained focus,
+  plantasia: 0.03,
 };
 
 /**

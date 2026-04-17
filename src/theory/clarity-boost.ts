@@ -24,7 +24,8 @@ const CLARITY_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.55,  // high clarity
   syro:      0.35,  // IDM — some chaos OK
-  ambient:   0.60,  // maximum clarity
+  ambient:   0.60,  // maximum clarity,
+  plantasia: 0.60,
 };
 
 /**

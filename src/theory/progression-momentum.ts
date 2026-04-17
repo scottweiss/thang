@@ -24,7 +24,8 @@ const MOMENTUM_SENSITIVITY: Record<Mood, number> = {
   flim:      0.25,  // weak
   xtal:      0.30,  // weak
   syro:      0.20,  // weakest
-  ambient:   0.15,  // weakest
+  ambient:   0.15,  // weakest,
+  plantasia: 0.15,
 };
 
 /**

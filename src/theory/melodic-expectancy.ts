@@ -27,7 +27,8 @@ const CONFORMITY: Record<Mood, number> = {
   flim:      0.35,  // lower — Aphex unexpectedness
   xtal:      0.30,  // low — ambient drift
   syro:      0.20,  // lowest — IDM defies expectations
-  ambient:   0.25,  // low — floating
+  ambient:   0.25,  // low — floating,
+  plantasia: 0.25,
 };
 
 /**

@@ -27,7 +27,8 @@ const DUCK_DEPTH: Record<Mood, number> = {
   flim:      0.08,   // delicate — hint of movement
   xtal:      0.05,   // dreamy — very subtle
   avril:     0.03,   // intimate — almost none
-  ambient:   0.00,   // static — no ducking
+  ambient:   0.00,   // static — no ducking,
+  plantasia: 0.00,
 };
 
 /** Recovery rate — how quickly gain returns (higher = faster) */
@@ -42,6 +43,7 @@ const RECOVERY_RATE: Record<Mood, number> = {
   xtal:      1.0,
   avril:     1.0,
   ambient:   1.0,
+  plantasia: 1.0,
 };
 
 /** Section multiplier — peaks pump harder, breakdowns soften */

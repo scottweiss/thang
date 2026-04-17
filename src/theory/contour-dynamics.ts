@@ -85,6 +85,7 @@ const CONTOUR_DEPTH: Record<Mood, number> = {
   xtal:      0.08,   // dreamy — soft contour
   disco:     0.06,   // groove — slight contour
   syro:      0.05,   // IDM — minimal
-  ambient:   0.04,   // slow — very subtle
+  ambient:   0.04,   // slow — very subtle,
+  plantasia: 0.04,
   trance:    0.03,   // driving — flat dynamics preferred
 };

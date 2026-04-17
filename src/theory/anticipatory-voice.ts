@@ -26,7 +26,8 @@ const ANTICIPATION_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // organic movement
   xtal:      0.30,  // floating
   syro:      0.20,  // independent voices
-  ambient:   0.45,  // slow, smooth transitions
+  ambient:   0.45,  // slow, smooth transitions,
+  plantasia: 0.45,
 };
 
 /**

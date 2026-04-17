@@ -20,7 +20,8 @@ import { resolutionPull } from './chord-tension';
  * Energetic moods get stronger effect (faster resolution of tension).
  */
 const MOOD_SENSITIVITY: Record<Mood, number> = {
-  ambient: 0.15,     // very subtle — ambient should flow naturally
+  ambient: 0.15,     // very subtle — ambient should flow naturally,
+  plantasia: 0.15,
   downtempo: 0.25,
   lofi: 0.2,
   trance: 0.4,       // strong — tension resolves fast in trance

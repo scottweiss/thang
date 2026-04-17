@@ -42,7 +42,8 @@ const INTERVAL_ROUGHNESS: Record<number, number> = {
 
 /** Target roughness per mood (0 = pure consonance, 1 = max dissonance) */
 const MOOD_TARGET_ROUGHNESS: Record<Mood, number> = {
-  ambient:   0.10,   // open, pure intervals
+  ambient:   0.10,   // open, pure intervals,
+  plantasia: 0.10,
   xtal:      0.15,   // gentle warmth
   flim:      0.25,   // delicate tension
   avril:     0.20,   // intimate clarity

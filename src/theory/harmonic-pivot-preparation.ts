@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const pivotDepth: Record<Mood, number> = {
   ambient: 0.40,
+  plantasia: 0.40,
   downtempo: 0.30,
   lofi: 0.25,
   trance: 0.35,

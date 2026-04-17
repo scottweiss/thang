@@ -131,7 +131,8 @@ const PASSING_TONE_DENSITY: Record<Mood, number> = {
   xtal:      0.30,   // dreamy scale fragments
   disco:     0.25,   // some scalar motion
   syro:      0.20,   // sparse angular passing
-  ambient:   0.15,   // very occasional
+  ambient:   0.15,   // very occasional,
+  plantasia: 0.15,
   trance:    0.10,   // mostly pure chord tones
 };
 

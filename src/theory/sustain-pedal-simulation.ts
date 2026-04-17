@@ -24,7 +24,8 @@ const PEDAL_DEPTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // high — crystalline sustain
   syro:      0.25,  // low
-  ambient:   0.65,  // highest — wash
+  ambient:   0.65,  // highest — wash,
+  plantasia: 0.65,
 };
 
 /**

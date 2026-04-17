@@ -21,7 +21,8 @@ import type { Mood, Section } from '../types';
 
 /** How much each mood uses quartal voicing (0-1) */
 const QUARTAL_TENDENCY: Record<Mood, number> = {
-  ambient:   0.40,  // open, spacious — quartal's home
+  ambient:   0.40,  // open, spacious — quartal's home,
+  plantasia: 0.40,
   xtal:      0.35,  // ethereal, ambiguous
   syro:      0.28,  // modern, angular
   lofi:      0.25,  // jazz — McCoy Tyner influence
@@ -149,7 +150,8 @@ export function selectVoicingType(
   const quartalWeight: Record<Mood, number> = {
     lofi:      0.7,  // jazz — quartal preferred
     syro:      0.6,  // angular — quartal
-    ambient:   0.4,  // mixed
+    ambient:   0.4,  // mixed,
+    plantasia: 0.4,
     xtal:      0.4,  // mixed
     flim:      0.5,  // balanced
     downtempo: 0.5,

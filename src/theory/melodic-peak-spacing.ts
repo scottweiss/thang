@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const spacingStrength: Record<Mood, number> = {
   ambient: 0.40,
+  plantasia: 0.40,
   downtempo: 0.35,
   lofi: 0.30,
   trance: 0.45,

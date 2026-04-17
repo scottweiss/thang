@@ -24,7 +24,8 @@ const COMPLEMENT_STRENGTH: Record<Mood, number> = {
   flim:      0.55,  // strongest — intricate interlocking
   xtal:      0.50,  // strong — crystalline hocket
   syro:      0.40,  // moderate — IDM patterns
-  ambient:   0.15,  // weakest — layers sustain together
+  ambient:   0.15,  // weakest — layers sustain together,
+  plantasia: 0.15,
 };
 
 /**

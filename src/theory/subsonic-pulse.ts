@@ -24,7 +24,8 @@ const PULSE_INTENSITY: Record<Mood, number> = {
   flim:      0.20,  // subtle
   xtal:      0.15,  // minimal
   syro:      0.45,  // IDM punch
-  ambient:   0.05,  // barely any
+  ambient:   0.05,  // barely any,
+  plantasia: 0.05,
 };
 
 /**

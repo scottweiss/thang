@@ -23,7 +23,8 @@ const DOUBLING_PROB: Record<Mood, number> = {
   flim:      0.20,  // weak
   xtal:      0.10,  // minimal — sparse ambient
   syro:      0.30,  // moderate — IDM density
-  ambient:   0.05,  // rare — purity
+  ambient:   0.05,  // rare — purity,
+  plantasia: 0.05,
 };
 
 /**

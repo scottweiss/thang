@@ -25,7 +25,8 @@ import type { Mood, Section } from '../types';
  * Per-mood tendency to use harmonic field voicings.
  */
 const FIELD_TENDENCY: Record<Mood, number> = {
-  ambient:   0.45,  // natural, resonant
+  ambient:   0.45,  // natural, resonant,
+  plantasia: 0.45,
   xtal:      0.35,  // bell-like
   flim:      0.25,  // organic sonority
   downtempo: 0.20,  // occasional color
@@ -98,6 +99,7 @@ export function overtoneVoicing(
 export function fieldPartials(mood: Mood, section: Section): number {
   const base = {
     ambient: 6, xtal: 5, flim: 5, downtempo: 4,
+    plantasia: 6,
     lofi: 4, avril: 3, blockhead: 3, syro: 4,
     disco: 3, trance: 3,
   }[mood];

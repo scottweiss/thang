@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const decayRate: Record<Mood, number> = {
   ambient: 0.15,
+  plantasia: 0.15,
   downtempo: 0.25,
   lofi: 0.20,
   trance: 0.30,

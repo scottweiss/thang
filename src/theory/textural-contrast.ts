@@ -45,7 +45,8 @@ const CONTRAST_STRENGTH: Record<Mood, number> = {
   flim:      0.30,   // delicate contrast
   avril:     0.25,   // intimate subtlety
   xtal:      0.20,   // dreamy, less contrast
-  ambient:   0.10,   // everything sustains
+  ambient:   0.10,   // everything sustains,
+  plantasia: 0.10,
 };
 
 /** Section modifies contrast (peaks want more contrast, breakdowns less) */

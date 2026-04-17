@@ -17,6 +17,10 @@ const CELL_TEMPLATES: Record<Mood, RhythmCell[]> = {
     [true, false, false, false, false, false, true, false, false, false, false, false, false, false, false, false],
     [true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
   ],
+  plantasia: [
+    [true, false, false, false, false, false, true, false, false, false, false, false, false, false, false, false],
+    [true, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false],
+  ],
   downtempo: [
     [true, false, false, true, false, false, true, false, false, false, true, false, false, false, false, false],
     [true, false, false, false, true, false, false, false, true, false, false, true, false, false, false, false],
@@ -68,12 +72,12 @@ export function generateRhythmCell(mood: Mood): RhythmCell {
  * Atmosphere follows least since it's ambient texture.
  */
 const LAYER_ADHERENCE: Record<string, Record<Mood, number>> = {
-  texture:    { ambient: 0.0, downtempo: 0.7, lofi: 0.8, trance: 0.9, avril: 0.3, xtal: 0.5, syro: 0.6, blockhead: 0.8, flim: 0.5, disco: 0.9 },
-  drone:      { ambient: 0.3, downtempo: 0.5, lofi: 0.6, trance: 0.7, avril: 0.3, xtal: 0.4, syro: 0.4, blockhead: 0.5, flim: 0.4, disco: 0.6 },
-  arp:        { ambient: 0.2, downtempo: 0.5, lofi: 0.5, trance: 0.6, avril: 0.3, xtal: 0.5, syro: 0.4, blockhead: 0.6, flim: 0.4, disco: 0.7 },
-  melody:     { ambient: 0.1, downtempo: 0.3, lofi: 0.3, trance: 0.4, avril: 0.2, xtal: 0.3, syro: 0.2, blockhead: 0.4, flim: 0.3, disco: 0.4 },
-  harmony:    { ambient: 0.1, downtempo: 0.2, lofi: 0.3, trance: 0.3, avril: 0.1, xtal: 0.2, syro: 0.2, blockhead: 0.3, flim: 0.2, disco: 0.3 },
-  atmosphere: { ambient: 0.0, downtempo: 0.1, lofi: 0.1, trance: 0.1, avril: 0.0, xtal: 0.1, syro: 0.1, blockhead: 0.1, flim: 0.1, disco: 0.1 },
+  texture:    { ambient: 0.0, downtempo: 0.7, lofi: 0.8, trance: 0.9, avril: 0.3, xtal: 0.5, syro: 0.6, blockhead: 0.8, flim: 0.5, disco: 0.9, plantasia: 0.0 },
+  drone:      { ambient: 0.3, downtempo: 0.5, lofi: 0.6, trance: 0.7, avril: 0.3, xtal: 0.4, syro: 0.4, blockhead: 0.5, flim: 0.4, disco: 0.6, plantasia: 0.3 },
+  arp:        { ambient: 0.2, downtempo: 0.5, lofi: 0.5, trance: 0.6, avril: 0.3, xtal: 0.5, syro: 0.4, blockhead: 0.6, flim: 0.4, disco: 0.7, plantasia: 0.3 },
+  melody:     { ambient: 0.1, downtempo: 0.3, lofi: 0.3, trance: 0.4, avril: 0.2, xtal: 0.3, syro: 0.2, blockhead: 0.4, flim: 0.3, disco: 0.4, plantasia: 0.2 },
+  harmony:    { ambient: 0.1, downtempo: 0.2, lofi: 0.3, trance: 0.3, avril: 0.1, xtal: 0.2, syro: 0.2, blockhead: 0.3, flim: 0.2, disco: 0.3, plantasia: 0.2 },
+  atmosphere: { ambient: 0.0, downtempo: 0.1, lofi: 0.1, trance: 0.1, avril: 0.0, xtal: 0.1, syro: 0.1, blockhead: 0.1, flim: 0.1, disco: 0.1, plantasia: 0.1 },
 };
 
 /** Get how strongly a layer should follow the rhythmic anchor */

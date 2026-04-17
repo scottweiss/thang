@@ -22,7 +22,8 @@ const COUPLING_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.30,  // low — density OK
-  ambient:   0.60,  // highest — space crucial
+  ambient:   0.60,  // highest — space crucial,
+  plantasia: 0.60,
 };
 
 /**

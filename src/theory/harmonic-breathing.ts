@@ -23,7 +23,8 @@ const BREATHING_DEPTH: Record<Mood, number> = {
   flim:      0.40,  // moderate — organic
   xtal:      0.55,  // strong — ambient space
   syro:      0.15,  // weak — IDM voicings shift independently
-  ambient:   0.65,  // strongest — deep breathing pads
+  ambient:   0.65,  // strongest — deep breathing pads,
+  plantasia: 0.65,
 };
 
 /**

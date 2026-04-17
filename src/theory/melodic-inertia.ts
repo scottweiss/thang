@@ -32,7 +32,8 @@ const INERTIA_STRENGTH: Record<Mood, number> = {
   xtal:      0.35,  // gentle direction
   blockhead: 0.30,  // hip-hop — punchy, less linear
   flim:      0.25,  // organic but varied
-  ambient:   0.20,  // floating, directionless
+  ambient:   0.20,  // floating, directionless,
+  plantasia: 0.20,
   syro:      0.15,  // IDM — angular, unpredictable
 };
 

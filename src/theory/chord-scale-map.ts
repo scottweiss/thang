@@ -194,6 +194,7 @@ const MOOD_CHORD_SCALE_STRENGTH: Record<Mood, number> = {
   xtal:      0.30,   // dreamy modal washes
   disco:     0.25,   // funky but less modal
   syro:      0.20,   // IDM — occasional modal thinking
-  ambient:   0.15,   // subtle — long tones benefit less
+  ambient:   0.15,   // subtle — long tones benefit less,
+  plantasia: 0.15,
   trance:    0.10,   // least modal — energy over harmony
 };

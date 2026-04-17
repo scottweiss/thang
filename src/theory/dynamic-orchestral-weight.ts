@@ -24,7 +24,8 @@ const WEIGHT_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate — airy
   syro:      0.30,  // low — dense is OK
-  ambient:   0.55,  // high — space is precious
+  ambient:   0.55,  // high — space is precious,
+  plantasia: 0.55,
 };
 
 /**

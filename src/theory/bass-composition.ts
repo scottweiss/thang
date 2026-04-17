@@ -17,6 +17,7 @@ const MOOD_STYLE: Record<Mood, BassStyle> = {
   downtempo: 'walking',
   flim:      'walking',
   ambient:   'pedal',
+  plantasia: 'pedal',
   avril:     'pedal',
   xtal:      'pedal',
   trance:    'riff',

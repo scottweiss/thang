@@ -24,7 +24,8 @@ const SPECTRAL_WEIGHT: Record<Mood, number> = {
   flim:      0.48,  // organic blend
   xtal:      0.38,  // crystalline high
   syro:      0.58,  // dark subharmonic
-  ambient:   0.35,  // light airy
+  ambient:   0.35,  // light airy,
+  plantasia: 0.35,
 };
 
 /**

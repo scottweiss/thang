@@ -27,7 +27,8 @@ const VIOLATION_TENDENCY: Record<Mood, number> = {
   flim:      0.30,  // organic timing
   xtal:      0.40,  // floating, ambiguous
   syro:      0.45,  // intentionally jarring
-  ambient:   0.20,  // slow but surprising
+  ambient:   0.20,  // slow but surprising,
+  plantasia: 0.20,
 };
 
 /**

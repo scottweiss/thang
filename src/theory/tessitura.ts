@@ -28,7 +28,8 @@ const TESSITURA_SENSITIVITY: Record<Mood, number> = {
   avril:     0.55,  // singer — tessitura is everything
   xtal:      0.45,  // expressive range
   flim:      0.40,  // organic expression
-  ambient:   0.35,  // spacious, range matters
+  ambient:   0.35,  // spacious, range matters,
+  plantasia: 0.35,
   lofi:      0.30,  // jazzy expression
   downtempo: 0.25,  // moderate
   blockhead: 0.18,  // less melodic focus

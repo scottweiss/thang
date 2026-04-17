@@ -23,7 +23,8 @@ const GROUP_SIZE: Record<Mood, number> = {
   flim:      5,     // 5-beat irregular groups
   xtal:      5,     // 5-beat crystalline phrases
   syro:      7,     // 7-beat irregular (prime number)
-  ambient:   6,     // 6-beat flowing groups
+  ambient:   6,     // 6-beat flowing groups,
+  plantasia: 6,
 };
 
 /**
@@ -39,7 +40,8 @@ const BOUNDARY_EMPHASIS: Record<Mood, number> = {
   flim:      0.50,  // strong — delicate grouping
   xtal:      0.55,  // strong — crystalline phrases
   syro:      0.30,  // weak — flowing
-  ambient:   0.25,  // weak — continuous
+  ambient:   0.25,  // weak — continuous,
+  plantasia: 0.25,
 };
 
 /**

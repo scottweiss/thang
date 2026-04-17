@@ -25,7 +25,8 @@ const SALIENCE_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // organic highlights
   xtal:      0.25,  // low — ambient shimmer
   syro:      0.60,  // strongest — IDM surprises
-  ambient:   0.10,  // minimal — non-hierarchical
+  ambient:   0.10,  // minimal — non-hierarchical,
+  plantasia: 0.10,
 };
 
 /**

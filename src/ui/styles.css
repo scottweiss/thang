@@ -30,6 +30,7 @@
 [data-mood="blockhead"] { --accent-h: 25; }
 [data-mood="flim"] { --accent-h: 170; }
 [data-mood="disco"] { --accent-h: 330; }
+[data-mood="plantasia"] { --accent-h: 110; }
 
 body {
   font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;

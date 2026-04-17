@@ -23,7 +23,8 @@ const ANTICIPATION_AMOUNT: Record<Mood, number> = {
   flim:      0.07,  // moderate
   xtal:      0.05,  // moderate
   syro:      0.04,  // small
-  ambient:   0.12,  // strongest — flowing anticipation
+  ambient:   0.12,  // strongest — flowing anticipation,
+  plantasia: 0.12,
 };
 
 /**

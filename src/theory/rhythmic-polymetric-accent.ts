@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const polymetricDepth: Record<Mood, number> = {
   ambient: 0.10,
+  plantasia: 0.10,
   downtempo: 0.20,
   lofi: 0.15,
   trance: 0.25,

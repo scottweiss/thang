@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodDarkeningRate: Record<Mood, number> = {
   ambient: 0.60,
+  plantasia: 0.60,
   downtempo: 0.45,
   lofi: 0.50,
   trance: 0.20,

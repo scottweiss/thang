@@ -27,7 +27,8 @@ const COLOR_SENSITIVITY: Record<Mood, number> = {
   flim:      0.42,  // organic shifts
   xtal:      0.30,  // floating variation
   syro:      0.20,  // controlled shifts
-  ambient:   0.50,  // maximum timbral color
+  ambient:   0.50,  // maximum timbral color,
+  plantasia: 0.50,
 };
 
 /**

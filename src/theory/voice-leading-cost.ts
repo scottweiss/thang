@@ -23,7 +23,8 @@ const SMOOTHNESS_PREFERENCE: Record<Mood, number> = {
   flim:      0.55,  // strong — delicate movement
   xtal:      0.50,  // moderate
   syro:      0.20,  // weakest — any movement OK
-  ambient:   0.55,  // strong — gentle transitions
+  ambient:   0.55,  // strong — gentle transitions,
+  plantasia: 0.55,
 };
 
 /**

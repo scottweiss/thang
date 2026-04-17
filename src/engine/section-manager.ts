@@ -31,6 +31,15 @@ const SECTION_CONFIGS: Record<Mood, Record<Section, SectionConfig>> = {
     breakdown: { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.30, spaciousnessTarget: 0.9, duration: [30, 55], harmonicRhythm: 'slow', contrastingMelody: true, arrangementDensity: 'sparse' },
     groove:    { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.5, brightnessTarget: 0.50, spaciousnessTarget: 0.8, duration: [40, 70], harmonicRhythm: 'normal', arrangementDensity: 'full' },
   },
+  plantasia: {
+    // No drums (texture never active). Slow harmonic rhythm everywhere for stable,
+    // meditative, plant-loving feel. Brighter than ambient — cheerful Moog aesthetic.
+    intro:     { activeLayers: ['drone', 'atmosphere', 'melody'],              densityTarget: 0.25, brightnessTarget: 0.45, spaciousnessTarget: 0.80, duration: [20, 30], harmonicRhythm: 'slow', arrangementDensity: 'sparse' },
+    build:     { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere'],   densityTarget: 0.45, brightnessTarget: 0.55, spaciousnessTarget: 0.70, duration: [25, 40], harmonicRhythm: 'slow', arrangementDensity: 'normal' },
+    peak:      { activeLayers: ['drone', 'harmony', 'melody', 'arp', 'atmosphere'], densityTarget: 0.60, brightnessTarget: 0.65, spaciousnessTarget: 0.70, duration: [30, 45], harmonicRhythm: 'slow', arrangementDensity: 'full' },
+    breakdown: { activeLayers: ['drone', 'atmosphere'],                        densityTarget: 0.20, brightnessTarget: 0.35, spaciousnessTarget: 0.85, duration: [15, 25], harmonicRhythm: 'slow', contrastingMelody: true, arrangementDensity: 'sparse' },
+    groove:    { activeLayers: ['harmony', 'melody', 'atmosphere', 'drone'],   densityTarget: 0.50, brightnessTarget: 0.55, spaciousnessTarget: 0.75, duration: [30, 45], harmonicRhythm: 'slow', arrangementDensity: 'normal' },
+  },
   downtempo: {
     intro:     { activeLayers: ['drone', 'harmony', 'atmosphere'], densityTarget: 0.3, brightnessTarget: 0.30, spaciousnessTarget: 0.8, duration: [16, 30], harmonicRhythm: 'slow', arrangementDensity: 'sparse' },
     build:     { activeLayers: ['drone', 'harmony', 'melody', 'atmosphere', 'arp'], densityTarget: 0.45, brightnessTarget: 0.45, spaciousnessTarget: 0.65, duration: [24, 45], harmonicRhythm: 'accelerating', arrangementDensity: 'normal' },
@@ -129,6 +138,7 @@ export class SectionManager {
     // Dreamy moods drift slowly, energetic moods snap into the feel
     const moodInterpScale: Record<Mood, number> = {
       ambient: 0.6, avril: 0.65, xtal: 0.7, flim: 0.7,
+      plantasia: 0.6,
       downtempo: 0.85, lofi: 0.85,
       blockhead: 1.0, trance: 1.2, disco: 1.2, syro: 1.3,
     };

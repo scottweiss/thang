@@ -23,7 +23,8 @@ const AGOGIC_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // strong — crystalline timing
   syro:      0.20,  // weak — mechanical precision
-  ambient:   0.60,  // strongest — breathing duration
+  ambient:   0.60,  // strongest — breathing duration,
+  plantasia: 0.60,
 };
 
 /**

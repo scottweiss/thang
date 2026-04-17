@@ -24,7 +24,8 @@ const WARP_RANGE: Record<Mood, number> = {
   syro:      0.015, // ±1.5% — tight IDM (was 0.03)
   disco:     0.01,  // ±1% — groove-locked (was 0.03)
   trance:    0.01,  // ±1% — groove-locked (was 0.03)
-  ambient:   0.01,  // ±1% — minimal (was 0.02)
+  ambient:   0.01,  // ±1% — minimal (was 0.02),
+  plantasia: 0.01,
 };
 
 /**

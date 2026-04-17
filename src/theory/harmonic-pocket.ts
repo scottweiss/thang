@@ -74,7 +74,8 @@ const POCKET_DEPTH: Record<Mood, number> = {
   disco:     0.15,   // groove — slight dip
   xtal:      0.15,   // dreamy — gentle pocket
   syro:      0.10,   // IDM — less conventional phrasing
-  ambient:   0.10,   // slow — changes are gradual anyway
+  ambient:   0.10,   // slow — changes are gradual anyway,
+  plantasia: 0.10,
   trance:    0.05,   // driving — minimal pocket (energy must sustain)
 };
 

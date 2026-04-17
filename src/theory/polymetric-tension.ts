@@ -23,7 +23,8 @@ const POLYMETRIC_TOLERANCE: Record<Mood, number> = {
   flim:      0.50,  // high — metric play
   xtal:      0.55,  // high — crystalline asymmetry
   syro:      0.65,  // highest — polymetric IDM
-  ambient:   0.45,  // moderate — floating meters
+  ambient:   0.45,  // moderate — floating meters,
+  plantasia: 0.45,
 };
 
 /**

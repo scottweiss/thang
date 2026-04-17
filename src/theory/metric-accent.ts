@@ -107,6 +107,13 @@ export function moodAccentProfile(mood: Mood): AccentProfile {
         weights: [1.08, 0.9, 0.95, 1.02, 0.92, 0.95, 0.98, 0.95],
         strength: 0.35,
       };
+
+    case 'plantasia':
+      // Gentle downbeat emphasis — 1 & 3 slightly, 2 & 4 softly lifted
+      return {
+        weights: [1.08, 0.92, 1.0, 0.95, 1.05, 0.92, 0.98, 0.93],
+        strength: 0.3,
+      };
   }
 }
 

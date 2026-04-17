@@ -25,7 +25,8 @@ const REINFORCEMENT_SENSITIVITY: Record<Mood, number> = {
   flim:      0.50,  // strong
   xtal:      0.60,  // strongest — crystalline harmonics
   syro:      0.20,  // weak — inharmonicity OK
-  ambient:   0.55,  // strong — pure resonance
+  ambient:   0.55,  // strong — pure resonance,
+  plantasia: 0.55,
 };
 
 /**

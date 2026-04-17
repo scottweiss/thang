@@ -24,7 +24,8 @@ import type { Mood } from '../types';
 
 /** Anchor scale degrees per mood (0-indexed from root) */
 const MOOD_ANCHORS: Record<Mood, number[]> = {
-  ambient:   [0, 4],      // root, P5
+  ambient:   [0, 4],      // root, P5,
+  plantasia: [0, 4],
   xtal:      [0, 4],      // root, P5
   downtempo: [0, 2, 4],   // root, M3, P5
   lofi:      [2, 6],      // M3, M7 (guide tones)
@@ -47,7 +48,8 @@ const ANCHOR_STRENGTH: Record<Mood, number> = {
   flim:      0.25,   // gentle pull
   xtal:      0.20,   // dreamy, less anchored
   syro:      0.20,   // intentionally unstable
-  ambient:   0.15,   // floating
+  ambient:   0.15,   // floating,
+  plantasia: 0.15,
 };
 
 /**

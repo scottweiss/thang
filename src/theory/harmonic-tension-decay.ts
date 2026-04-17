@@ -22,7 +22,8 @@ const DECAY_RATE: Record<Mood, number> = {
   flim:      0.50,  // moderate
   xtal:      0.55,  // moderate
   syro:      0.30,  // low — holds dissonance
-  ambient:   0.70,  // highest — peaceful release
+  ambient:   0.70,  // highest — peaceful release,
+  plantasia: 0.70,
 };
 
 /**

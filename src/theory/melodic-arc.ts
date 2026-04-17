@@ -26,7 +26,8 @@ const ARC_INTENSITY: Record<Mood, number> = {
   flim:      0.40,  // organic arc
   xtal:      0.30,  // floating arc
   syro:      0.20,  // less directed
-  ambient:   0.15,  // barely arcing
+  ambient:   0.15,  // barely arcing,
+  plantasia: 0.15,
 };
 
 /**

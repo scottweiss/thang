@@ -21,7 +21,8 @@ const PEAK_EMPHASIS: Record<Mood, number> = {
   flim:      0.55,  // high — delicate peaks
   xtal:      0.50,  // moderate
   syro:      0.25,  // low — peaks less meaningful
-  ambient:   0.45,  // moderate
+  ambient:   0.45,  // moderate,
+  plantasia: 0.45,
 };
 
 /**

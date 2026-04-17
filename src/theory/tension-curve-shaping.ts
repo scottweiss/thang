@@ -23,7 +23,8 @@ const CURVE_TYPE: Record<Mood, 'linear' | 'exponential' | 'sine' | 'plateau' | '
   flim:      'sine',         // delicate waves
   xtal:      'exponential',  // crystalline build
   syro:      'jagged',       // unpredictable
-  ambient:   'sine',         // slow breathing
+  ambient:   'sine',         // slow breathing,
+  plantasia: 'sine',
 };
 
 /**
@@ -40,6 +41,7 @@ const CURVE_INTENSITY: Record<Mood, number> = {
   xtal:      0.55,
   syro:      0.60,
   ambient:   0.50,
+  plantasia: 0.50,
 };
 
 /**

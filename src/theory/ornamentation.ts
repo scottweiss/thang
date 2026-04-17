@@ -23,7 +23,8 @@ type ApproachType = 'lower' | 'upper' | 'enclosure' | 'double' | 'chromatic';
  * 0 = none, 1 = heavy embellishment.
  */
 const MOOD_ORNAMENT_AMOUNT: Record<Mood, number> = {
-  ambient: 0.0,     // clean, spacious
+  ambient: 0.0,     // clean, spacious,
+  plantasia: 0.0,
   downtempo: 0.15,  // subtle
   lofi: 0.2,        // jazzy embellishment
   trance: 0.05,     // mostly clean
@@ -40,7 +41,8 @@ const MOOD_ORNAMENT_AMOUNT: Record<Mood, number> = {
  * Weights determine selection probability (higher = more likely).
  */
 const MOOD_APPROACH_WEIGHTS: Record<Mood, Partial<Record<ApproachType, number>>> = {
-  ambient:   { lower: 1 },                                        // won't fire (amount=0)
+  ambient:   { lower: 1 },                                        // won't fire (amount=0),
+  plantasia: { lower: 1 },
   downtempo: { lower: 3, upper: 2, chromatic: 1 },                // mostly diatonic
   lofi:      { lower: 2, upper: 1, enclosure: 2, chromatic: 2 },  // jazzy
   trance:    { lower: 2, upper: 2 },                               // clean, symmetric

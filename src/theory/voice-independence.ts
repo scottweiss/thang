@@ -26,7 +26,8 @@ const INDEPENDENCE_STRENGTH: Record<Mood, number> = {
   flim:      0.50,  // organic independence
   xtal:      0.45,  // floating counterpoint
   syro:      0.30,  // complex independence
-  ambient:   0.20,  // gentle independence
+  ambient:   0.20,  // gentle independence,
+  plantasia: 0.20,
 };
 
 /**

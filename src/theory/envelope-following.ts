@@ -25,7 +25,8 @@ const FOLLOW_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // organic responsiveness
   xtal:      0.35,  // floating, moderate
   syro:      0.25,  // independent voices
-  ambient:   0.30,  // gentle responsiveness
+  ambient:   0.30,  // gentle responsiveness,
+  plantasia: 0.30,
 };
 
 /**

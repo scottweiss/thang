@@ -167,7 +167,8 @@ const MOOD_ANIMATION: Record<Mood, number> = {
   disco:     0.10,   // string pads can move
   syro:      0.10,   // occasional complexity
   trance:    0.05,   // mostly static pads
-  ambient:   0.0,    // static washes
+  ambient:   0.0,    // static washes,
+  plantasia: 0.0,
 };
 
 /** Section multiplier */

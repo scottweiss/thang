@@ -32,7 +32,8 @@ const ADDITIVE_TENDENCY: Record<Mood, number> = {
   disco:     0.10,  // mostly 4/4 but occasional variation
   trance:    0.08,  // mostly regular, rare variation
   avril:     0.08,  // songwriter — mostly regular
-  ambient:   0.05,  // floats, doesn't need groove
+  ambient:   0.05,  // floats, doesn't need groove,
+  plantasia: 0.05,
 };
 
 /** Section multipliers for additive rhythm */

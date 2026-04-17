@@ -148,7 +148,8 @@ const COMP_PROBABILITY: Record<Mood, number> = {
   avril:     0.15,   // piano — mostly sustained
   trance:    0.10,   // pads dominate
   xtal:      0.10,   // dreamy sustained
-  ambient:   0.05,   // almost always sustained
+  ambient:   0.05,   // almost always sustained,
+  plantasia: 0.05,
 };
 
 /** Section multiplier for comping */
@@ -172,4 +173,5 @@ const MOOD_COMP_STYLES: Record<Mood, CompingStyle[]> = {
   trance:    ['sustained'],
   xtal:      ['sparse'],
   ambient:   ['sustained'],
+  plantasia: ['sustained'],
 };

@@ -123,7 +123,8 @@ const MOOD_SECONDARY_DOMINANT: Record<Mood, number> = {
   trance:    0.05,   // rare — simple harmony preferred
   avril:     0.08,   // subtle color
   xtal:      0.06,   // dreamy — keep it diatonic mostly
-  ambient:   0.0,    // too static for chromatic movement
+  ambient:   0.0,    // too static for chromatic movement,
+  plantasia: 0.0,
 };
 
 /** How strong each scale degree is as a secondary dominant target */

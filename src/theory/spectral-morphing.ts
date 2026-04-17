@@ -23,7 +23,8 @@ const MORPH_SPEED: Record<Mood, number> = {
   flim:      0.25,  // slowest — delicate morphs
   xtal:      0.30,  // slow — crystalline evolution
   syro:      0.45,  // moderate
-  ambient:   0.20,  // slowest — glacial morphs
+  ambient:   0.20,  // slowest — glacial morphs,
+  plantasia: 0.20,
 };
 
 /**

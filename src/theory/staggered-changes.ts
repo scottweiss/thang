@@ -28,6 +28,7 @@ export interface StaggerConfig {
  */
 const MOOD_STAGGER: Record<Mood, StaggerConfig> = {
   ambient:   { drone: 0, harmony: 1, melody: 2, arp: 1 },
+  plantasia: { drone: 0, harmony: 1, melody: 2, arp: 1 },
   downtempo: { drone: 0, harmony: 0, melody: 1, arp: 1 },
   lofi:      { drone: 0, harmony: 0, melody: 1, arp: 0 },
   trance:    { drone: 0, harmony: 0, melody: 0, arp: 0 },  // tight sync

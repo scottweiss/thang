@@ -22,7 +22,8 @@ const STEP_PREFERENCE: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.15,  // lowest — leaps welcome
-  ambient:   0.50,  // high — gentle motion
+  ambient:   0.50,  // high — gentle motion,
+  plantasia: 0.50,
 };
 
 /**

@@ -35,7 +35,8 @@ const INVERSION_TENDENCY: Record<Mood, number> = {
   avril:     0.30,   // intimate — smooth bass
   xtal:      0.20,   // dreamy — some movement
   trance:    0.08,   // driving — root position for power
-  ambient:   0.10,   // static — minimal movement
+  ambient:   0.10,   // static — minimal movement,
+  plantasia: 0.10,
 };
 
 /**

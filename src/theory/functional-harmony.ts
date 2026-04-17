@@ -161,7 +161,8 @@ const FUNCTIONAL_WEIGHT: Record<Mood, number> = {
   disco:     0.60,   // funk — strong functional grooves
   trance:    0.65,   // EDM — powerful V-I drops
   syro:      0.25,   // IDM — subvert functional expectations
-  ambient:   0.10,   // drone — functions barely matter
+  ambient:   0.10,   // drone — functions barely matter,
+  plantasia: 0.10,
 };
 
 /**

@@ -31,7 +31,8 @@ const TRITONE_SUB_PROB: Record<Mood, number> = {
   avril:     0.08,   // intimate — subtle
   xtal:      0.06,   // dreamy — rare
   trance:    0.03,   // driving — clean harmony preferred
-  ambient:   0.00,   // too static
+  ambient:   0.00,   // too static,
+  plantasia: 0.00,
 };
 
 /** Section multiplier */

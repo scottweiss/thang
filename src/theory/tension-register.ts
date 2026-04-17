@@ -29,7 +29,8 @@ const REGISTER_SENSITIVITY: Record<Mood, number> = {
   flim:      0.20,   // delicate subtle
   avril:     0.20,   // intimate gentle
   xtal:      0.15,   // dreamy subtle
-  ambient:   0.05,   // barely moves
+  ambient:   0.05,   // barely moves,
+  plantasia: 0.05,
 };
 
 /** Per-layer register shift amount (how much each layer responds) */

@@ -31,7 +31,8 @@ const MAX_ADJACENT_GAP = 14; // major 9th + 1
 
 /** Preferred spacing width per mood (multiplier on defaults) */
 const SPACING_PREFERENCE: Record<Mood, number> = {
-  ambient:   1.4,   // wide, open
+  ambient:   1.4,   // wide, open,
+  plantasia: 1.4,
   xtal:      1.3,   // wide, dreamy
   flim:      1.1,   // slightly open
   avril:     1.0,   // balanced

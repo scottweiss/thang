@@ -82,5 +82,6 @@ const MOOD_TIMBRE_DEPTH: Record<Mood, number> = {
   disco:     0.35,   // funky chord brightness
   syro:      0.3,    // IDM — some harmonic coloring
   trance:    0.25,   // less important — driving energy dominates
-  ambient:   0.2,    // very subtle — sustained tones need less variation
+  ambient:   0.2,    // very subtle — sustained tones need less variation,
+  plantasia: 0.2,
 };

@@ -73,7 +73,8 @@ const VARIETY_STRENGTH: Record<Mood, number> = {
   avril:     0.30,   // singer-songwriter — some color
   disco:     0.30,   // funk — some variation
   xtal:      0.25,   // dreamy — subtle shifts
-  ambient:   0.20,   // slow evolution
+  ambient:   0.20,   // slow evolution,
+  plantasia: 0.20,
   trance:    0.15,   // consistent energy preferred
 };
 

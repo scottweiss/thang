@@ -55,7 +55,8 @@ export function shouldApplyPhaseOffset(
  * 0.125 = 1/8 note offset, 0.0625 = 1/16 note offset
  */
 const MOOD_PHASE_OFFSET: Record<Mood, number> = {
-  ambient:   0.125,    // 1/8 late — dreamy offset
+  ambient:   0.125,    // 1/8 late — dreamy offset,
+  plantasia: 0.125,
   xtal:      0.125,    // 1/8 late — phasing shimmer
   flim:      0.0625,   // 1/16 late — delicate shift
   syro:      0.0625,   // 1/16 late — IDM precision offset

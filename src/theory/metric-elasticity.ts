@@ -24,7 +24,8 @@ const ELASTICITY_RANGE: Record<Mood, number> = {
   flim:      0.020, // moderate
   xtal:      0.018, // moderate
   syro:      0.012, // moderate
-  ambient:   0.040, // strongest — time breathes
+  ambient:   0.040, // strongest — time breathes,
+  plantasia: 0.040,
 };
 
 /**

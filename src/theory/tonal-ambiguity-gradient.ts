@@ -24,7 +24,8 @@ const AMBIGUITY_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // high — crystalline distance
   syro:      0.35,  // moderate — already chaotic
-  ambient:   0.60,  // highest — space mirrors distance
+  ambient:   0.60,  // highest — space mirrors distance,
+  plantasia: 0.60,
 };
 
 /**

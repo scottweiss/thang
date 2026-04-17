@@ -53,6 +53,7 @@ export interface CompositionPlan {
 const COMPOSITION_ARCHETYPES: Record<Mood, Section[]> = {
   trance:    ['intro', 'build', 'build', 'peak', 'breakdown', 'build', 'peak', 'breakdown', 'groove'],
   ambient:   ['intro', 'groove', 'build', 'groove', 'breakdown', 'groove', 'breakdown'],
+  plantasia: ['intro', 'groove', 'build', 'groove', 'breakdown', 'groove', 'breakdown'],
   lofi:      ['intro', 'build', 'groove', 'build', 'peak', 'breakdown', 'groove', 'build', 'peak', 'breakdown', 'groove'],
   syro:      ['intro', 'peak', 'breakdown', 'build', 'groove', 'peak', 'build', 'breakdown', 'groove'],
   downtempo: ['intro', 'build', 'groove', 'build', 'peak', 'breakdown', 'groove'],
@@ -75,6 +76,7 @@ const SECTION_DURATION_RANGES: Record<Section, [number, number]> = {
 // Mood pacing multiplier (slower moods get longer sections)
 const MOOD_PACING: Record<Mood, number> = {
   ambient: 1.6, avril: 1.4, xtal: 1.3, flim: 1.2,
+  plantasia: 1.6,
   downtempo: 1.1, lofi: 1.0, blockhead: 0.9,
   disco: 0.85, trance: 0.85, syro: 0.75,
 };
@@ -206,6 +208,7 @@ function assignHarmonicRegion(
 
 const MOOD_MOTIF_CONFIG: Record<Mood, { density: MotifSeed['density']; contours: MotifSeed['contour'][] }> = {
   ambient:   { density: 'sparse',   contours: ['arch', 'valley'] },
+  plantasia: { density: 'sparse',   contours: ['arch', 'valley'] },
   downtempo: { density: 'moderate', contours: ['arch', 'descending'] },
   lofi:      { density: 'moderate', contours: ['arch', 'descending', 'valley'] },
   trance:    { density: 'dense',    contours: ['ascending', 'arch'] },

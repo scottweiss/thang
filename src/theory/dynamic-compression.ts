@@ -23,7 +23,8 @@ const COMPRESSION_RATIO: Record<Mood, number> = {
   flim:      0.30,  // weak — wide dynamics
   xtal:      0.35,  // weak — crystalline dynamics
   syro:      0.50,  // moderate
-  ambient:   0.25,  // weakest — widest dynamics
+  ambient:   0.25,  // weakest — widest dynamics,
+  plantasia: 0.25,
 };
 
 /**

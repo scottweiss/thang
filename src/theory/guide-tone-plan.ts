@@ -173,7 +173,8 @@ const SMOOTHNESS_WEIGHT: Record<Mood, number> = {
   disco:     0.30,   // funk — rhythmic harmony
   trance:    0.20,   // EDM — block chord movement
   syro:      0.25,   // IDM — angular by design
-  ambient:   0.35,   // drone — smooth when voices exist
+  ambient:   0.35,   // drone — smooth when voices exist,
+  plantasia: 0.35,
 };
 
 /**

@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const crossAccentStrength: Record<Mood, number> = {
   ambient: 0.05,
+  plantasia: 0.05,
   downtempo: 0.20,
   lofi: 0.25,
   trance: 0.15,

@@ -73,6 +73,7 @@ const moodCallResponse: Record<Mood, number> = {
   avril: 0.25,
   trance: 0.2,
   ambient: 0.15,
+  plantasia: 0.15,
 };
 
 /**

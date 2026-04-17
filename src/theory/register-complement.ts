@@ -31,7 +31,8 @@ const COMPLEMENT_STRENGTH: Record<Mood, number> = {
   syro:      0.35,   // IDM — some crossing OK
   xtal:      0.30,   // dreamy overlap OK
   trance:    0.25,   // power — less separation needed
-  ambient:   0.10,   // floating — overlap fine
+  ambient:   0.10,   // floating — overlap fine,
+  plantasia: 0.10,
 };
 
 /** Reference MIDI values for register boundaries */

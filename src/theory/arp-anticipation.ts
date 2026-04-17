@@ -24,7 +24,8 @@ const ANTICIPATION_STRENGTH: Record<Mood, number> = {
   xtal:      0.20,   // dreamy — gentle
   avril:     0.20,   // intimate — gentle
   trance:    0.10,   // driving — minimal (clean changes preferred)
-  ambient:   0.05,   // static — almost none
+  ambient:   0.05,   // static — almost none,
+  plantasia: 0.05,
 };
 
 /**

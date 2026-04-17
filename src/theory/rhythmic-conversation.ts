@@ -28,7 +28,8 @@ const CONVERSATION_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // organic interplay
   xtal:      0.35,  // floating, voices emerge
   syro:      0.30,  // complex but less turn-taking
-  ambient:   0.25,  // gentle emergence
+  ambient:   0.25,  // gentle emergence,
+  plantasia: 0.25,
 };
 
 /** Layer priority for "speaking" (higher = more likely to lead). */

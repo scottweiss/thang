@@ -27,7 +27,8 @@ const ACCEL_STRENGTH: Record<Mood, number> = {
   syro:      0.08,  // ambiguous (was 0.10)
   disco:     0.05,  // groove-locked — near-zero (was 0.25)
   trance:    0.05,  // groove-locked — near-zero (was 0.30)
-  ambient:   0.03,  // barely perceptible (was 0.08)
+  ambient:   0.03,  // barely perceptible (was 0.08),
+  plantasia: 0.03,
 };
 
 /**

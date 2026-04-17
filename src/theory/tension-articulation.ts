@@ -32,7 +32,8 @@ const TENSION_SENSITIVITY: Record<Mood, number> = {
   flim:      0.20,   // delicate — subtle
   xtal:      0.15,   // dreamy — gentle
   avril:     0.15,   // intimate — gentle
-  ambient:   0.05,   // always legato
+  ambient:   0.05,   // always legato,
+  plantasia: 0.05,
 };
 
 /**

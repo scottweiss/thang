@@ -22,7 +22,8 @@ const ENERGY_CEILING: Record<Mood, number> = {
   flim:      0.70,  // low — delicate
   xtal:      0.65,  // low — airy
   syro:      0.80,  // moderate — dense OK
-  ambient:   0.55,  // lowest — spacious
+  ambient:   0.55,  // lowest — spacious,
+  plantasia: 0.55,
 };
 
 /**

@@ -28,7 +28,8 @@ const CLOSURE_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // organic closure
   xtal:      0.20,  // open-ended
   syro:      0.12,  // avoids closure
-  ambient:   0.08,  // nearly closureless
+  ambient:   0.08,  // nearly closureless,
+  plantasia: 0.08,
 };
 
 /**

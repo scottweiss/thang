@@ -25,7 +25,8 @@ const EXCHANGE_STRENGTH: Record<Mood, number> = {
   avril:     0.35,   // singer-songwriter — verse/chorus interplay
   downtempo: 0.30,   // moderate exchange
   xtal:      0.30,   // dreamy interlocking
-  ambient:   0.20,   // subtle exchange
+  ambient:   0.20,   // subtle exchange,
+  plantasia: 0.20,
   blockhead: 0.25,   // hip-hop — sample-layer interplay
   syro:      0.35,   // IDM — complex voice relationships
   disco:     0.15,   // groove — voices stay in lanes

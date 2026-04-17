@@ -36,7 +36,8 @@ const CHAIN_PROBABILITY: Record<Mood, number> = {
   blockhead: 0.15,   // hip-hop soul
   disco:     0.10,   // funky but less contrapuntal
   syro:      0.10,   // IDM — different approach to tension
-  ambient:   0.08,   // occasional gentle chains
+  ambient:   0.08,   // occasional gentle chains,
+  plantasia: 0.08,
   trance:    0.05,   // too subtle for trance
 };
 
@@ -51,6 +52,7 @@ const PREFERRED_CHAINS: Record<Mood, ChainType[]> = {
   disco:     ['4-3'],
   syro:      ['mixed'],
   ambient:   ['7-6'],
+  plantasia: ['7-6'],
   trance:    ['4-3'],
 };
 

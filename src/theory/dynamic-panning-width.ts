@@ -24,7 +24,8 @@ const WIDTH_RANGE: Record<Mood, number> = {
   flim:      0.50,  // moderate
   xtal:      0.60,  // high — crystalline space
   syro:      0.30,  // moderate
-  ambient:   0.65,  // highest — vast space
+  ambient:   0.65,  // highest — vast space,
+  plantasia: 0.65,
 };
 
 /**

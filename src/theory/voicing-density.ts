@@ -30,7 +30,8 @@ const DENSITY_SENSITIVITY: Record<Mood, number> = {
   flim:      0.20,  // organic
   xtal:      0.15,  // dreamy — consistently sparse
   syro:      0.12,  // IDM — density is independent
-  ambient:   0.08,  // minimal variation — always sparse
+  ambient:   0.08,  // minimal variation — always sparse,
+  plantasia: 0.08,
 };
 
 /**

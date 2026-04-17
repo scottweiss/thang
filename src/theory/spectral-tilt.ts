@@ -23,7 +23,8 @@ const TILT_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.25,  // subtle — already ambient-bright
   syro:      0.40,  // moderate IDM tilt
-  ambient:   0.20,  // minimal — stays dark/warm
+  ambient:   0.20,  // minimal — stays dark/warm,
+  plantasia: 0.20,
 };
 
 /**

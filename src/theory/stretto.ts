@@ -32,7 +32,8 @@ const STRETTO_TENDENCY: Record<Mood, number> = {
   downtempo: 0.12,  // subtle
   avril:     0.10,  // songwriter
   xtal:      0.08,  // gentle echoes
-  ambient:   0.05,  // minimal
+  ambient:   0.05,  // minimal,
+  plantasia: 0.05,
 };
 
 /** Section multiplier */
@@ -145,6 +146,7 @@ export function strettoInterval(mood: Mood, tick: number): number {
     avril:     [0, 7, 12],
     xtal:      [0, 7, 12],
     ambient:   [0, 12, 7],
+    plantasia: [0, 12, 7],
   };
 
   const options = intervals[mood];

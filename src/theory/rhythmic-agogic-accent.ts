@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const agogicStrength: Record<Mood, number> = {
   ambient: 0.50,
+  plantasia: 0.50,
   downtempo: 0.40,
   lofi: 0.35,
   trance: 0.20,

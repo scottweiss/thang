@@ -39,7 +39,8 @@ const MASKING_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // clear
   xtal:      0.55,  // crystalline clarity
   syro:      0.35,  // complex, some overlap
-  ambient:   0.60,  // maximum clarity
+  ambient:   0.60,  // maximum clarity,
+  plantasia: 0.60,
 };
 
 /**

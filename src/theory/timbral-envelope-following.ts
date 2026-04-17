@@ -24,7 +24,8 @@ const ENVELOPE_TRACKING: Record<Mood, number> = {
   flim:      0.50,  // high — delicate
   xtal:      0.55,  // high — crystalline attack
   syro:      0.25,  // low — synthetic
-  ambient:   0.60,  // highest — natural timbre
+  ambient:   0.60,  // highest — natural timbre,
+  plantasia: 0.60,
 };
 
 /**

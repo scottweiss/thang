@@ -24,7 +24,8 @@ const INERTIA_STRENGTH: Record<Mood, number> = {
   flim:      0.50,  // moderate
   xtal:      0.55,  // high — slow shimmer
   syro:      0.20,  // low — rapid changes OK
-  ambient:   0.65,  // highest — glacial transitions
+  ambient:   0.65,  // highest — glacial transitions,
+  plantasia: 0.65,
 };
 
 /**

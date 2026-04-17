@@ -22,7 +22,8 @@ const CENTERING_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.25,  // low — register freedom
-  ambient:   0.35,  // moderate
+  ambient:   0.35,  // moderate,
+  plantasia: 0.35,
 };
 
 /**

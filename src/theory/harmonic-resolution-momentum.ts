@@ -22,7 +22,8 @@ const DRIVE_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // low
   xtal:      0.25,  // low — floating
   syro:      0.20,  // lowest — no resolution expected
-  ambient:   0.15,  // lowest — timeless
+  ambient:   0.15,  // lowest — timeless,
+  plantasia: 0.15,
 };
 
 const FIFTHS_DISTANCE: Record<number, number> = {

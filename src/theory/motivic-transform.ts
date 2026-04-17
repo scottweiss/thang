@@ -170,7 +170,8 @@ const MOOD_TRANSFORM_PROB: Record<Mood, number> = {
   syro:      0.40,   // complex IDM development
   trance:    0.15,   // repetitive — less transformation
   disco:     0.10,   // groove-based — keep motifs stable
-  ambient:   0.05,   // minimal structure
+  ambient:   0.05,   // minimal structure,
+  plantasia: 0.05,
 };
 
 const SECTION_TRANSFORM_MULT: Record<Section, number> = {

@@ -264,6 +264,7 @@ const ALL_ARCS: Record<ArcType, NarrativeArc> = {
 /** Per-mood preferred arc types (weighted random selection) */
 const MOOD_ARC_WEIGHTS: Record<Mood, Partial<Record<ArcType, number>>> = {
   ambient:   { meditation: 3.0, journey: 1.5, elegy: 1.0 },
+  plantasia: { meditation: 3.0, journey: 1.5, elegy: 1.0 },
   downtempo: { journey: 2.0, elegy: 1.5, meditation: 1.0 },
   lofi:      { journey: 2.0, elegy: 1.5, meditation: 1.0 },
   trance:    { dance: 3.0, triumph: 1.5 },

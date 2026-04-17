@@ -8,7 +8,8 @@ import type { Mood, Section } from '../types';
  */
 
 const tessituraCenter: Record<Mood, number> = {
-  ambient: 62,    // D4 — mid-range, spacious
+  ambient: 62,    // D4 — mid-range, spacious,
+  plantasia: 62,
   downtempo: 60,  // C4 — classic middle
   lofi: 58,       // Bb3 — slightly low, warm
   trance: 65,     // F4 — bright
@@ -22,6 +23,7 @@ const tessituraCenter: Record<Mood, number> = {
 
 const tessituraWidth: Record<Mood, number> = {
   ambient: 10,
+  plantasia: 10,
   downtempo: 8,
   lofi: 7,
   trance: 9,
@@ -35,6 +37,7 @@ const tessituraWidth: Record<Mood, number> = {
 
 const comfortStrength: Record<Mood, number> = {
   ambient: 0.35,
+  plantasia: 0.35,
   downtempo: 0.40,
   lofi: 0.45,
   trance: 0.30,

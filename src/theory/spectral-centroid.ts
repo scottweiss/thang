@@ -26,7 +26,8 @@ const TARGET_CENTROID: Record<Mood, number> = {
   flim:      2100,   // organic warmth
   xtal:      2500,   // crystalline
   syro:      2700,   // detailed, present
-  ambient:   1600,   // dark, warm
+  ambient:   1600,   // dark, warm,
+  plantasia: 1600,
 };
 
 /**
@@ -102,7 +103,7 @@ export function shouldCorrectCentroid(deviation: number, mood: Mood): boolean {
   const tolerance: Record<Mood, number> = {
     trance: 300, avril: 350, disco: 300, downtempo: 400,
     blockhead: 350, lofi: 400, flim: 400, xtal: 500,
-    syro: 300, ambient: 500,
+    syro: 300, ambient: 500, plantasia: 500,
   };
   return Math.abs(deviation) > tolerance[mood];
 }

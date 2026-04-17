@@ -261,6 +261,7 @@ export function moodArpStyles(mood: Mood, section: Section): ArpStyle[] {
   // Base styles per mood character
   const moodStyles: Record<Mood, ArpStyle[]> = {
     ambient:   ['pedal', 'up', 'mirror'],
+    plantasia: ['pedal', 'up', 'mirror'],
     downtempo: ['alberti', 'updown', 'thirds', 'zigzag'],
     lofi:      ['broken', 'alberti', 'thirds', 'pedal'],
     trance:    ['up', 'updown', 'zigzag', 'thirds'],

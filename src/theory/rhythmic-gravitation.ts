@@ -26,7 +26,8 @@ const GRAVITATION_STRENGTH: Record<Mood, number> = {
   flim:      0.25,  // weak — Aphex wonk
   xtal:      0.20,  // weak — ambient float
   syro:      0.15,  // weakest — IDM against-the-grid
-  ambient:   0.10,  // minimal — time dissolves
+  ambient:   0.10,  // minimal — time dissolves,
+  plantasia: 0.10,
 };
 
 /**

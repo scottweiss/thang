@@ -132,7 +132,8 @@ const MOOD_LOCK_PROB: Record<Mood, number> = {
   flim:      0.20,   // delicate moments
   xtal:      0.15,   // rare alignment
   avril:     0.20,   // intimate unity
-  ambient:   0.05,   // almost never — layers float
+  ambient:   0.05,   // almost never — layers float,
+  plantasia: 0.05,
 };
 
 /** Section multiplier for groove lock probability */
@@ -155,5 +156,6 @@ const MOOD_LOCK_STRENGTH: Record<Mood, number> = {
   flim:      0.25,   // delicate
   xtal:      0.20,   // faint
   avril:     0.25,   // intimate
-  ambient:   0.10,   // barely there
+  ambient:   0.10,   // barely there,
+  plantasia: 0.10,
 };

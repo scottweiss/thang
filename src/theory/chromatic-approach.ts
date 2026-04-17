@@ -34,7 +34,8 @@ const APPROACH_PROB: Record<Mood, number> = {
   avril:     0.08,   // intimate — subtle
   xtal:      0.05,   // dreamy — rare
   trance:    0.02,   // driving — clean harmony preferred
-  ambient:   0.00,   // too static for passing chords
+  ambient:   0.00,   // too static for passing chords,
+  plantasia: 0.00,
 };
 
 /** Section multiplier — approach chords work best in settled sections */

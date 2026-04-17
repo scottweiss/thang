@@ -23,7 +23,8 @@ const ANTICIPATION_STRENGTH: Record<Mood, number> = {
   downtempo: 0.40,   // smooth forward motion
   avril:     0.35,   // singer-songwriter — some lookahead
   flim:      0.30,   // organic IDM
-  ambient:   0.25,   // subtle — harmony moves slowly anyway
+  ambient:   0.25,   // subtle — harmony moves slowly anyway,
+  plantasia: 0.25,
   xtal:      0.25,   // dreamy anticipation
   blockhead: 0.20,   // hip-hop — chords anchor beats
   syro:      0.20,   // IDM — some forward motion
@@ -51,6 +52,7 @@ const ANTICIPATION_WINDOW: Record<Mood, number> = {
   avril:     1,
   flim:      1,
   ambient:   2,
+  plantasia: 2,
   xtal:      2,
   blockhead: 1,
   syro:      1,

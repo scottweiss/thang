@@ -24,7 +24,8 @@ const CADENTIAL_WEIGHT: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // strong — crystalline arrivals
   syro:      0.15,  // weakest — even weight
-  ambient:   0.40,  // moderate — gentle arrivals
+  ambient:   0.40,  // moderate — gentle arrivals,
+  plantasia: 0.40,
 };
 
 /**

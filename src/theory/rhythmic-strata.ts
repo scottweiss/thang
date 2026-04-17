@@ -23,7 +23,8 @@ const STRATA_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // strong — Aphex polymetric
   xtal:      0.45,  // strong — ambient time layers
   syro:      0.50,  // strongest — IDM temporal chaos
-  ambient:   0.35,  // strong — drifting time
+  ambient:   0.35,  // strong — drifting time,
+  plantasia: 0.35,
 };
 
 /**

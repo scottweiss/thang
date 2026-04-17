@@ -24,7 +24,8 @@ const LOCK_TIGHTNESS: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.25,  // very loose
   syro:      0.50,  // moderate IDM
-  ambient:   0.15,  // loosest
+  ambient:   0.15,  // loosest,
+  plantasia: 0.15,
 };
 
 /**

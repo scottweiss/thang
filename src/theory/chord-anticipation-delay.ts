@@ -27,7 +27,8 @@ const SPREAD: Record<Mood, number> = {
   flim:      0.09,  // organic looseness
   xtal:      0.07,  // floating
   syro:      0.04,  // controlled
-  ambient:   0.12,  // maximum spread
+  ambient:   0.12,  // maximum spread,
+  plantasia: 0.12,
 };
 
 /**

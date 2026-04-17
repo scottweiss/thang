@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodSurgeDepth: Record<Mood, number> = {
   ambient: 0.40,
+  plantasia: 0.40,
   downtempo: 0.45,
   lofi: 0.50,
   trance: 0.55,

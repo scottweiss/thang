@@ -26,7 +26,8 @@ const PREFERRED_DISTANCE: Record<Mood, number> = {
   flim:      0.50,  // far — organic wandering
   xtal:      0.45,  // moderate-far — ambient drift
   syro:      0.60,  // farthest — IDM harmonic adventure
-  ambient:   0.35,  // moderate — gentle drift
+  ambient:   0.35,  // moderate — gentle drift,
+  plantasia: 0.35,
 };
 
 /**

@@ -24,7 +24,8 @@ const FIELD_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.55,  // strong — crystalline harmonic color
   syro:      0.25,  // weak — all distances equal
-  ambient:   0.60,  // strongest — color is everything
+  ambient:   0.60,  // strongest — color is everything,
+  plantasia: 0.60,
 };
 
 /**

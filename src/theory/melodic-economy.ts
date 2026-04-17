@@ -26,7 +26,8 @@ import type { Mood, Section } from '../types';
  * Higher = more restrictive pitch vocabulary.
  */
 const ECONOMY_STRENGTH: Record<Mood, number> = {
-  ambient:   0.60,  // minimal — few pitches, much repetition
+  ambient:   0.60,  // minimal — few pitches, much repetition,
+  plantasia: 0.60,
   trance:    0.50,  // anthemic hooks use few notes
   avril:     0.45,  // singable melodies are economical
   xtal:      0.40,  // dreamy but focused

@@ -24,7 +24,8 @@ const WAVE_AMPLITUDE: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.55,  // high — crystalline breathing
   syro:      0.20,  // low — consistent density
-  ambient:   0.60,  // highest — vast breathing
+  ambient:   0.60,  // highest — vast breathing,
+  plantasia: 0.60,
 };
 
 /**

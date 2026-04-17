@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const mediantStrength: Record<Mood, number> = {
   ambient: 0.30,
+  plantasia: 0.30,
   downtempo: 0.35,
   lofi: 0.20,
   trance: 0.45,

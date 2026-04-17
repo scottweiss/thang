@@ -23,7 +23,8 @@ const TRACKING_DEPTH: Record<Mood, number> = {
   flim:      0.45,  // strong — delicate spectral shift
   xtal:      0.55,  // strongest — crystalline decay
   syro:      0.25,  // weak — sharp electronic timbres
-  ambient:   0.60,  // strongest — evolving pads
+  ambient:   0.60,  // strongest — evolving pads,
+  plantasia: 0.60,
 };
 
 /**

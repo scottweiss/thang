@@ -25,7 +25,8 @@ const WAVE_AMPLITUDE: Record<Mood, number> = {
   flim:      0.18,  // organic
   xtal:      0.22,  // floating swells
   syro:      0.12,  // complex but steady
-  ambient:   0.25,  // maximum breathing
+  ambient:   0.25,  // maximum breathing,
+  plantasia: 0.25,
 };
 
 /**
@@ -42,7 +43,8 @@ const WAVE_PERIOD: Record<Mood, number> = {
   flim:      12,  // slow
   xtal:      16,  // very slow swells
   syro:      6,   // fast cycling
-  ambient:   20,  // very slow breathing
+  ambient:   20,  // very slow breathing,
+  plantasia: 20,
 };
 
 /**

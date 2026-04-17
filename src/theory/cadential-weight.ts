@@ -26,7 +26,8 @@ const CADENTIAL_WEIGHT: Record<Mood, number> = {
   flim:      0.30,  // organic
   xtal:      0.20,  // floating, cadences less important
   syro:      0.15,  // ambiguous, avoiding strong cadences
-  ambient:   0.10,  // barely noticeable
+  ambient:   0.10,  // barely noticeable,
+  plantasia: 0.10,
 };
 
 /**

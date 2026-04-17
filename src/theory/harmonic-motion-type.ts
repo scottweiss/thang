@@ -24,7 +24,8 @@ const MOTION_PREFERENCE: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.15,  // lowest
-  ambient:   0.35,  // moderate
+  ambient:   0.35,  // moderate,
+  plantasia: 0.35,
 };
 
 export type MotionType = 'contrary' | 'oblique' | 'parallel' | 'static';

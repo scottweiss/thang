@@ -24,7 +24,8 @@ const INVERSION_FREEDOM: Record<Mood, number> = {
   flim:      0.50,  // moderate
   xtal:      0.45,  // moderate
   syro:      0.35,  // moderate
-  ambient:   0.40,  // moderate — open voicings
+  ambient:   0.40,  // moderate — open voicings,
+  plantasia: 0.40,
 };
 
 /**

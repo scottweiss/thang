@@ -29,7 +29,8 @@ const FRAGMENTATION_TENDENCY: Record<Mood, number> = {
   downtempo: 0.15,  // subtle
   avril:     0.12,  // songwriter — occasional
   xtal:      0.10,  // dreamy — gentle fragmentation
-  ambient:   0.05,  // nearly whole phrases
+  ambient:   0.05,  // nearly whole phrases,
+  plantasia: 0.05,
 };
 
 /** Section determines fragmentation direction */

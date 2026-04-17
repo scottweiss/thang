@@ -24,7 +24,8 @@ const ARC_INTENSITY: Record<Mood, number> = {
   flim:      0.45,  // strong — delicate arcs
   xtal:      0.55,  // strong — crystalline tension
   syro:      0.20,  // weak — constant tension
-  ambient:   0.35,  // moderate — gentle arcs
+  ambient:   0.35,  // moderate — gentle arcs,
+  plantasia: 0.35,
 };
 
 /**

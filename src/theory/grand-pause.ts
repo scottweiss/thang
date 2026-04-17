@@ -34,7 +34,8 @@ const GP_TENDENCY: Record<Mood, number> = {
   flim:      0.04,  // subtle
   downtempo: 0.04,  // subtle
   lofi:      0.03,  // jazz — rare
-  ambient:   0.01,  // almost never — continuous texture
+  ambient:   0.01,  // almost never — continuous texture,
+  plantasia: 0.01,
 };
 
 /** Sections where GP is most impactful */
@@ -82,7 +83,8 @@ export function gpDuration(mood: Mood): number {
     flim:      2,    // gentle pause
     downtempo: 2,    // spacious
     lofi:      1,    // brief
-    ambient:   2,    // long breath
+    ambient:   2,    // long breath,
+    plantasia: 2,
   };
   return durations[mood];
 }
@@ -100,6 +102,7 @@ export function shouldFermata(
     avril:     0.15,
     xtal:      0.12,
     ambient:   0.10,
+    plantasia: 0.10,
     flim:      0.10,
     lofi:      0.08,
     downtempo: 0.06,

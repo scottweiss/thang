@@ -25,7 +25,8 @@ const ACCENT_DEPTH: Record<Mood, number> = {
   flim:      0.38,  // organic expression
   xtal:      0.20,  // gentle accents
   syro:      0.25,  // controlled contrast
-  ambient:   0.10,  // barely accented
+  ambient:   0.10,  // barely accented,
+  plantasia: 0.10,
 };
 
 const NOTE_PC: Record<string, number> = {

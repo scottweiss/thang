@@ -31,7 +31,8 @@ const RESOLUTION_STRENGTH: Record<Mood, number> = {
   flim:      0.25,  // organic resolution
   xtal:      0.15,  // dreamy — less rhythmic structure
   syro:      0.10,  // resists resolution
-  ambient:   0.05,  // barely any rhythmic structure to resolve
+  ambient:   0.05,  // barely any rhythmic structure to resolve,
+  plantasia: 0.05,
 };
 
 /**

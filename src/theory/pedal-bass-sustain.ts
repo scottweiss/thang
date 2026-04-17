@@ -24,7 +24,8 @@ const PEDAL_TENDENCY: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.55,  // strong — ambient drones
   syro:      0.25,  // weak — IDM bass moves
-  ambient:   0.65,  // strongest — sustained drones
+  ambient:   0.65,  // strongest — sustained drones,
+  plantasia: 0.65,
 };
 
 /**

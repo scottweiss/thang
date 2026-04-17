@@ -25,7 +25,8 @@ const BASS_TOLERANCE: Record<Mood, number> = {
   flim:      0.35,  // balanced
   xtal:      0.30,  // lighter bass
   syro:      0.45,  // moderate
-  ambient:   0.25,  // lightest bass
+  ambient:   0.25,  // lightest bass,
+  plantasia: 0.25,
 };
 
 /**

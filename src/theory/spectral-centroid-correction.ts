@@ -24,7 +24,8 @@ const TARGET_CENTROID: Record<Mood, number> = {
   flim:      2000,  // medium — delicate
   xtal:      2200,  // medium-bright — crystalline
   syro:      2600,  // bright — electronic
-  ambient:   1400,  // warmest — soft
+  ambient:   1400,  // warmest — soft,
+  plantasia: 1400,
 };
 
 /**
@@ -41,6 +42,7 @@ const CORRECTION_STRENGTH: Record<Mood, number> = {
   xtal:      0.45,
   syro:      0.30,
   ambient:   0.55,
+  plantasia: 0.55,
 };
 
 /**

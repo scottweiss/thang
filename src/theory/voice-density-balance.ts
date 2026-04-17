@@ -23,7 +23,8 @@ const MAX_VOICES_WITH_MELODY: Record<Mood, number> = {
   flim:      3,     // organic
   xtal:      2,     // minimal — sparse ambient
   syro:      4,     // dense OK — IDM layers
-  ambient:   2,     // minimal — space
+  ambient:   2,     // minimal — space,
+  plantasia: 2,
 };
 
 /**
@@ -40,6 +41,7 @@ const MAX_VOICES_WITHOUT_MELODY: Record<Mood, number> = {
   xtal:      3,
   syro:      5,
   ambient:   3,
+  plantasia: 3,
 };
 
 /**

@@ -79,7 +79,8 @@ const GLOW_INTENSITY: Record<Mood, number> = {
   disco:     0.10,   // funk — slight lift
   syro:      0.10,   // IDM — analytical beauty
   trance:    0.15,   // EDM — drop moments
-  ambient:   0.08,   // subtle — barely there
+  ambient:   0.08,   // subtle — barely there,
+  plantasia: 0.08,
 };
 
 /**

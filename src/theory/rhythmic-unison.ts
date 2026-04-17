@@ -30,7 +30,8 @@ const UNISON_TENDENCY: Record<Mood, number> = {
   lofi:      0.06,  // rare but effective
   xtal:      0.04,  // mostly independent
   syro:      0.03,  // intentionally desynchronized
-  ambient:   0.02,  // almost never — ambience needs independence
+  ambient:   0.02,  // almost never — ambience needs independence,
+  plantasia: 0.02,
 };
 
 /**

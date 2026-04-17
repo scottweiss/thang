@@ -23,7 +23,8 @@ const DYNAMIC_RANGE: Record<Mood, number> = {
   flim:      0.30,  // strong — delicate
   xtal:      0.25,  // moderate
   syro:      0.12,  // weak — electronic precision
-  ambient:   0.20,  // moderate — gentle breathing
+  ambient:   0.20,  // moderate — gentle breathing,
+  plantasia: 0.20,
 };
 
 /**

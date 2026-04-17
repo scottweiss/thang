@@ -31,6 +31,14 @@ const FORM_MATRICES: Record<Mood, TransitionMatrix> = {
     groove:    { build: 4, breakdown: 3, groove: 2, peak: 1 },  // can repeat groove
     intro:     { build: 10 },
   },
+  plantasia: {
+    // Ambient: meandering, avoids strong peaks, loves groove and breakdown
+    build:     { peak: 5, groove: 3, breakdown: 2 },
+    peak:      { breakdown: 6, groove: 4 },
+    breakdown: { groove: 7, build: 3 },
+    groove:    { build: 4, breakdown: 3, groove: 2, peak: 1 },  // can repeat groove
+    intro:     { build: 10 },
+  },
   downtempo: {
     build:     { peak: 6, groove: 3, breakdown: 1 },
     peak:      { breakdown: 5, groove: 4, peak: 1 },

@@ -23,7 +23,8 @@ const ORBITAL_PULL: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate — crystalline wander
   syro:      0.20,  // weakest — free orbits
-  ambient:   0.30,  // weak — floating
+  ambient:   0.30,  // weak — floating,
+  plantasia: 0.30,
 };
 
 /**

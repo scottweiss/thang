@@ -26,7 +26,8 @@ const TRANSFER_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // organic
   xtal:      0.20,  // floating, no rush
   syro:      0.15,  // intentional gaps OK
-  ambient:   0.10,  // slow, gaps are fine
+  ambient:   0.10,  // slow, gaps are fine,
+  plantasia: 0.10,
 };
 
 /**

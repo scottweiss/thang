@@ -144,7 +144,8 @@ const MOOD_HEMIOLA: Record<Mood, number> = {
   flim:      0.10,   // delicate cross-accents
   xtal:      0.08,   // occasional
   avril:     0.05,   // very rare
-  ambient:   0.0,    // never — too static
+  ambient:   0.0,    // never — too static,
+  plantasia: 0.0,
 };
 
 /** Section multiplier for hemiola */

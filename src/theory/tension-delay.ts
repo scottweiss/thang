@@ -18,7 +18,8 @@ import type { Mood } from '../types';
  * How strongly tension affects delay feedback per mood.
  */
 const MOOD_SENSITIVITY: Record<Mood, number> = {
-  ambient: 0.15,     // moderate — echoes are part of ambient's character
+  ambient: 0.15,     // moderate — echoes are part of ambient's character,
+  plantasia: 0.15,
   downtempo: 0.12,
   lofi: 0.1,
   trance: 0.2,       // strong — trance builds echo cascades

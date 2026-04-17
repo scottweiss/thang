@@ -25,7 +25,8 @@ const BINDING_WINDOW_MS: Record<Mood, number> = {
   flim:      40,    // wide — organic
   xtal:      38,    // moderate-wide
   syro:      30,    // moderate — controlled looseness
-  ambient:   55,    // widest — floating
+  ambient:   55,    // widest — floating,
+  plantasia: 55,
 };
 
 /**

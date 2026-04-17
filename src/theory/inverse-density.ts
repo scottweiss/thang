@@ -48,7 +48,8 @@ export function shouldApplyInverseDensity(mood: Mood): boolean {
  * Higher = more responsive to harmonic rhythm.
  */
 const MOOD_INVERSE_SENSITIVITY: Record<Mood, number> = {
-  ambient:   0.3,   // gentle response
+  ambient:   0.3,   // gentle response,
+  plantasia: 0.3,
   downtempo: 0.5,   // moderate
   lofi:      0.6,   // jazzy awareness
   trance:    0.2,   // minimal — trance stays driving

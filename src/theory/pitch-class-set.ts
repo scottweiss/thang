@@ -128,7 +128,8 @@ export function moodSetMatch(pcs: number[], mood: Mood): number {
   // Mood profiles: what interval class proportions are desirable
   // [ic1, ic2, ic3, ic4, ic5, ic6]
   const profiles: Record<Mood, number[]> = {
-    ambient:   [0.05, 0.10, 0.15, 0.15, 0.45, 0.10], // open fifths
+    ambient:   [0.05, 0.10, 0.15, 0.15, 0.45, 0.10], // open fifths,
+    plantasia: [0.05, 0.10, 0.15, 0.15, 0.45, 0.10],
     xtal:      [0.05, 0.15, 0.20, 0.20, 0.30, 0.10], // crystalline
     downtempo: [0.08, 0.12, 0.25, 0.25, 0.20, 0.10], // warm thirds
     lofi:      [0.10, 0.15, 0.25, 0.20, 0.15, 0.15], // jazz color

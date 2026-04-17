@@ -23,7 +23,8 @@ const GRAVITY_STRENGTH: Record<Mood, number> = {
   downtempo: 0.40,   // smooth forward pull
   avril:     0.35,   // accompaniment supports the voice
   flim:      0.30,   // organic IDM
-  ambient:   0.20,   // gentle drift
+  ambient:   0.20,   // gentle drift,
+  plantasia: 0.20,
   xtal:      0.25,   // dreamy pull
   blockhead: 0.25,   // hip-hop — bass leads
   syro:      0.20,   // structured but some pull
@@ -50,6 +51,7 @@ const GRAVITY_WINDOW: Record<Mood, number> = {
   avril:     1,
   flim:      1,
   ambient:   2,
+  plantasia: 2,
   xtal:      2,
   blockhead: 1,
   syro:      1,

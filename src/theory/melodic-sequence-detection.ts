@@ -26,7 +26,8 @@ const SEQUENCE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // organic sequences
   xtal:      0.30,  // floating
   syro:      0.20,  // complex, less predictable
-  ambient:   0.15,  // barely sequential
+  ambient:   0.15,  // barely sequential,
+  plantasia: 0.15,
 };
 
 /**

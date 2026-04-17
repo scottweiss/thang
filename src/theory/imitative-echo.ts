@@ -28,7 +28,8 @@ const ECHO_PROBABILITY: Record<Mood, number> = {
   blockhead: 0.15,   // hip-hop — some response
   disco:     0.10,   // funk — rhythm over imitation
   trance:    0.08,   // EDM — minimal imitation
-  ambient:   0.05,   // drone — sparse echoes
+  ambient:   0.05,   // drone — sparse echoes,
+  plantasia: 0.05,
 };
 
 /** Echo interval preferences (in scale steps) */
@@ -42,7 +43,8 @@ const ECHO_INTERVALS: Record<Mood, number[]> = {
   blockhead: [4, -3],       // 5th, 4th down
   disco:     [4, 2],        // simple intervals
   trance:    [7, 4],        // octave, 5th (power intervals)
-  ambient:   [4, 7],        // 5th, octave (open)
+  ambient:   [4, 7],        // 5th, octave (open),
+  plantasia: [4, 7],
 };
 
 /** Section multiplier for echo probability */

@@ -24,7 +24,8 @@ const SWING_DEPTH: Record<Mood, number> = {
   flim:      0.014,  // organic
   xtal:      0.010,  // subtle
   syro:      0.012,  // moderate IDM
-  ambient:   0.006,  // very subtle
+  ambient:   0.006,  // very subtle,
+  plantasia: 0.006,
 };
 
 /**

@@ -23,7 +23,8 @@ const EXPANSION_FACTOR: Record<Mood, number> = {
   flim:      0.50,  // strong — wide exploration
   xtal:      0.55,  // strong — crystalline range
   syro:      0.65,  // strongest — wide leaps
-  ambient:   0.40,  // moderate — gentle expansion
+  ambient:   0.40,  // moderate — gentle expansion,
+  plantasia: 0.40,
 };
 
 /**

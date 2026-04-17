@@ -24,7 +24,8 @@ const SHIFT_RANGE: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.30,  // low — ethereal
   syro:      0.60,  // highest — maximum shift
-  ambient:   0.15,  // lowest — stable
+  ambient:   0.15,  // lowest — stable,
+  plantasia: 0.15,
 };
 
 /**

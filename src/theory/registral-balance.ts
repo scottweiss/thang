@@ -23,7 +23,8 @@ const BALANCE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.50,  // strong — ambient space
   syro:      0.25,  // weak — IDM likes density
-  ambient:   0.60,  // strongest — space between voices
+  ambient:   0.60,  // strongest — space between voices,
+  plantasia: 0.60,
 };
 
 /**

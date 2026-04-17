@@ -22,7 +22,8 @@ const MASKING_SENSITIVITY: Record<Mood, number> = {
   flim:      0.50,  // high
   xtal:      0.45,  // moderate
   syro:      0.35,  // low — density OK
-  ambient:   0.60,  // highest — pristine clarity
+  ambient:   0.60,  // highest — pristine clarity,
+  plantasia: 0.60,
 };
 
 /**

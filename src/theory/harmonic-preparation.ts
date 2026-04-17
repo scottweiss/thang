@@ -25,7 +25,8 @@ const PREPARATION_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // organic preparation
   xtal:      0.35,  // moderate
   syro:      0.20,  // IDM — raw dissonance OK
-  ambient:   0.30,  // gentle preparation
+  ambient:   0.30,  // gentle preparation,
+  plantasia: 0.30,
 };
 
 /**

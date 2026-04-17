@@ -22,7 +22,8 @@ const HEADROOM_DISCIPLINE: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.25,  // low — flat dynamics OK
-  ambient:   0.50,  // high — dynamic range important
+  ambient:   0.50,  // high — dynamic range important,
+  plantasia: 0.50,
 };
 
 /**

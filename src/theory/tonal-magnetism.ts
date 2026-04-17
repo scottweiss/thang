@@ -24,7 +24,8 @@ const MAGNETIC_STRENGTH: Record<Mood, number> = {
   flim:      0.58,  // organic flow
   xtal:      0.60,  // floating but centered
   syro:      0.35,  // weak — IDM loves dissonance
-  ambient:   0.70,  // strong tonic pull
+  ambient:   0.70,  // strong tonic pull,
+  plantasia: 0.70,
 };
 
 /**

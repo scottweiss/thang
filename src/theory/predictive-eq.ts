@@ -24,7 +24,8 @@ const PREDICTIVE_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // organic
   xtal:      0.35,  // ambient
   syro:      0.25,  // IDM
-  ambient:   0.45,  // smooth
+  ambient:   0.45,  // smooth,
+  plantasia: 0.45,
 };
 
 /**

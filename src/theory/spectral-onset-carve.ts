@@ -24,7 +24,8 @@ const CARVE_INTENSITY: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.55,  // maximum clarity
   syro:      0.35,  // IDM — some chaos OK
-  ambient:   0.60,  // very clean transitions
+  ambient:   0.60,  // very clean transitions,
+  plantasia: 0.60,
 };
 
 /**

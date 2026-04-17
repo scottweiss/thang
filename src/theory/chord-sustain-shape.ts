@@ -24,7 +24,8 @@ const SUSTAIN_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // organic response
   xtal:      0.35,  // gentle variation
   syro:      0.20,  // controlled
-  ambient:   0.45,  // quality colors sustain
+  ambient:   0.45,  // quality colors sustain,
+  plantasia: 0.45,
 };
 
 /**

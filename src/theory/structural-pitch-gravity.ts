@@ -24,7 +24,8 @@ const GRAVITY_STRENGTH: Record<Mood, number> = {
   flim:      0.25,  // weak — floating
   xtal:      0.30,  // weak — ethereal
   syro:      0.15,  // weakest — all pitches equal
-  ambient:   0.20,  // weak — drifting
+  ambient:   0.20,  // weak — drifting,
+  plantasia: 0.20,
 };
 
 /**

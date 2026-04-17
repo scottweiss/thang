@@ -23,7 +23,8 @@ const VARIETY_APPETITE: Record<Mood, number> = {
   flim:      0.55,  // high — delicate variety
   xtal:      0.50,  // high
   syro:      0.60,  // highest — maximal variety
-  ambient:   0.35,  // moderate — stepwise OK
+  ambient:   0.35,  // moderate — stepwise OK,
+  plantasia: 0.35,
 };
 
 /**

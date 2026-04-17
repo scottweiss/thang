@@ -23,7 +23,8 @@ const SATURATION_THRESHOLD: Record<Mood, number> = {
   flim:      4.5,   // moderate extensions
   xtal:      5.0,   // rich voicings
   syro:      6.0,   // highest — complex clusters OK
-  ambient:   4.0,   // moderate — clarity matters
+  ambient:   4.0,   // moderate — clarity matters,
+  plantasia: 4.0,
 };
 
 /**
@@ -39,7 +40,8 @@ const SATURATION_SENSITIVITY: Record<Mood, number> = {
   flim:      0.30,  // moderate
   xtal:      0.25,  // slow
   syro:      0.20,  // slowest — tolerates complexity
-  ambient:   0.40,  // moderate
+  ambient:   0.40,  // moderate,
+  plantasia: 0.40,
 };
 
 /**

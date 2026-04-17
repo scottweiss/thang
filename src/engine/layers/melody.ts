@@ -149,7 +149,7 @@ export class MelodyLayer extends CachingLayer {
       return false;
     }
 
-    const maxTicks = { downtempo: 16, lofi: 14, trance: 12, avril: 18, xtal: 20, syro: 8, blockhead: 16, flim: 18, disco: 12 }[state.mood] ?? 14;
+    const maxTicks = { downtempo: 16, lofi: 14, trance: 12, avril: 18, xtal: 20, syro: 8, blockhead: 16, flim: 18, disco: 12, plantasia: 18 }[state.mood] ?? 14;
     if (this.ticksSinceLastGeneration(state) >= maxTicks) return true;
 
     return false;
@@ -208,9 +208,14 @@ export class MelodyLayer extends CachingLayer {
     const gain = 0.30 * (0.4 + density * 0.6) * (0.9 + tension * 0.15);
 
     // Build melodic phrase
-    let elements = mood === 'ambient'
-      ? this.buildAmbientPhrase(state, density)
-      : this.buildStructuredPhrase(state, density);
+    let elements: string[];
+    if (mood === 'plantasia') {
+      elements = this.buildMotivicPhrase(state, density);
+    } else if (mood === 'ambient') {
+      elements = this.buildAmbientPhrase(state, density);
+    } else {
+      elements = this.buildStructuredPhrase(state, density);
+    }
 
     // Blue note inflections for ambient/xtal (structured phrases handle this internally)
     if (mood === 'ambient' || mood === 'xtal') {
@@ -1010,6 +1015,70 @@ export class MelodyLayer extends CachingLayer {
     return elements;
   }
 
+  /**
+   * Motivic phrase — builds a short 2-4 note cell from the pentatonic scale
+   * and repeats it across 16 sixteenth-note steps with AABA-style variation.
+   * Favors long rests between cells so the tune breathes. Used by Plantasia
+   * to evoke the album's childlike, singable Moog melodies.
+   */
+  private buildMotivicPhrase(state: GenerativeState, density: number): string[] {
+    const penta = getPentatonicSubset(state.scale);
+    // Anchor motif to the current chord's tones that also live in the pentatonic
+    const chordNames = new Set(state.currentChord.notes.map(n => n.replace(/\d+$/, '')));
+    const anchors = penta.filter(n => chordNames.has(n));
+    const safeAnchors = anchors.length > 0 ? anchors : penta.slice(0, 3);
+
+    // Cell size: 2-3 notes, stepwise within the pentatonic (never leaps > P5)
+    const cellSize = 2 + Math.floor(Math.random() * 2);
+    const buildCell = (baseIdx: number, offset: number = 0): string[] => {
+      const cell: string[] = [];
+      let idx = Math.max(0, Math.min(penta.length - 1, baseIdx + offset));
+      for (let i = 0; i < cellSize; i++) {
+        const dir = Math.random() < 0.5 ? 1 : -1;
+        idx = Math.max(0, Math.min(penta.length - 1, idx + (i === 0 ? 0 : dir)));
+        cell.push(`${penta[idx]}${4}`);
+      }
+      return cell;
+    };
+
+    // Pick an anchor pentatonic index for the A cell
+    const anchorNote = safeAnchors[Math.floor(Math.random() * safeAnchors.length)];
+    const anchorIdx = Math.max(0, penta.indexOf(anchorNote));
+    const cellA = buildCell(anchorIdx);
+    // B cell: shifted a third higher for contrast (the 'bridge' of AABA)
+    const cellB = buildCell(anchorIdx, 2);
+
+    // Section-driven density: intro 1 statement, build 2, peak 3, breakdown/groove 2.
+    // Place statements on strong beats (1, 5, 9, 13 in sixteenth notation).
+    const statementCount = {
+      intro: 1, build: 2, peak: 3, breakdown: 1, groove: 2,
+    }[state.section] ?? 2;
+
+    const elements: string[] = Array(16).fill('~');
+    // AABA slots — statements land on sixteenth-positions 0, 4, 8, 12 (beats 1-4)
+    const slots = [0, 4, 8, 12];
+    const cells = [cellA, cellA, cellB, cellA]; // AABA
+    // Trim to statementCount, always prefer downbeats (slot 0, then 8, then 4, then 12)
+    const preferredOrder = [0, 2, 1, 3];
+    const chosenSlots = preferredOrder.slice(0, statementCount).sort((a, b) => a - b);
+
+    for (const slotIdx of chosenSlots) {
+      const start = slots[slotIdx];
+      const cell = cells[slotIdx];
+      for (let i = 0; i < cell.length && start + i < 16; i++) {
+        // Gate by density — at very low density sometimes skip a note within the cell
+        if (density < 0.2 && i > 0 && Math.random() > 0.7) continue;
+        elements[start + i] = cell[i];
+      }
+    }
+
+    // Guarantee at least one note
+    if (!elements.some(e => e !== '~')) {
+      elements[0] = `${safeAnchors[0]}4`;
+    }
+    return elements;
+  }
+
   // Structured phrase with contour, motifs, and chord-tone anchoring
   private buildStructuredPhrase(state: GenerativeState, density: number): string[] {
     const mood = state.mood;
@@ -1206,6 +1275,7 @@ export class MelodyLayer extends CachingLayer {
     const effectiveDensity = density * sectionDensity * inverseMult * gestureDMult;
     const noteProbability = {
       ambient: effectiveDensity * 0.3,
+      plantasia: effectiveDensity * 0.3,
       downtempo: effectiveDensity * 0.3,
       lofi: effectiveDensity * 0.4,
       trance: effectiveDensity * 0.5,
@@ -1220,6 +1290,7 @@ export class MelodyLayer extends CachingLayer {
     // Breathiness: gentle moods get more space between phrases
     const breathiness = {
       ambient: 0.8, downtempo: 0.5, lofi: 0.5,
+      plantasia: 0.8,
       trance: 0.2, avril: 0.7, xtal: 0.8,
       syro: 0.15, blockhead: 0.4, flim: 0.7, disco: 0.25,
     }[mood];

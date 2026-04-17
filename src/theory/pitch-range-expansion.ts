@@ -24,7 +24,8 @@ const BASE_RANGE: Record<Mood, number> = {
   flim:      1.0,  // narrow
   xtal:      0.8,  // very narrow — delicate
   syro:      2.0,  // wide — already expansive
-  ambient:   1.0,  // narrow — spacious within limits
+  ambient:   1.0,  // narrow — spacious within limits,
+  plantasia: 1.0,
 };
 
 /**
@@ -40,7 +41,8 @@ const EXPANSION_FACTOR: Record<Mood, number> = {
   flim:      1.8,  // significant
   xtal:      2.5,  // dramatic — from tiny to vast
   syro:      0.5,  // minimal — already wide
-  ambient:   2.0,  // dramatic
+  ambient:   2.0,  // dramatic,
+  plantasia: 2.0,
 };
 
 /**

@@ -41,6 +41,7 @@ type ArpPattern = 'up' | 'down' | 'updown' | 'broken';
 // Mood-specific velocity accent patterns
 const MOOD_VELOCITY: Record<Mood, VelocityPattern> = {
   ambient: 'flat',
+  plantasia: 'flat',
   downtempo: 'accent14',
   lofi: 'accent1',
   trance: 'accent14',
@@ -103,7 +104,7 @@ export class ArpLayer extends CachingLayer {
       return false;
     }
 
-    const maxTicks = { downtempo: 16, lofi: 14, trance: 12, avril: 18, xtal: 20, syro: 6, blockhead: 16, flim: 18, disco: 14 }[state.mood] ?? 14;
+    const maxTicks = { downtempo: 16, lofi: 14, trance: 12, avril: 18, xtal: 20, syro: 6, blockhead: 16, flim: 18, disco: 14, plantasia: 20 }[state.mood] ?? 14;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -607,6 +608,31 @@ export class ArpLayer extends CachingLayer {
           .delay(0.15)
           .delaytime(0.125)
           .delayfeedback(0.15)
+          .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
+      }
+
+      case 'plantasia': {
+        // Gentle warm triangle-like arp — only in peak, sparse, pentatonic.
+        // Soft attacks, short release, a playful gesture.
+        const notes = this.spreadWithDynamics(baseNotes, Math.max(3, adjLow), Math.min(5, adjHigh), state);
+        const sparsePattern = this.pickStyle(mood, section, counterDir);
+        const fill = this.pickFill16(density * sectionMult * 0.6); // sparser than default
+        let steps = this.applyDisplacement(this.buildFromFill(notes, sparsePattern, 16, fill), state);
+        steps = this.clampForSoundfont(steps);
+        const plantasiaGain = 0.10 * (0.5 + density * 0.5);
+        const velGain = this.getVelocityGain(plantasiaGain, 16, mood, section, progress, steps);
+        return `note("${steps.join(' ')}")
+          .sound("triangle")
+          .attack(0.02)
+          .decay(0.2)
+          .sustain(0.3)
+          .release(0.35)
+          .slow(2)
+          .gain("${velGain}")
+          .lpf(${(1800 + brightness * 1200).toFixed(0)})
+          .pan(sine.range(0.45, 0.55).slow(11))
+          .room(${(room * 0.4).toFixed(2)})
+          .roomsize(1.1)
           .orbit(${this.orbit})${phaseLate > 0.001 ? `.late(${phaseLate.toFixed(4)})` : ''}`;
       }
     }

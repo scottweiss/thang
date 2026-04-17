@@ -33,7 +33,8 @@ const OSTINATO_TENDENCY: Record<Mood, number> = {
   flim:      0.18,  // organic repetition
   avril:     0.12,  // songwriter — verse riffs
   xtal:      0.10,  // crystalline loops
-  ambient:   0.08,  // minimal — evolving over static
+  ambient:   0.08,  // minimal — evolving over static,
+  plantasia: 0.08,
 };
 
 /** Section appropriateness */
@@ -105,7 +106,8 @@ export function selectOstinatoType(mood: Mood, section: Section, tick: number): 
     flim:      [2, 2, 3, 1],  // pendulum
     avril:     [1, 1, 1, 4],  // static riffs
     xtal:      [2, 1, 3, 2],  // pendulum shimmer
-    ambient:   [1, 1, 2, 4],  // static drones
+    ambient:   [1, 1, 2, 4],  // static drones,
+    plantasia: [1, 1, 2, 4],
   };
 
   const w = weights[mood];
@@ -138,7 +140,7 @@ export function shouldApplyOstinato(
 export function ostinatoLength(mood: Mood): number {
   const lengths: Record<Mood, number> = {
     trance: 4, disco: 4, blockhead: 4, syro: 3,
-    lofi: 4, downtempo: 3, flim: 3, avril: 4, xtal: 3, ambient: 2,
+    lofi: 4, downtempo: 3, flim: 3, avril: 4, xtal: 3, ambient: 2, plantasia: 4,
   };
   return lengths[mood];
 }

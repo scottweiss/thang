@@ -30,7 +30,8 @@ export interface EmotionalLandmark {
 
 /** How much each mood values emotional recall (0-1) */
 const RECALL_AFFINITY: Record<Mood, number> = {
-  ambient:   0.45,   // dreamlike recall, déjà vu
+  ambient:   0.45,   // dreamlike recall, déjà vu,
+  plantasia: 0.45,
   xtal:      0.50,   // nostalgic — loves callbacks
   avril:     0.55,   // singer-songwriter — narrative arcs
   downtempo: 0.40,   // moderate narrative

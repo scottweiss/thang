@@ -24,7 +24,8 @@ const COLORING_INTENSITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.20,  // low — functions blurred
-  ambient:   0.30,  // moderate — gentle coloring
+  ambient:   0.30,  // moderate — gentle coloring,
+  plantasia: 0.30,
 };
 
 type HarmonicFunction = 'tonic' | 'subdominant' | 'dominant' | 'other';

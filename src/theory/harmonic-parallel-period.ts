@@ -10,6 +10,7 @@ import type { Mood, Section } from '../types';
 
 const periodStrength: Record<Mood, number> = {
   ambient: 0.20,
+  plantasia: 0.20,
   downtempo: 0.35,
   lofi: 0.30,
   trance: 0.45,

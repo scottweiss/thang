@@ -27,7 +27,8 @@ const COUPLING_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // organic variety
   xtal:      0.20,  // floating, independent
   syro:      0.15,  // deliberate contrast
-  ambient:   0.10,  // maximum textural variety
+  ambient:   0.10,  // maximum textural variety,
+  plantasia: 0.10,
 };
 
 /**

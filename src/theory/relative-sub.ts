@@ -34,7 +34,8 @@ const REL_SUB_PROB: Record<Mood, number> = {
   disco:     0.06,   // funk — mostly stays on degree
   syro:      0.08,   // IDM — some surprise
   trance:    0.03,   // driving — prefer strong harmony
-  ambient:   0.05,   // subtle — very occasional color
+  ambient:   0.05,   // subtle — very occasional color,
+  plantasia: 0.05,
 };
 
 /** Section multiplier */

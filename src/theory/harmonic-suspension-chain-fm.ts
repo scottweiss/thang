@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const chainDepth: Record<Mood, number> = {
   ambient: 0.50,
+  plantasia: 0.50,
   downtempo: 0.35,
   lofi: 0.30,
   trance: 0.40,

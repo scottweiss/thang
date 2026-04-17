@@ -36,7 +36,8 @@ const MOOD_CADENCES: Record<Mood, number[][]> = {
   disco:     [[1, 4, 0], [4, 0]],                   // ii-V-I, V-I
   syro:      [[4, 0], [6, 4, 0]],                   // V-I, vii-V-I
   trance:    [[4, 0]],                               // V-I (short, impactful)
-  ambient:   [[3, 0]],                               // IV-I (plagal only)
+  ambient:   [[3, 0]],                               // IV-I (plagal only),
+  plantasia: [[3, 0]],
 };
 
 /** Section progress threshold for triggering cadential planning */

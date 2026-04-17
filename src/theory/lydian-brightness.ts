@@ -23,7 +23,8 @@ const LYDIAN_PROBABILITY: Record<Mood, number> = {
   flim:      0.25,  // moderate — Aphex floaty
   xtal:      0.35,  // strong — ambient luminosity
   syro:      0.18,  // moderate
-  ambient:   0.40,  // strongest — floating brightness
+  ambient:   0.40,  // strongest — floating brightness,
+  plantasia: 0.40,
 };
 
 /**

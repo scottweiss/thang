@@ -128,7 +128,8 @@ const MOOD_FEEL: Record<Mood, Feel> = {
   syro:      'straight',   // precise, complex
   trance:    'straight',   // driving, on-grid
   disco:     'straight',   // funky but straight 16ths
-  ambient:   'halftime',   // very spacious
+  ambient:   'halftime',   // very spacious,
+  plantasia: 'halftime',
 };
 
 const MOOD_FEEL_INTENSITY: Record<Mood, number> = {
@@ -141,7 +142,8 @@ const MOOD_FEEL_INTENSITY: Record<Mood, number> = {
   syro:      0.1,    // minimal
   trance:    0.0,    // none
   disco:     0.1,    // minimal
-  ambient:   0.5,    // strong halftime
+  ambient:   0.5,    // strong halftime,
+  plantasia: 0.5,
 };
 
 const SECTION_FEEL_MULT: Record<Section, number> = {

@@ -24,7 +24,8 @@ const CONTRARY_STRENGTH: Record<Mood, number> = {
   flim:      0.35,   // delicate — some independence
   disco:     0.35,   // funk — bass has its own groove
   xtal:      0.30,   // dreamy — subtle
-  ambient:   0.20,   // static — bass barely moves
+  ambient:   0.20,   // static — bass barely moves,
+  plantasia: 0.20,
   syro:      0.15,   // IDM — bass follows its own logic
   trance:    0.10,   // driving — bass and melody align for power
 };

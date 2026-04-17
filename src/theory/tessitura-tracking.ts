@@ -24,7 +24,8 @@ const CORRECTION_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // strong — crystalline clarity
   syro:      0.30,  // moderate
-  ambient:   0.35,  // moderate — wide register OK
+  ambient:   0.35,  // moderate — wide register OK,
+  plantasia: 0.35,
 };
 
 /**

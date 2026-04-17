@@ -21,7 +21,8 @@ const BREATHING_DEPTH: Record<Mood, number> = {
   flim:      0.45,  // high
   xtal:      0.50,  // high — atmospheric waves
   syro:      0.20,  // low — mechanical
-  ambient:   0.60,  // highest — oceanic breathing
+  ambient:   0.60,  // highest — oceanic breathing,
+  plantasia: 0.60,
 };
 
 /**

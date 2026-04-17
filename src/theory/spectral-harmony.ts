@@ -47,7 +47,8 @@ const OVERTONE_SERIES: { harmonic: number; semitones: number; cents: number }[] 
 
 /** How much each mood uses spectral harmony (0-1) */
 const SPECTRAL_TENDENCY: Record<Mood, number> = {
-  ambient:   0.55,  // ethereal, overtone-rich
+  ambient:   0.55,  // ethereal, overtone-rich,
+  plantasia: 0.55,
   xtal:      0.50,  // crystalline, bell-like
   flim:      0.35,  // organic shimmer
   downtempo: 0.30,  // warm depth

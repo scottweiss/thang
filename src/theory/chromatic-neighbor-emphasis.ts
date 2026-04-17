@@ -22,7 +22,8 @@ const CHROMATIC_EMPHASIS: Record<Mood, number> = {
   flim:      0.50,  // high
   xtal:      0.45,  // moderate
   syro:      0.65,  // highest — loves chromaticism
-  ambient:   0.25,  // low — smooth
+  ambient:   0.25,  // low — smooth,
+  plantasia: 0.25,
 };
 
 /**

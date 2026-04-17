@@ -21,7 +21,8 @@ const INVERSION_STRENGTH: Record<Mood, number> = {
   flim:      0.55,  // high — delicate hocket
   xtal:      0.50,  // moderate
   syro:      0.40,  // moderate
-  ambient:   0.35,  // moderate — both sparse anyway
+  ambient:   0.35,  // moderate — both sparse anyway,
+  plantasia: 0.35,
 };
 
 /**

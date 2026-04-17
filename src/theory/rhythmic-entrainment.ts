@@ -24,7 +24,8 @@ const ENTRAINMENT_RATE: Record<Mood, number> = {
   flim:      0.25,  // slow — independent layers
   xtal:      0.20,  // slowest — floating
   syro:      0.15,  // slowest — independent
-  ambient:   0.10,  // minimal — free floating
+  ambient:   0.10,  // minimal — free floating,
+  plantasia: 0.10,
 };
 
 /**

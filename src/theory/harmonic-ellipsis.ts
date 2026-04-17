@@ -25,7 +25,8 @@ const ELLIPSIS_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // sparse textures
   xtal:      0.40,  // ambient openness
   syro:      0.25,  // moderate
-  ambient:   0.50,  // maximum sparseness
+  ambient:   0.50,  // maximum sparseness,
+  plantasia: 0.50,
 };
 
 /**

@@ -12,6 +12,7 @@ export type ReharmType =
 const WHITELIST: Record<Mood, ReharmType[]> = {
   lofi:      ['secondaryDominant', 'tritoneSub'],
   ambient:   ['neoRiemannian'],
+  plantasia: ['neoRiemannian'],
   trance:    ['modalInterchange'],
   syro:      ['negativeHarmony', 'chromaticApproach'],
   avril:     ['relativeSub'],

@@ -22,7 +22,8 @@ const STABILITY_PREFERENCE: Record<Mood, number> = {
   flim:      0.25,  // low — IDM instability
   xtal:      0.20,  // low — floating
   syro:      0.15,  // lowest — chaos welcome
-  ambient:   0.10,  // lowest — no groove
+  ambient:   0.10,  // lowest — no groove,
+  plantasia: 0.10,
 };
 
 /**

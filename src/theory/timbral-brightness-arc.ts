@@ -23,7 +23,8 @@ const ARC_DEPTH: Record<Mood, number> = {
   flim:      0.55,  // high — delicate shifts
   xtal:      0.50,  // high — glassy evolution
   syro:      0.30,  // low — brightness is chaotic
-  ambient:   0.65,  // highest — slow bloom
+  ambient:   0.65,  // highest — slow bloom,
+  plantasia: 0.65,
 };
 
 /**

@@ -23,7 +23,8 @@ const GROOVE_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // weak — delicate
   xtal:      0.25,  // weak — ethereal
   syro:      0.20,  // weakest — free
-  ambient:   0.15,  // weakest — floating
+  ambient:   0.15,  // weakest — floating,
+  plantasia: 0.15,
 };
 
 /**
@@ -40,7 +41,8 @@ const GROOVE_TEMPLATES: Record<Mood, number[]> = {
   flim:      [1.0, 0.4, 0.5, 0.4, 0.6, 0.5, 0.4, 0.5, 0.7, 0.4, 0.5, 0.4, 0.6, 0.5, 0.4, 0.5], // delicate
   xtal:      [1.0, 0.5, 0.5, 0.5, 0.6, 0.5, 0.5, 0.5, 0.7, 0.5, 0.5, 0.5, 0.6, 0.5, 0.5, 0.5], // even
   syro:      [1.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.6, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5], // flat
-  ambient:   [1.0, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.7, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6], // very flat
+  ambient:   [1.0, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.7, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6], // very flat,
+  plantasia: [1.0, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.7, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6, 0.6],
 };
 
 /**

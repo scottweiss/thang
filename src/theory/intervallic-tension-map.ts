@@ -107,6 +107,7 @@ export function intervalSensitivity(mood: Mood): number {
     xtal:      0.15,
     syro:      0.10,
     ambient:   0.08,
+    plantasia: 0.08,
   };
   return SENSITIVITY[mood];
 }

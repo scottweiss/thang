@@ -19,7 +19,8 @@ import type { Mood, Section } from '../types';
 
 /** How strongly each mood favors elision (0 = always breathe, 1 = always elide) */
 const ELISION_TENDENCY: Record<Mood, number> = {
-  ambient:   0.70,   // flowing, continuous
+  ambient:   0.70,   // flowing, continuous,
+  plantasia: 0.70,
   xtal:      0.60,   // dreamy continuity
   downtempo: 0.50,   // moderate flow
   lofi:      0.45,   // jazz phrasing, some elision
@@ -42,7 +43,8 @@ const SECTION_ELISION_MULT: Record<Section, number> = {
 
 /** Overlap amount in slots (how many beats phrases share) */
 const ELISION_OVERLAP: Record<Mood, number> = {
-  ambient:   2,    // generous overlap
+  ambient:   2,    // generous overlap,
+  plantasia: 2,
   xtal:      2,
   downtempo: 1,
   lofi:      1,

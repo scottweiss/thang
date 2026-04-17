@@ -28,7 +28,8 @@ const BREATH_SYNC_DEPTH: Record<Mood, number> = {
   flim:      0.20,   // organic
   syro:      0.15,   // IDM — less conventional timing
   xtal:      0.15,   // dreamy — doesn't need strong beats
-  ambient:   0.05,   // no strong metric structure
+  ambient:   0.05,   // no strong metric structure,
+  plantasia: 0.05,
   trance:    0.30,   // four-on-floor needs the pump
 };
 

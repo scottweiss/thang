@@ -24,7 +24,8 @@ const SPACING_STRICTNESS: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // moderate
   syro:      0.20,  // low — anything goes
-  ambient:   0.50,  // moderate — open spacing preferred
+  ambient:   0.50,  // moderate — open spacing preferred,
+  plantasia: 0.50,
 };
 
 /**

@@ -24,7 +24,8 @@ const BEATING_TOLERANCE: Record<Mood, number> = {
   flim:      0.45,  // moderate — delicate beating
   xtal:      0.20,  // low — crystalline clarity
   syro:      0.50,  // high — beating is texture
-  ambient:   0.60,  // highest — beating = warmth
+  ambient:   0.60,  // highest — beating = warmth,
+  plantasia: 0.60,
 };
 
 /**

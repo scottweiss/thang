@@ -35,7 +35,8 @@ const REGISTRAL_SENSITIVITY: Record<Mood, number> = {
   flim:      0.20,  // organic register
   xtal:      0.15,  // dreamy — register is already wide
   syro:      0.10,  // IDM — register is chaotic anyway
-  ambient:   0.05,  // barely any registral constraint
+  ambient:   0.05,  // barely any registral constraint,
+  plantasia: 0.05,
 };
 
 /**

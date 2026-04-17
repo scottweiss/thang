@@ -23,7 +23,8 @@ const NORMALIZATION_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.30,  // moderate — ambient lets natural curves exist
   syro:      0.25,  // weak — IDM embraces imbalance
-  ambient:   0.20,  // weak — natural frequency rolloff is part of the sound
+  ambient:   0.20,  // weak — natural frequency rolloff is part of the sound,
+  plantasia: 0.20,
 };
 
 /**

@@ -25,7 +25,8 @@ const FUGATO_INTENSITY: Record<Mood, number> = {
   flim:      0.45,  // organic density
   xtal:      0.50,  // ambient layering
   syro:      0.40,  // IDM complexity
-  ambient:   0.10,  // minimal
+  ambient:   0.10,  // minimal,
+  plantasia: 0.10,
 };
 
 /**

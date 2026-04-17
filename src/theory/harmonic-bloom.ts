@@ -25,7 +25,8 @@ const BLOOM_RATE: Record<Mood, number> = {
   flim:      0.40,  // organic bloom
   xtal:      0.50,  // maximum ethereal bloom
   syro:      0.12,  // controlled
-  ambient:   0.55,  // spacious bloom
+  ambient:   0.55,  // spacious bloom,
+  plantasia: 0.55,
 };
 
 /**

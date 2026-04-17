@@ -25,7 +25,8 @@ const MAX_USEFUL_COMPLEXITY: Record<Mood, number> = {
   flim:      5.5,   // moderate
   xtal:      5.0,   // moderate — clarity over density
   syro:      7.0,   // highest — IDM loves complex harmony
-  ambient:   4.0,   // simple — open voicings
+  ambient:   4.0,   // simple — open voicings,
+  plantasia: 4.0,
 };
 
 /**
@@ -41,7 +42,8 @@ const SIMPLIFICATION_IMPACT: Record<Mood, number> = {
   flim:      0.50,  // strong
   xtal:      0.45,  // moderate
   syro:      0.30,  // weaker — IDM prefers complexity
-  ambient:   0.65,  // very strong — simplicity is powerful
+  ambient:   0.65,  // very strong — simplicity is powerful,
+  plantasia: 0.65,
 };
 
 /**

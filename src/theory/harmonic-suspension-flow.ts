@@ -24,7 +24,8 @@ const CHAIN_TENDENCY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.50,  // strong — delicate suspensions
   syro:      0.25,  // weak — independent voices
-  ambient:   0.60,  // strongest — flowing suspensions
+  ambient:   0.60,  // strongest — flowing suspensions,
+  plantasia: 0.60,
 };
 
 /**

@@ -24,7 +24,8 @@ const NOISE_INTENSITY: Record<Mood, number> = {
   flim:      0.35,  // high — organic texture
   xtal:      0.30,  // moderate — ambient shimmer
   syro:      0.25,  // moderate — controlled chaos
-  ambient:   0.20,  // moderate — gentle movement
+  ambient:   0.20,  // moderate — gentle movement,
+  plantasia: 0.20,
 };
 
 /**

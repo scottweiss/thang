@@ -40,7 +40,8 @@ const MODULATION_TENDENCY: Record<Mood, number> = {
   xtal:      0.03,  // mostly static (was 0.05)
   disco:     0.0,   // groove-locked — no metric modulation (was 0.15)
   trance:    0.0,   // groove-locked — no metric modulation (was 0.12)
-  ambient:   0.0,   // no metric modulation (was 0.03)
+  ambient:   0.0,   // no metric modulation (was 0.03),
+  plantasia: 0.0,
 };
 
 /** Which transitions favor acceleration vs deceleration */

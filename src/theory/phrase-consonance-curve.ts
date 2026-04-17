@@ -24,7 +24,8 @@ const CONSONANCE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.70,  // organic breathing
   xtal:      0.80,  // crystalline intonation
   syro:      0.55,  // playful
-  ambient:   0.75,  // gentle gravity
+  ambient:   0.75,  // gentle gravity,
+  plantasia: 0.75,
 };
 
 const NOTE_PC: Record<string, number> = {

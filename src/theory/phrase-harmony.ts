@@ -35,6 +35,7 @@ export function currentPhraseRole(tick: number, mood: Mood): PhraseRole {
 export function phraseLength(mood: Mood): number {
   const lengths: Record<Mood, number> = {
     ambient: 8,
+    plantasia: 8,
     downtempo: 6,
     lofi: 6,
     trance: 4,
@@ -135,6 +136,7 @@ function moodPhraseStrength(mood: Mood): number {
     avril: 0.45,
     xtal: 0.3,
     ambient: 0.2,
+    plantasia: 0.2,
   };
   return strengths[mood];
 }

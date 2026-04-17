@@ -24,7 +24,8 @@ const MOMENTUM_INTENSITY: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.25,  // weak — ambient float
   syro:      0.30,  // moderate
-  ambient:   0.15,  // weakest — static energy
+  ambient:   0.15,  // weakest — static energy,
+  plantasia: 0.15,
 };
 
 /**

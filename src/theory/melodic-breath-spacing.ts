@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const moodBreathDepth: Record<Mood, number> = {
   ambient: 0.60,
+  plantasia: 0.60,
   downtempo: 0.45,
   lofi: 0.50,
   trance: 0.20,

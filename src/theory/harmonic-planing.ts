@@ -26,7 +26,8 @@ import type { Mood, Section } from '../types';
  * Per-mood probability of using planing instead of voice leading.
  */
 const MOOD_PLANING_PROBABILITY: Record<Mood, number> = {
-  ambient: 0.4,     // impressionist floating
+  ambient: 0.4,     // impressionist floating,
+  plantasia: 0.4,
   downtempo: 0.15,  // occasional color
   lofi: 0.1,        // subtle
   trance: 0.05,     // mostly functional harmony

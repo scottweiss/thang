@@ -24,7 +24,8 @@ const PAUSE_DEPTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.45,  // moderate
   syro:      0.25,  // low
-  ambient:   0.60,  // highest — spacious pauses
+  ambient:   0.60,  // highest — spacious pauses,
+  plantasia: 0.60,
 };
 
 /**

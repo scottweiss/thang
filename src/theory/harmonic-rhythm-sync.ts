@@ -23,7 +23,8 @@ const SYNC_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // weak — off-grid OK
   xtal:      0.25,  // weak — floating changes
   syro:      0.15,  // weakest — anywhere goes
-  ambient:   0.20,  // weak — drifting changes
+  ambient:   0.20,  // weak — drifting changes,
+  plantasia: 0.20,
 };
 
 /**

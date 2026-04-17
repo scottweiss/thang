@@ -35,7 +35,8 @@ const SECTION_TEMPO: Record<Section, TempoTrajectoryConfig> = {
  * Ambient/dreamy moods have more tempo freedom; driving moods stay tighter.
  */
 const MOOD_TEMPO_SENSITIVITY: Record<Mood, number> = {
-  ambient:   1.5,   // most fluid
+  ambient:   1.5,   // most fluid,
+  plantasia: 1.5,
   avril:     1.3,
   xtal:      1.2,
   flim:      1.1,

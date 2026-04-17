@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const cambiataStrength: Record<Mood, number> = {
   ambient: 0.15,
+  plantasia: 0.15,
   downtempo: 0.25,
   lofi: 0.30,
   trance: 0.20,

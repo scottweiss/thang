@@ -22,7 +22,8 @@ const DRIFT_TOLERANCE: Record<Mood, number> = {
   flim:      0.60,  // high — free exploration
   xtal:      0.65,  // high — atmospheric drift OK
   syro:      0.70,  // highest — maximum freedom
-  ambient:   0.60,  // high — floating
+  ambient:   0.60,  // high — floating,
+  plantasia: 0.60,
 };
 
 /**

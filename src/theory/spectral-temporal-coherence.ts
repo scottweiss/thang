@@ -24,7 +24,8 @@ const COHERENCE_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.25,  // loose — ambient texture
   syro:      0.20,  // IDM — incoherence OK
-  ambient:   0.15,  // minimal — free floating
+  ambient:   0.15,  // minimal — free floating,
+  plantasia: 0.15,
 };
 
 /**

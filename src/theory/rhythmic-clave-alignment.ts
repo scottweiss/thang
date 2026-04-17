@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const claveStrength: Record<Mood, number> = {
   ambient: 0.05,
+  plantasia: 0.05,
   downtempo: 0.30,
   lofi: 0.35,
   trance: 0.20,

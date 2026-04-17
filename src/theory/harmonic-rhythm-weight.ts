@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodWeight: Record<Mood, number> = {
   ambient: 0.15,
+  plantasia: 0.15,
   downtempo: 0.35,
   lofi: 0.45,
   trance: 0.65,

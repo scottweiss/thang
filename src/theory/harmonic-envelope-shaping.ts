@@ -23,7 +23,8 @@ const SHAPING_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.20,  // weak — IDM chords are unpredictable
-  ambient:   0.60,  // strong — sustained resolution pads
+  ambient:   0.60,  // strong — sustained resolution pads,
+  plantasia: 0.60,
 };
 
 /**

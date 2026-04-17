@@ -114,7 +114,8 @@ const DROP_PROBABILITY: Record<Mood, number> = {
   disco:     0.25,   // funky chords
   syro:      0.20,   // occasional jazz reference
   trance:    0.10,   // mostly stacked pads
-  ambient:   0.15,   // wide but sparse
+  ambient:   0.15,   // wide but sparse,
+  plantasia: 0.15,
 };
 
 /** Section multiplier for drop voicing probability */

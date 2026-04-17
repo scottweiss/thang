@@ -23,7 +23,8 @@ const PARALLAX_DEPTH: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.55,  // strong — ambient depth
   syro:      0.30,  // moderate
-  ambient:   0.60,  // strongest — deep parallax
+  ambient:   0.60,  // strongest — deep parallax,
+  plantasia: 0.60,
 };
 
 /**

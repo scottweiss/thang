@@ -65,7 +65,8 @@ const TRANSITION_SPEED: Record<Mood, number> = {
   flim:      0.25,
   xtal:      0.20,  // slow, dreamy transitions
   syro:      0.45,
-  ambient:   0.15,  // very slow, gradual
+  ambient:   0.15,  // very slow, gradual,
+  plantasia: 0.15,
 };
 
 /**

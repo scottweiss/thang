@@ -446,6 +446,23 @@ export class DroneLayer implements Layer {
           .roomsize(1)
           .orbit(${this.orbit})`;
       }
+
+      case 'plantasia':
+        // Warm sine bass with octave doubling — clean, round, Moog-like.
+        // No walking, no punch — just a steady harmonic floor.
+        return `note("${root}2")
+          .sound("sine")
+          .attack(0.4)
+          .decay(1.5)
+          .sustain(0.5)
+          .release(1.8)
+          .slow(4)
+          .gain(${(gain * 0.85).toFixed(3)})
+          .lpf(${(250 + brightness * 300).toFixed(0)})
+          .pan(0.5)
+          .room(${(room * 0.35).toFixed(2)})
+          .roomsize(1.4)
+          .orbit(${this.orbit})`;
     }
   }
 

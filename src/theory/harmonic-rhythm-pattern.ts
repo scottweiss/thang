@@ -41,7 +41,8 @@ const PATTERN_TENDENCY: Record<Mood, number> = {
   disco:     0.35,   // funk — rhythmic but steady
   syro:      0.55,   // IDM — irregular timing
   trance:    0.15,   // EDM — uniform for driving pulse
-  ambient:   0.10,   // drone — minimal pattern
+  ambient:   0.10,   // drone — minimal pattern,
+  plantasia: 0.10,
 };
 
 /**

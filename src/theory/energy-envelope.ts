@@ -29,7 +29,8 @@ const ENERGY_CEILING: Record<Mood, number> = {
   flim:      0.65,  // moderate
   xtal:      0.50,  // restrained
   syro:      0.85,  // high
-  ambient:   0.40,  // low energy
+  ambient:   0.40,  // low energy,
+  plantasia: 0.40,
 };
 
 /**

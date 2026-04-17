@@ -77,7 +77,8 @@ const LAYER_PAN_OFFSET: Record<string, number> = {
 
 /** How much the per-layer offsets are applied per mood (0 = mono, 1 = full spread) */
 const PAN_SPREAD: Record<Mood, number> = {
-  ambient:   0.80,   // wide — space is the point
+  ambient:   0.80,   // wide — space is the point,
+  plantasia: 0.80,
   xtal:      0.75,   // dreamy width
   flim:      0.65,   // delicate spatial detail
   downtempo: 0.60,   // smooth, wide

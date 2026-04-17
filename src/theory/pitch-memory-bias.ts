@@ -24,7 +24,8 @@ const MEMORY_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // moderate — Aphex varies
   xtal:      0.25,  // weak — ambient explores
   syro:      0.20,  // weakest — IDM avoids repetition
-  ambient:   0.30,  // moderate — meditative repetition
+  ambient:   0.30,  // moderate — meditative repetition,
+  plantasia: 0.30,
 };
 
 /**

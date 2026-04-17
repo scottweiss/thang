@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const goldenStrength: Record<Mood, number> = {
   ambient: 0.25,
+  plantasia: 0.25,
   downtempo: 0.30,
   lofi: 0.25,
   trance: 0.35,

@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodThreshold: Record<Mood, number> = {
   ambient: 3.0,
+  plantasia: 3.0,
   downtempo: 4.0,
   lofi: 4.5,
   trance: 5.5,

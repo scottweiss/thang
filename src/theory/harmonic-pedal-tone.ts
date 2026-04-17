@@ -25,7 +25,8 @@ const PEDAL_TENDENCY: Record<Mood, number> = {
   flim:      0.40,  // organic pedal
   xtal:      0.55,  // floating sustained bass
   syro:      0.15,  // angular, less pedal
-  ambient:   0.60,  // maximum sustain
+  ambient:   0.60,  // maximum sustain,
+  plantasia: 0.60,
 };
 
 /**
@@ -42,6 +43,7 @@ const MAX_PEDAL_LENGTH: Record<Mood, number> = {
   xtal:      5,
   syro:      2,
   ambient:   6,
+  plantasia: 6,
 };
 
 /**

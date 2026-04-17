@@ -23,7 +23,8 @@ const ANTICIPATION_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // moderate
   xtal:      0.15,  // weak — ambient floats
   syro:      0.35,  // moderate — IDM displacement
-  ambient:   0.05,  // minimal — no pulse to anticipate
+  ambient:   0.05,  // minimal — no pulse to anticipate,
+  plantasia: 0.05,
 };
 
 /**

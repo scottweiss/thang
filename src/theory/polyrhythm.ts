@@ -40,7 +40,8 @@ const MOOD_POLY: Record<Mood, PolyConfig> = {
   flim:      { probability: 0.20, groupings: [5, 3, 7] },    // Aphex-style odd groupings
   xtal:      { probability: 0.15, groupings: [5, 3] },       // dreamy — occasional 5-feel
   avril:     { probability: 0.10, groupings: [3] },           // intimate — gentle triplet
-  ambient:   { probability: 0.05, groupings: [3, 5] },       // rare — ethereal odd meter
+  ambient:   { probability: 0.05, groupings: [3, 5] },       // rare — ethereal odd meter,
+  plantasia: { probability: 0.05, groupings: [3, 5] },
 };
 
 /** Sections that favor polyrhythm */

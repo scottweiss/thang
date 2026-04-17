@@ -24,7 +24,8 @@ const DRIFT_RATE: Record<Mood, number> = {
   flim:      0.20,  // moderate — Aphex drift
   xtal:      0.35,  // strong — ambient key dissolution
   syro:      0.15,  // moderate
-  ambient:   0.40,  // strongest — tonal dissolution
+  ambient:   0.40,  // strongest — tonal dissolution,
+  plantasia: 0.40,
 };
 
 /**

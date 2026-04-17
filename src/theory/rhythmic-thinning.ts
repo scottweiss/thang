@@ -23,7 +23,8 @@ const THINNING_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // strong — delicate balance
   xtal:      0.50,  // strong — crystalline clarity
   syro:      0.20,  // weak — dense patterns OK
-  ambient:   0.60,  // strongest — sparse by nature
+  ambient:   0.60,  // strongest — sparse by nature,
+  plantasia: 0.60,
 };
 
 /**

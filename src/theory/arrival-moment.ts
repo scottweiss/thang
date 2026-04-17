@@ -99,5 +99,6 @@ const MOOD_ARRIVAL_SENSITIVITY: Record<Mood, number> = {
   flim:      0.4,    // delicate
   xtal:      0.3,    // subtle
   avril:     0.35,   // intimate moments
-  ambient:   0.15,   // very subtle — space is sacred
+  ambient:   0.15,   // very subtle — space is sacred,
+  plantasia: 0.15,
 };

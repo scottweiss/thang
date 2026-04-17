@@ -28,7 +28,8 @@ const TENDENCY_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // low-moderate — IDM ambiguity
   xtal:      0.30,  // low — atmospheric
   syro:      0.20,  // lowest — atonal tendency
-  ambient:   0.25,  // low — floating
+  ambient:   0.25,  // low — floating,
+  plantasia: 0.25,
 };
 
 /**

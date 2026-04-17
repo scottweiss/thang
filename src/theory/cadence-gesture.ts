@@ -143,6 +143,7 @@ const MOOD_CADENCE_PROBS: Record<Mood, [CadenceType, number][]> = {
   blockhead: [['step-down', 0.2], ['leap-to-tonic', 0.15], ['enclosure', 0.1]],
   downtempo: [['step-down', 0.25], ['leading-tone', 0.1]],
   ambient:   [['step-down', 0.1]],
+  plantasia: [['step-down', 0.1]],
   trance:    [['leap-to-tonic', 0.2], ['step-down', 0.1]],
   avril:     [['step-down', 0.35], ['leading-tone', 0.2], ['enclosure', 0.15]],
   xtal:      [['step-down', 0.15], ['leading-tone', 0.1]],

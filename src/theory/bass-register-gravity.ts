@@ -22,7 +22,8 @@ const GRAVITY_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // low — airy bass
   syro:      0.30,  // low — anything goes
-  ambient:   0.45,  // moderate — natural bass
+  ambient:   0.45,  // moderate — natural bass,
+  plantasia: 0.45,
 };
 
 /**

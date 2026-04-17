@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const moodSyncopation: Record<Mood, number> = {
   ambient: 0.10,
+  plantasia: 0.10,
   downtempo: 0.35,
   lofi: 0.50,
   trance: 0.15,

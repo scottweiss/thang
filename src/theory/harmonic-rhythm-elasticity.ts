@@ -24,7 +24,8 @@ const ELASTICITY_RANGE: Record<Mood, number> = {
   flim:      0.40,  // moderate — organic
   xtal:      0.35,  // moderate
   syro:      0.25,  // moderate — IDM precision but some play
-  ambient:   0.60,  // strongest — time dissolves
+  ambient:   0.60,  // strongest — time dissolves,
+  plantasia: 0.60,
 };
 
 /**

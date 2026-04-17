@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const moodArcDepth: Record<Mood, number> = {
   ambient: 0.35,
+  plantasia: 0.35,
   downtempo: 0.40,
   lofi: 0.45,
   trance: 0.25,

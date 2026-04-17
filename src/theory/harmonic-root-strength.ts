@@ -25,7 +25,8 @@ const ROOT_SENSITIVITY: Record<Mood, number> = {
   flim:      0.30,  // low — IDM ambiguity
   xtal:      0.25,  // low — airy
   syro:      0.20,  // lowest — anything goes
-  ambient:   0.30,  // low — floating harmony
+  ambient:   0.30,  // low — floating harmony,
+  plantasia: 0.30,
 };
 
 /**

@@ -24,7 +24,8 @@ const COUPLING_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.15,  // weak — mechanical
-  ambient:   0.30,  // moderate — gentle dynamics
+  ambient:   0.30,  // moderate — gentle dynamics,
+  plantasia: 0.30,
 };
 
 /**

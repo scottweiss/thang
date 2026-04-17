@@ -37,6 +37,12 @@ const LOOP_TEMPLATES: Record<Mood, LoopTemplate[]> = {
     { degrees: [0, 5, 0, 5], qualities: ['sus2', 'min', 'sus2', 'min'], weight: 2 },    // Isus-vi oscillation
     { degrees: [0, 2, 3, 1], qualities: ['sus4', 'min', 'maj', 'min'], weight: 2 },     // modal drift
   ],
+  plantasia: [
+    { degrees: [0, 4, 5, 3], qualities: ['maj', 'maj', 'min', 'maj'], weight: 3 },      // I-V-vi-IV (classic Moog pop)
+    { degrees: [0, 3, 4, 0], qualities: ['maj', 'maj', 'maj', 'maj'], weight: 2 },      // I-IV-V-I (plain cadential)
+    { degrees: [0, 2, 3, 4], qualities: ['add9', 'min', 'maj', 'maj'], weight: 2 },     // Iadd9-iii-IV-V
+    { degrees: [0, 5, 3, 4], qualities: ['maj', 'min', 'add9', 'maj'], weight: 2 },     // I-vi-IVadd9-V
+  ],
   trance: [
     { degrees: [0, 4, 5, 3], qualities: ['min', 'maj', 'maj', 'maj'], weight: 3 },      // i-V-VI-IV (anthemic minor)
     { degrees: [5, 3, 0, 4], qualities: ['maj', 'maj', 'min', 'maj'], weight: 2 },       // VI-IV-i-V
@@ -81,6 +87,7 @@ const LOOP_TEMPLATES: Record<Mood, LoopTemplate[]> = {
 /** Default bars per chord for each mood */
 const BARS_PER_CHORD: Record<Mood, number> = {
   ambient: 4,
+  plantasia: 4,
   downtempo: 2,
   lofi: 2,
   trance: 2,

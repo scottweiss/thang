@@ -25,7 +25,8 @@ const DYNAMIC_RANGE: Record<Mood, number> = {
   flim:      0.55,  // organic
   xtal:      0.65,  // wide, crystalline
   syro:      0.50,  // moderate
-  ambient:   0.70,  // maximum dynamic range
+  ambient:   0.70,  // maximum dynamic range,
+  plantasia: 0.70,
 };
 
 /**

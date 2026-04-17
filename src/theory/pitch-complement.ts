@@ -122,7 +122,8 @@ const MOOD_COMPLEMENT_STRENGTH: Record<Mood, number> = {
   syro:      0.5,    // complex textures need separation
   trance:    0.15,   // unison power is fine
   disco:     0.2,    // some separation
-  ambient:   0.1,    // blending is the point
+  ambient:   0.1,    // blending is the point,
+  plantasia: 0.1,
 };
 
 /**

@@ -28,7 +28,8 @@ const FLUCTUATION_DEPTH: Record<Mood, number> = {
   flim:      0.015,   // organic IDM (was 0.025)
   downtempo: 0.015,   // laid back feel (was 0.020)
   xtal:      0.012,   // dreamy fluctuation (was 0.018)
-  ambient:   0.010,   // organic breathing (was 0.020)
+  ambient:   0.010,   // organic breathing (was 0.020),
+  plantasia: 0.010,
   blockhead: 0.008,   // hip-hop pocket (was 0.015)
   syro:      0.006,   // tight but not mechanical (was 0.010)
   disco:     0.004,   // groove-locked (was 0.012)
@@ -41,7 +42,8 @@ const CYCLE_PERIOD: Record<Mood, number> = {
   avril:     10,    // moderate breathing
   flim:      8,     // quicker breathing
   downtempo: 14,    // very slow breathing
-  ambient:   16,    // slowest breathing
+  ambient:   16,    // slowest breathing,
+  plantasia: 16,
   xtal:      14,    // slow
   blockhead: 8,     // moderate
   disco:     6,     // quicker feel

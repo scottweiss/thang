@@ -77,7 +77,8 @@ export function shouldApplyRegisterSpread(mood: Mood): boolean {
 
 /** How strongly each mood responds to spread dynamics */
 const MOOD_SPREAD_DEPTH: Record<Mood, number> = {
-  ambient:   0.4,   // moderate — keep things ethereal
+  ambient:   0.4,   // moderate — keep things ethereal,
+  plantasia: 0.4,
   downtempo: 0.5,   // moderate
   lofi:      0.3,   // subtle — intimate genre
   trance:    0.7,   // strong — builds need wide spreads

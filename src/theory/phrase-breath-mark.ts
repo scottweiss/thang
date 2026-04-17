@@ -26,7 +26,8 @@ const BREATH_DEPTH: Record<Mood, number> = {
   flim:      0.25,  // organic
   xtal:      0.20,  // gentle
   syro:      0.10,  // controlled
-  ambient:   0.18,  // spacious breath
+  ambient:   0.18,  // spacious breath,
+  plantasia: 0.18,
 };
 
 /**

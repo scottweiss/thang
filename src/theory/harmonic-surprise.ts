@@ -102,7 +102,7 @@ export function surpriseBrightness(surprise: number, mood: Mood): number {
   const sensitivity: Record<Mood, number> = {
     trance: 0.45, avril: 0.40, disco: 0.35, blockhead: 0.30,
     downtempo: 0.25, lofi: 0.20, flim: 0.15, xtal: 0.10,
-    syro: 0.08, ambient: 0.05,
+    syro: 0.08, ambient: 0.05, plantasia: 0.04,
   };
   return 1.0 + surprise * sensitivity[mood] * 0.3;
 }
@@ -115,7 +115,7 @@ export function surpriseGain(surprise: number, mood: Mood): number {
   const sensitivity: Record<Mood, number> = {
     trance: 0.40, avril: 0.35, disco: 0.30, blockhead: 0.25,
     downtempo: 0.20, lofi: 0.15, flim: 0.12, xtal: 0.08,
-    syro: 0.06, ambient: 0.03,
+    syro: 0.06, ambient: 0.03, plantasia: 0.02,
   };
   return 1.0 + surprise * sensitivity[mood] * 0.15;
 }
@@ -127,7 +127,7 @@ export function surpriseSensitivity(mood: Mood): number {
   const sensitivity: Record<Mood, number> = {
     trance: 0.45, avril: 0.40, disco: 0.35, blockhead: 0.30,
     downtempo: 0.25, lofi: 0.20, flim: 0.15, xtal: 0.10,
-    syro: 0.08, ambient: 0.05,
+    syro: 0.08, ambient: 0.05, plantasia: 0.04,
   };
   return sensitivity[mood];
 }

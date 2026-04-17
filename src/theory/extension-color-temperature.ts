@@ -25,7 +25,8 @@ const COLOR_SENSITIVITY: Record<Mood, number> = {
   flim:      0.50,  // high
   xtal:      0.55,  // high — crystalline colors
   syro:      0.40,  // moderate
-  ambient:   0.55,  // high — atmospheric
+  ambient:   0.55,  // high — atmospheric,
+  plantasia: 0.55,
 };
 
 /**

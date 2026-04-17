@@ -20,7 +20,8 @@ const ELASTICITY: Record<Mood, number> = {
   lofi:      0.06,  // jazz — moderate elasticity (was 0.12)
   downtempo: 0.05,  // moderate stretch (was 0.10)
   flim:      0.05,  // organic feel (was 0.10)
-  ambient:   0.05,  // dreamlike (was 0.15)
+  ambient:   0.05,  // dreamlike (was 0.15),
+  plantasia: 0.05,
   xtal:      0.04,  // floating (was 0.08)
   avril:     0.04,  // subtle rubato (was 0.08)
   syro:      0.03,  // complex but tight (was 0.05)

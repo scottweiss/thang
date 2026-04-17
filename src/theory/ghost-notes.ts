@@ -103,6 +103,7 @@ const MOOD_GHOST_MAP: Record<Mood, GhostMap> = {
 
   // Ambient: almost none
   ambient: [0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02],
+  plantasia: [0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02, 0, 0.02],
 };
 
 const MOOD_GHOST_DENSITY: Record<Mood, number> = {
@@ -116,4 +117,5 @@ const MOOD_GHOST_DENSITY: Record<Mood, number> = {
   avril:     0.1,
   flim:      0.2,
   ambient:   0.05,
+  plantasia: 0.05,
 };

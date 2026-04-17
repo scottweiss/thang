@@ -26,6 +26,7 @@ interface BassConfig {
 
 const MOOD_BASS: Record<Mood, BassConfig> = {
   ambient:   { style: 'pedal',       octave: 2, followChord: false },
+  plantasia: { style: 'pedal',       octave: 2, followChord: false },
   downtempo: { style: 'root-fifth',  octave: 2, followChord: true },
   lofi:      { style: 'walking',     octave: 2, followChord: true },
   trance:    { style: 'driving',     octave: 2, followChord: true },

@@ -19,7 +19,8 @@ import type { Mood } from '../types';
  * Dense moods (syro, trance) thin more aggressively; sparse moods less.
  */
 const MOOD_SENSITIVITY: Record<Mood, number> = {
-  ambient:   0.15,  // already sparse — minimal thinning
+  ambient:   0.15,  // already sparse — minimal thinning,
+  plantasia: 0.15,
   downtempo: 0.30,
   lofi:      0.35,
   trance:    0.45,  // dense — needs aggressive thinning

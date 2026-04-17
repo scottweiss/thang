@@ -21,7 +21,8 @@ const CONTROL_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.30,  // low — density welcome
-  ambient:   0.60,  // highest — purity important
+  ambient:   0.60,  // highest — purity important,
+  plantasia: 0.60,
 };
 
 /**

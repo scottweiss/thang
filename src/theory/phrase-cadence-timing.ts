@@ -22,7 +22,8 @@ const CADENCE_STRICTNESS: Record<Mood, number> = {
   flim:      0.30,  // low — IDM flexibility
   xtal:      0.25,  // low — floating
   syro:      0.15,  // lowest — any position
-  ambient:   0.20,  // low — timeless
+  ambient:   0.20,  // low — timeless,
+  plantasia: 0.20,
 };
 
 /**

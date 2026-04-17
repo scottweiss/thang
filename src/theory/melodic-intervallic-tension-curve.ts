@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const tensionCurveDepth: Record<Mood, number> = {
   ambient: 0.35,
+  plantasia: 0.35,
   downtempo: 0.30,
   lofi: 0.25,
   trance: 0.35,

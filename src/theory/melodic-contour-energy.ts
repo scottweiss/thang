@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodContourDepth: Record<Mood, number> = {
   ambient: 0.25,
+  plantasia: 0.25,
   downtempo: 0.35,
   lofi: 0.40,
   trance: 0.35,

@@ -24,7 +24,8 @@ const STASIS_TOLERANCE: Record<Mood, number> = {
   flim:      0.60,  // high — ambient-leaning
   xtal:      0.65,  // high — crystalline stasis OK
   syro:      0.25,  // low — needs constant change
-  ambient:   0.75,  // highest — stasis is the point
+  ambient:   0.75,  // highest — stasis is the point,
+  plantasia: 0.75,
 };
 
 /**

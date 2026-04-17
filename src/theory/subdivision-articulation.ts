@@ -24,7 +24,8 @@ const ARTICULATION_RESPONSIVENESS: Record<Mood, number> = {
   flim:      0.55,  // high — precise
   xtal:      0.40,  // moderate
   syro:      0.35,  // moderate
-  ambient:   0.25,  // low — everything legato
+  ambient:   0.25,  // low — everything legato,
+  plantasia: 0.25,
 };
 
 /**

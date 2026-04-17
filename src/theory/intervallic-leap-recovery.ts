@@ -23,7 +23,8 @@ const RECOVERY_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // moderate — Aphex defies convention
   xtal:      0.25,  // weak — ambient wanders
   syro:      0.15,  // weakest — IDM angular melody
-  ambient:   0.20,  // weak — floating
+  ambient:   0.20,  // weak — floating,
+  plantasia: 0.20,
 };
 
 /**

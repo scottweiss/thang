@@ -23,7 +23,8 @@ const CONTRAST_RANGE: Record<Mood, number> = {
   flim:      0.55,  // strong — Aphex timbral play
   xtal:      0.60,  // strongest — ambient morphing
   syro:      0.50,  // strong — IDM timbre exploration
-  ambient:   0.45,  // strong — slow morph
+  ambient:   0.45,  // strong — slow morph,
+  plantasia: 0.45,
 };
 
 /**

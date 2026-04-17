@@ -23,7 +23,8 @@ const ALIGNMENT_EMPHASIS: Record<Mood, number> = {
   flim:      0.25,  // low — delicate
   xtal:      0.30,  // low — ethereal
   syro:      0.20,  // weakest — avoid alignment
-  ambient:   0.15,  // weakest — flowing
+  ambient:   0.15,  // weakest — flowing,
+  plantasia: 0.15,
 };
 
 /**

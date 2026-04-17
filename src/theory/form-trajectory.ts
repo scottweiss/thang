@@ -134,6 +134,7 @@ export function sectionPreference(state: TrajectoryState): Record<Section, numbe
 export function moodFormLength(mood: Mood): number {
   const lengths: Record<Mood, number> = {
     ambient: 120,
+    plantasia: 120,
     avril: 100,
     xtal: 100,
     flim: 90,

@@ -24,7 +24,8 @@ const DISPLACEMENT_DEPTH: Record<Mood, number> = {
   flim:      0.45,  // high — glitchy phasing
   xtal:      0.50,  // highest — crystalline phasing
   syro:      0.55,  // highest — phase chaos
-  ambient:   0.30,  // moderate — gentle phasing
+  ambient:   0.30,  // moderate — gentle phasing,
+  plantasia: 0.30,
 };
 
 /**

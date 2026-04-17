@@ -28,7 +28,8 @@ import type { Mood, Section } from '../types';
 
 /** How much each mood uses color pedals (0-1) */
 const PEDAL_TENDENCY: Record<Mood, number> = {
-  ambient:   0.45,  // sustained textures — natural home
+  ambient:   0.45,  // sustained textures — natural home,
+  plantasia: 0.45,
   xtal:      0.38,  // shimmering sustain
   flim:      0.28,  // organic sustain
   avril:     0.22,  // songwriter — held notes
@@ -128,7 +129,8 @@ export function pedalPattern(
  */
 export function pedalOctave(mood: Mood): number {
   const octaves: Record<Mood, number> = {
-    ambient:   5,    // high shimmering
+    ambient:   5,    // high shimmering,
+    plantasia: 5,
     xtal:      5,    // high ethereal
     flim:      4,    // middle
     avril:     4,    // singer range

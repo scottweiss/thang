@@ -40,6 +40,7 @@ const SCALE_CHARACTERS: Record<ScaleType, ScaleCharacter> = {
  */
 const MOOD_SCALE_PREFERENCES: Record<Mood, ScaleType[]> = {
   ambient:   ['lydian', 'major', 'pentatonic', 'dorian'],
+  plantasia: ['lydian', 'major', 'pentatonic', 'dorian'],
   downtempo: ['dorian', 'minor', 'mixolydian', 'aeolian'],
   lofi:      ['dorian', 'minor', 'pentatonic', 'minor_pentatonic'],
   trance:    ['minor', 'phrygian', 'aeolian', 'major'],

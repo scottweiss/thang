@@ -22,7 +22,8 @@ const SMOOTHNESS_PREFERENCE: Record<Mood, number> = {
   flim:      0.50,  // high
   xtal:      0.45,  // moderate
   syro:      0.20,  // lowest — jagged is fine
-  ambient:   0.40,  // moderate
+  ambient:   0.40,  // moderate,
+  plantasia: 0.40,
 };
 
 /**

@@ -22,7 +22,8 @@ const WARMTH_TARGET: Record<Mood, number> = {
   flim:      0.60,  // moderate — delicate
   xtal:      0.65,  // moderate-high — glassy warmth
   syro:      0.35,  // low — metallic OK
-  ambient:   0.70,  // high — organic
+  ambient:   0.70,  // high — organic,
+  plantasia: 0.70,
 };
 
 /**

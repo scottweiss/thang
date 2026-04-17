@@ -26,7 +26,8 @@ const CLARITY_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // organic spacing
   xtal:      0.55,  // maximum clarity desire
   syro:      0.25,  // dense complexity accepted
-  ambient:   0.60,  // maximum spaciousness
+  ambient:   0.60,  // maximum spaciousness,
+  plantasia: 0.60,
 };
 
 /**

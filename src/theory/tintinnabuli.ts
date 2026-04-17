@@ -27,7 +27,8 @@ import type { Mood, Section } from '../types';
 /** How much each mood uses tintinnabuli technique (0-1) */
 const TINTINNABULI_TENDENCY: Record<Mood, number> = {
   xtal:      0.35,  // ethereal — Pärt's natural home
-  ambient:   0.30,  // pure, meditative
+  ambient:   0.30,  // pure, meditative,
+  plantasia: 0.30,
   flim:      0.22,  // gentle, organic
   avril:     0.18,  // songwriter — sparse beauty
   downtempo: 0.12,  // subtle stillness
@@ -155,7 +156,8 @@ export function selectPosition(
 ): TPosition {
   const positions: Record<Mood, TPosition[]> = {
     xtal:      ['1sup', '2sup', '1inf'],       // bright, open
-    ambient:   ['1sup', '1inf', '2inf'],        // equal bright/dark
+    ambient:   ['1sup', '1inf', '2inf'],        // equal bright/dark,
+    plantasia: ['1sup', '1inf', '2inf'],
     flim:      ['1inf', '1sup', '2inf'],        // darker lean
     avril:     ['1sup', '1inf'],                // simple
     downtempo: ['1inf', '2inf', '1sup'],        // warm, low

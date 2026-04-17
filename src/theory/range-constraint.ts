@@ -94,7 +94,8 @@ function approxPitch(note: string): number {
 const MOOD_MAX_RANGE: Record<Mood, number> = {
   avril:     12,   // octave — intimate, vocal
   flim:      12,   // octave — delicate
-  ambient:   14,   // octave + M2 — gentle
+  ambient:   14,   // octave + M2 — gentle,
+  plantasia: 14,
   lofi:      14,   // octave + M2 — soulful
   downtempo: 15,   // ~10th
   blockhead: 15,   // ~10th

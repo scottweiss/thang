@@ -27,7 +27,8 @@ const GRAVITY_SENSITIVITY: Record<Mood, number> = {
   flim:      0.35,  // organic, loose
   xtal:      0.20,  // floating, weak gravity
   syro:      0.15,  // complex, gravity-defying
-  ambient:   0.10,  // nearly weightless
+  ambient:   0.10,  // nearly weightless,
+  plantasia: 0.10,
 };
 
 /**

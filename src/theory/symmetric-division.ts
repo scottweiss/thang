@@ -36,7 +36,8 @@ const SYMMETRIC_TENDENCY: Record<Mood, number> = {
   syro:      0.25,  // IDM — geometric harmony
   lofi:      0.20,  // jazz — Coltrane influence
   xtal:      0.15,  // dreamy axis movement
-  ambient:   0.12,  // floating key centers
+  ambient:   0.12,  // floating key centers,
+  plantasia: 0.12,
   flim:      0.10,  // organic exploration
   downtempo: 0.08,  // subtle
   blockhead: 0.06,  // hip-hop — jazz influence
@@ -152,6 +153,7 @@ export function selectAxisType(mood: Mood, tick: number): AxisType {
     syro:      { 'major-third': 2, 'minor-third': 3, 'tritone': 2, 'whole-tone': 2 },
     xtal:      { 'major-third': 2, 'minor-third': 2, 'tritone': 3, 'whole-tone': 1 },
     ambient:   { 'major-third': 1, 'minor-third': 2, 'tritone': 3, 'whole-tone': 2 },
+    plantasia: { 'major-third': 1, 'minor-third': 2, 'tritone': 3, 'whole-tone': 2 },
     flim:      { 'major-third': 2, 'minor-third': 2, 'tritone': 2, 'whole-tone': 1 },
     downtempo: { 'major-third': 3, 'minor-third': 2, 'tritone': 1, 'whole-tone': 1 },
     blockhead: { 'major-third': 3, 'minor-third': 2, 'tritone': 1, 'whole-tone': 0 },

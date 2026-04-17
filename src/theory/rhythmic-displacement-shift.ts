@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const displacementAmount: Record<Mood, number> = {
   ambient: 0.10,
+  plantasia: 0.10,
   downtempo: 0.30,
   lofi: 0.35,
   trance: 0.15,

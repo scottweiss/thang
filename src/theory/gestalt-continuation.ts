@@ -24,7 +24,8 @@ const CONTINUATION_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // moderate-low — organic shifts
   xtal:      0.25,  // low — ambient evolution
   syro:      0.20,  // low — IDM breaks trajectory
-  ambient:   0.15,  // minimal — non-directional
+  ambient:   0.15,  // minimal — non-directional,
+  plantasia: 0.15,
 };
 
 /**

@@ -22,7 +22,8 @@ const LOCK_TIGHTNESS: Record<Mood, number> = {
   flim:      0.25,  // low — IDM freedom
   xtal:      0.20,  // lowest — floating
   syro:      0.15,  // lowest — anti-grid
-  ambient:   0.10,  // lowest — timeless
+  ambient:   0.10,  // lowest — timeless,
+  plantasia: 0.10,
 };
 
 /**

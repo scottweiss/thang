@@ -124,7 +124,8 @@ const LAYER_TENSION_CURVES: Record<LayerName, TensionCurve> = {
  * 0 = flat (all layers equal), 1 = maximum dynamic range.
  */
 const MOOD_ORCHESTRATION_DEPTH: Record<Mood, number> = {
-  ambient:   0.4,    // gentle shifting
+  ambient:   0.4,    // gentle shifting,
+  plantasia: 0.4,
   downtempo: 0.6,    // moderate dynamics
   lofi:      0.5,    // warm dynamics
   trance:    0.7,    // dramatic orchestration

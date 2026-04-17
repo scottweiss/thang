@@ -24,7 +24,8 @@ const MATCHING_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.15,  // weakest — independent voices
-  ambient:   0.35,  // moderate — gentle following
+  ambient:   0.35,  // moderate — gentle following,
+  plantasia: 0.35,
 };
 
 /**
@@ -41,7 +42,8 @@ const MOTION_PREFERENCE: Record<Mood, number> = {
   flim:      0.3,   // mixed
   xtal:      0.4,   // mixed
   syro:     -0.2,   // contrary preferred
-  ambient:   0.5,   // balanced
+  ambient:   0.5,   // balanced,
+  plantasia: 0.5,
 };
 
 /**

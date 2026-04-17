@@ -22,7 +22,8 @@ const PENALTY_STRENGTH: Record<Mood, number> = {
   flim:      0.55,  // high — melodic variety
   xtal:      0.50,  // moderate-high
   syro:      0.65,  // highest — always fresh
-  ambient:   0.15,  // lowest — meditative repetition OK
+  ambient:   0.15,  // lowest — meditative repetition OK,
+  plantasia: 0.15,
 };
 
 /**

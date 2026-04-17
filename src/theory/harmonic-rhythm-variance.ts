@@ -24,7 +24,8 @@ const VARIANCE_INTENSITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.45,  // moderate
   syro:      0.35,  // moderate — already erratic
-  ambient:   0.60,  // highest — free timing
+  ambient:   0.60,  // highest — free timing,
+  plantasia: 0.60,
 };
 
 /**

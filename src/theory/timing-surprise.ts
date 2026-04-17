@@ -26,7 +26,8 @@ const SURPRISE_PROBABILITY: Record<Mood, number> = {
   flim:      0.18,  // organic timing play
   xtal:      0.08,  // floating surprises
   syro:      0.05,  // controlled complexity
-  ambient:   0.04,  // very rare
+  ambient:   0.04,  // very rare,
+  plantasia: 0.04,
 };
 
 /**
@@ -42,7 +43,8 @@ const MAX_OFFSET: Record<Mood, number> = {
   flim:      0.055,  // maximum looseness
   xtal:      0.030,  // floating
   syro:      0.020,  // controlled
-  ambient:   0.025,  // gentle
+  ambient:   0.025,  // gentle,
+  plantasia: 0.025,
 };
 
 /**

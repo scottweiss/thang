@@ -116,6 +116,7 @@ const SECTION_GESTURES: Record<Section, GestureType[]> = {
 /** Mood weights for gesture selection */
 const MOOD_GESTURE_AFFINITY: Record<Mood, Partial<Record<GestureType, number>>> = {
   ambient:   { meditation: 1.5, breath: 1.3, dissolution: 1.2 },
+  plantasia: { meditation: 1.5, breath: 1.3, dissolution: 1.2 },
   xtal:      { meditation: 1.3, dissolution: 1.2, breath: 1.1 },
   downtempo: { breath: 1.3, resolution: 1.2, momentum: 1.1 },
   lofi:      { breath: 1.2, momentum: 1.1, resolution: 1.1 },

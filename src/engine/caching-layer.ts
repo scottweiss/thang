@@ -44,6 +44,7 @@ import { breathSyncGainPattern, shouldApplyBreathSync } from '../theory/rhythmic
 import { sectionTimbre, shouldApplyTimbralVariety } from '../theory/timbral-variety';
 import { shouldApplyResultant, resultantGainMask } from '../theory/resultant-rhythm';
 import { anchorGainBias, layerAdherence, sectionAdherenceMultiplier } from '../theory/rhythmic-anchor';
+import { isStageEnabledForLayer } from './mood-profile';
 
 export abstract class CachingLayer implements Layer {
   abstract name: string;
@@ -208,8 +209,7 @@ export abstract class CachingLayer implements Layer {
     }
 
     // Chorus depth: detuning adds warmth at peaks, cleans at breakdowns
-    // Skip for drums — detuned drums sound wobbly and wrong
-    if (this.name !== 'texture') {
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'chorus')) {
       result = this.applyChorusDepth(result, state);
     }
 
@@ -219,15 +219,15 @@ export abstract class CachingLayer implements Layer {
     // HPF sweep: build-up tension via rising high-pass filter
     result = this.applyHpfSweep(result, state);
 
-    // Envelope evolution: attacks tighten in builds, soften in breakdowns
-    // Skip for drums — drum ADSR is carefully tuned per pattern template
-    if (this.name !== 'texture') {
+    // Envelope evolution / articulation / textural contrast — role-gated
+    // (drum ADSR is carefully tuned per pattern template, so texture opts out)
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'envelopeEvolution')) {
       result = this.applyEnvelopeEvolution(result, state);
-
-      // Tension articulation: note length tracks real-time tension arc
+    }
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'tensionArticulation')) {
       result = this.applyTensionArticulation(result, state);
-
-      // Textural contrast: differentiate ADSR between layers for clarity
+    }
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'texturalContrast')) {
       result = this.applyTexturalContrast(result, state);
     }
 
@@ -238,20 +238,18 @@ export abstract class CachingLayer implements Layer {
     result = this.applyMetricAccent(result, state);
 
     // Hemiola: cross-rhythm accents (3-over-4 or clave 3+3+2)
-    // Skip for drums — the drum patterns already have their own accent structure
-    if (this.name !== 'texture') {
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'hemiola')) {
       result = this.applyHemiola(result, state);
     }
 
     // Sidechain ducking: rhythmic gain pump on strong beats (EDM breathing effect)
     result = this.applySidechainDuck(result, state);
 
-    // Rhythmic breath sync: micro-dips before strong beats for collective lift
-    // Skip for drums — drums ARE the strong beats, shouldn't dip before themselves
-    if (this.name !== 'texture') {
+    // Rhythmic breath sync + resultant rhythm — role-gated
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'breathSync')) {
       result = this.applyBreathSync(result, state);
-
-      // Resultant rhythm: polyrhythmic accent mask for complex groove layers
+    }
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'resultantRhythm')) {
       result = this.applyResultantRhythm(result, state);
     }
 
@@ -286,7 +284,7 @@ export abstract class CachingLayer implements Layer {
     }
 
     // Rhythmic phase offset: shift arp timing for inter-layer phasing (not drums)
-    if (this.name !== 'texture' && shouldApplyPhaseOffset(this.name, state.mood)) {
+    if (isStageEnabledForLayer(state.mood, this.name as any, 'rhythmicPhase') && shouldApplyPhaseOffset(this.name, state.mood)) {
       const offset = layerPhaseOffset(this.name, state.mood, state.section);
       if (offset > 0.01) {
         result = result.replace(

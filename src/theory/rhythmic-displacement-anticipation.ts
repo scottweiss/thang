@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const anticipationStrength: Record<Mood, number> = {
   ambient: 0.10,
+  plantasia: 0.10,
   downtempo: 0.25,
   lofi: 0.35,
   trance: 0.40,

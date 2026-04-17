@@ -8,6 +8,7 @@ import type { Mood } from '../types';
 
 const moodResponsiveness: Record<Mood, number> = {
   ambient: 0.20,
+  plantasia: 0.20,
   downtempo: 0.35,
   lofi: 0.40,
   trance: 0.30,

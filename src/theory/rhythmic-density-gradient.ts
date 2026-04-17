@@ -24,7 +24,8 @@ const GRADIENT_COUPLING: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.20,  // weak — IDM layers are independent
-  ambient:   0.50,  // strong — ensemble breathing
+  ambient:   0.50,  // strong — ensemble breathing,
+  plantasia: 0.50,
 };
 
 /**

@@ -26,7 +26,8 @@ const CROSSING_TOLERANCE: Record<Mood, number> = {
   flim:      0.40,  // organic, messy OK
   xtal:      0.50,  // floating, crossings add color
   syro:      0.55,  // intentional chaos
-  ambient:   0.20,  // wide open, avoid crossing
+  ambient:   0.20,  // wide open, avoid crossing,
+  plantasia: 0.20,
 };
 
 /**
@@ -43,7 +44,8 @@ const TARGET_SPREAD: Record<Mood, number> = {
   flim:      24,  // organic spread
   xtal:      28,  // very wide, spacious
   syro:      20,  // varied
-  ambient:   30,  // maximum spaciousness
+  ambient:   30,  // maximum spaciousness,
+  plantasia: 30,
 };
 
 /**

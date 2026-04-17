@@ -14,6 +14,7 @@ interface Particle {
 
 const MOOD_PALETTES: Record<Mood, { bg: string; hues: number[]; saturation: number; lightness: number }> = {
   ambient: { bg: '#06060f', hues: [220, 260, 280, 200], saturation: 40, lightness: 25 },
+  plantasia: { bg: '#08100a', hues: [90, 110, 140, 75], saturation: 45, lightness: 45 },
   downtempo: { bg: '#0a0808', hues: [20, 35, 280, 320], saturation: 35, lightness: 30 },
   lofi: { bg: '#0c0a08', hues: [330, 20, 40, 350], saturation: 25, lightness: 35 },
   trance: { bg: '#040810', hues: [190, 210, 240, 170], saturation: 60, lightness: 40 },
@@ -229,6 +230,7 @@ export class Visualizer {
   private getSpawnRate(): number {
     const base = {
       ambient: 0.3,
+      plantasia: 0.3,
       downtempo: 0.8,
       lofi: 1.2,
       trance: 2.5,
@@ -364,6 +366,16 @@ export class Visualizer {
         maxLife = 80 + Math.random() * 120;
         break;
       }
+      case 'plantasia': {
+        // Slow tendrils drifting upward from the bottom — plants reaching for light
+        x = Math.random() * w;
+        y = h + 10;
+        vx = (Math.random() - 0.5) * 0.2;
+        vy = -(0.15 + Math.random() * 0.3);
+        size = 1.5 + Math.random() * 3;
+        maxLife = 280 + Math.random() * 300;
+        break;
+      }
     }
 
     // Section energy scales particle size — peak sections get bigger, more visible particles
@@ -455,6 +467,14 @@ export class Visualizer {
         p.vy -= 0.01; // slight upward pull
         p.vx *= 0.98;
         p.vy *= 0.99;
+        break;
+      }
+      case 'plantasia': {
+        // Slow upward growth with gentle lateral meander — tendrils in sunlight
+        p.vx += Math.sin(this.time * 0.18 + p.y * 0.006) * 0.006;
+        p.vy -= 0.002;
+        p.vx *= 0.995;
+        p.vy *= 0.998;
         break;
       }
     }

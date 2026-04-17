@@ -24,7 +24,8 @@ const BALANCE_STRICTNESS: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.45,  // moderate
   syro:      0.25,  // low — chaos OK
-  ambient:   0.50,  // moderate — spread important
+  ambient:   0.50,  // moderate — spread important,
+  plantasia: 0.50,
 };
 
 /**

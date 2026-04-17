@@ -12,7 +12,7 @@ export class AtmosphereLayer extends CachingLayer {
     // that provides continuity through transitions
 
     // Atmosphere is slow-evolving, regenerate infrequently
-    const maxTicks = { ambient: 20, downtempo: 18, lofi: 16, trance: 12, avril: 20, xtal: 20, syro: 10, blockhead: 18, flim: 20, disco: 14 }[state.mood] ?? 16;
+    const maxTicks = { ambient: 20, downtempo: 18, lofi: 16, trance: 12, avril: 20, xtal: 20, syro: 10, blockhead: 18, flim: 20, disco: 14, plantasia: 22 }[state.mood] ?? 16;
     return this.ticksSinceLastGeneration(state) >= maxTicks;
   }
 
@@ -58,7 +58,45 @@ export class AtmosphereLayer extends CachingLayer {
 
       case 'disco':
         return this.buildDiscoAtmosphere(density, brightness, room, section, root);
+
+      case 'plantasia':
+        return this.buildPlantasiaAtmosphere(density, brightness, room, section, root);
     }
+  }
+
+  private buildPlantasiaAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {
+    // Warm Moog-like pad with occasional celesta sprinkles — a living garden.
+    // Longer attack/release for gentle breathing; bright but not piercing.
+    const sectionGain = { intro: 0.55, build: 0.75, peak: 0.9, breakdown: 0.5, groove: 0.75 }[section];
+    const gain = 0.05 * (0.3 + density * 0.4) * sectionGain;
+    const lpf = 1400 + brightness * 1400;
+    // Celesta sprinkle: tonic + third of the scale, widely spaced, rare
+    const sprinkle = section === 'peak' || section === 'groove' ? 0.3 : 0.15;
+
+    return `stack(
+      note("${root}4")
+        .sound("gm_pad_warm")
+        .attack(2.5)
+        .decay(3)
+        .sustain(0.45)
+        .release(3)
+        .slow(8)
+        .gain(${gain.toFixed(4)})
+        .lpf(${Math.round(lpf)})
+        .room(${(room * 0.75).toFixed(3)})
+        .pan(sine.range(0.35, 0.65).slow(13))
+        .orbit(5),
+      note("${root}5 ~ ~ ~").struct("1 0 0 0 0 0 0 0")
+        .sound("gm_celesta")
+        .attack(0.02)
+        .release(1.5)
+        .slow(16)
+        .gain(${(gain * sprinkle).toFixed(4)})
+        .lpf(${Math.round(lpf * 1.3)})
+        .room(${(room * 0.9).toFixed(3)})
+        .pan(sine.range(0.3, 0.7).slow(17))
+        .orbit(5)
+    )`;
   }
 
   private buildAmbientAtmosphere(density: number, brightness: number, room: number, section: Section, root: string): string {

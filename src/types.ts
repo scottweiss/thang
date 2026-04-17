@@ -14,7 +14,7 @@ export type ScaleType =
 
 export type ChordQuality = 'maj' | 'min' | 'maj7' | 'min7' | 'dom7' | 'sus2' | 'sus4' | 'dim' | 'aug' | 'add9' | 'min9';
 
-export type Mood = 'ambient' | 'downtempo' | 'lofi' | 'trance' | 'avril' | 'xtal' | 'syro' | 'blockhead' | 'flim' | 'disco';
+export type Mood = 'ambient' | 'downtempo' | 'lofi' | 'trance' | 'avril' | 'xtal' | 'syro' | 'blockhead' | 'flim' | 'disco' | 'plantasia';
 
 export interface ScaleState {
   root: NoteName;
@@ -132,6 +132,16 @@ export interface BarClockState {
   loopBar: number;
   /** Current chord index within the loop (0 to loop.degrees.length-1) */
   loopChordIndex: number;
+  /** 4-bar phrase number within current section (sectionBar / 4) */
+  phrase: number;
+  /** Position within phrase (0-3) */
+  phraseBar: number;
+  /** True at the start of a new phrase (phraseBar === 0 on a new bar) */
+  isPhraseStart: boolean;
+  /** True on the last bar of a phrase (phraseBar === 3) */
+  isPhraseEnd: boolean;
+  /** Alias for phraseBar === 0 — the "home" bar where cadences resolve */
+  isHomeBar: boolean;
 }
 
 export type LayerName = 'drone' | 'harmony' | 'melody' | 'texture' | 'arp' | 'atmosphere';

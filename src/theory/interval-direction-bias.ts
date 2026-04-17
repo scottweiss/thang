@@ -25,7 +25,8 @@ const MOOD_DIRECTION: Record<Mood, number> = {
   flim:      0.10,   // slight ascending — delicate
   xtal:      -0.10,  // slight descending — atmospheric
   syro:      0.00,   // neutral — unpredictable
-  ambient:   -0.25,  // descending — settling
+  ambient:   -0.25,  // descending — settling,
+  plantasia: -0.25,
 };
 
 /**

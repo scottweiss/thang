@@ -25,7 +25,8 @@ const CROWDING_TOLERANCE: Record<Mood, number> = {
   flim:      0.30,  // organic, moderate
   xtal:      0.15,  // crystalline clarity
   syro:      0.35,  // complex, some overlap
-  ambient:   0.10,  // maximum separation
+  ambient:   0.10,  // maximum separation,
+  plantasia: 0.10,
 };
 
 /**

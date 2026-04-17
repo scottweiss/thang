@@ -21,7 +21,8 @@ const RELEASE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.55,  // high — delicate
   xtal:      0.60,  // high — atmospheric trails
   syro:      0.25,  // low — precise
-  ambient:   0.65,  // highest — long releases
+  ambient:   0.65,  // highest — long releases,
+  plantasia: 0.65,
 };
 
 /**

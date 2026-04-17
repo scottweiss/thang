@@ -103,7 +103,8 @@ const MOOD_COLOR_PROB: Record<Mood, number> = {
   syro:      0.25,   // complex — welcomes color
   disco:     0.10,   // some funk color
   trance:    0.05,   // mostly clean chords
-  ambient:   0.10,   // occasional shimmer
+  ambient:   0.10,   // occasional shimmer,
+  plantasia: 0.10,
 };
 
 /**

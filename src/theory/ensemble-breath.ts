@@ -32,7 +32,8 @@ const BREATH_DEPTH: Record<Mood, number> = {
   disco:     0.25,   // funk — light, rhythm drives more
   syro:      0.20,   // IDM — mechanical, less organic
   trance:    0.15,   // EDM — constant energy, minimal breath
-  ambient:   0.30,   // drone — slow, deep breaths
+  ambient:   0.30,   // drone — slow, deep breaths,
+  plantasia: 0.30,
 };
 
 /** Section multiplier — breathing is more pronounced in expressive sections */

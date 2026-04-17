@@ -23,7 +23,8 @@ const SPREAD_PREFERENCE: Record<Mood, number> = {
   flim:      0.50,  // strong
   xtal:      0.55,  // strong — crystalline spread
   syro:      0.35,  // moderate
-  ambient:   0.65,  // strongest — wide spacing
+  ambient:   0.65,  // strongest — wide spacing,
+  plantasia: 0.65,
 };
 
 /**

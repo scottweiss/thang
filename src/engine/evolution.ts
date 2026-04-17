@@ -8,6 +8,7 @@ import { gravityDurationMultiplier, shouldApplyHarmonicGravity } from '../theory
 // Chord change timing per mood (seconds) — faster harmonic rhythm for energetic moods
 const CHORD_TIMING: Record<Mood, [number, number]> = {
   ambient: [25, 80],
+  plantasia: [25, 80],
   downtempo: [15, 45],
   lofi: [12, 35],
   trance: [8, 24],
@@ -22,6 +23,7 @@ const CHORD_TIMING: Record<Mood, [number, number]> = {
 // Scale modulation timing per mood — trance modulates often, ambient/avril stay put
 const SCALE_TIMING: Record<Mood, [number, number]> = {
   ambient: [180, 400],
+  plantasia: [180, 400],
   downtempo: [120, 280],
   lofi: [100, 240],
   trance: [80, 180],

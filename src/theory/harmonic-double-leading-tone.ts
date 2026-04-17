@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const leadingToneDepth: Record<Mood, number> = {
   ambient: 0.20,
+  plantasia: 0.20,
   downtempo: 0.30,
   lofi: 0.25,
   trance: 0.50,

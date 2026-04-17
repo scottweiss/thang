@@ -24,7 +24,8 @@ const PUNCH_INTENSITY: Record<Mood, number> = {
   flim:      0.30,  // organic
   xtal:      0.15,  // subtle
   syro:      0.45,  // IDM snap
-  ambient:   0.08,  // barely any
+  ambient:   0.08,  // barely any,
+  plantasia: 0.08,
 };
 
 /**

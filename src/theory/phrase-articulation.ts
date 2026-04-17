@@ -173,7 +173,8 @@ const MOOD_ARTICULATION_DEPTH: Record<Mood, number> = {
   downtempo: 0.5,    // moderate expression
   xtal:      0.5,    // dreamy expression
   blockhead: 0.5,    // hip-hop dynamics
-  ambient:   0.3,    // gentle — sustained tones need less variation
+  ambient:   0.3,    // gentle — sustained tones need less variation,
+  plantasia: 0.3,
   syro:      0.4,    // some expression, mostly mechanical
   disco:     0.3,    // groove-focused, less phrase variation
   trance:    0.2,    // mechanical by design

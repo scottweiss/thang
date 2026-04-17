@@ -144,7 +144,8 @@ const ROOT_PITCH: Record<string, number> = {
 const MOOD_GRAVITY_THRESHOLD: Record<Mood, number> = {
   avril:     0.35,   // intimate — stay close to home
   flim:      0.40,   // delicate — moderate pull
-  ambient:   0.50,   // wandering is OK — home is where you make it
+  ambient:   0.50,   // wandering is OK — home is where you make it,
+  plantasia: 0.50,
   lofi:      0.40,   // jazzy but grounded
   downtempo: 0.45,   // gentle exploration
   xtal:      0.50,   // dreamy wandering

@@ -32,7 +32,8 @@ const GRAVITY_STRENGTH: Record<Mood, number> = {
   flim:      0.20,  // organic movement
   xtal:      0.12,  // floating
   syro:      0.08,  // intentionally ambiguous
-  ambient:   0.05,  // almost no gravity
+  ambient:   0.05,  // almost no gravity,
+  plantasia: 0.05,
 };
 
 /**

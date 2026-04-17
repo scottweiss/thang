@@ -24,7 +24,8 @@ const PRECEDENCE_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.55,  // high clarity
   syro:      0.30,  // IDM — spatial chaos OK
-  ambient:   0.60,  // strongest — spatial purity
+  ambient:   0.60,  // strongest — spatial purity,
+  plantasia: 0.60,
 };
 
 /**

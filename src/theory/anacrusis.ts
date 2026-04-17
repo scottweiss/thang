@@ -179,5 +179,6 @@ const MOOD_ANACRUSIS_PROB: Record<Mood, number> = {
   flim:      0.30,   // delicate pickups
   xtal:      0.15,   // occasional
   avril:     0.20,   // gentle breath-before-singing
-  ambient:   0.05,   // very rare — phrases float
+  ambient:   0.05,   // very rare — phrases float,
+  plantasia: 0.05,
 };

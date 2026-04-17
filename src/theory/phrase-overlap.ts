@@ -25,7 +25,8 @@ const OVERLAP_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // organic
   xtal:      0.25,  // floating, gaps OK
   syro:      0.20,  // intentional gaps
-  ambient:   0.15,  // silence is part of the music
+  ambient:   0.15,  // silence is part of the music,
+  plantasia: 0.15,
 };
 
 /**

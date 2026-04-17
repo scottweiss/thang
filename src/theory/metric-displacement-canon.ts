@@ -23,7 +23,8 @@ const DISPLACEMENT_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // strong — delicate stagger
   xtal:      0.50,  // strongest — crystalline offset
   syro:      0.35,  // moderate — IDM phasing
-  ambient:   0.55,  // strongest — floating entries
+  ambient:   0.55,  // strongest — floating entries,
+  plantasia: 0.55,
 };
 
 /**

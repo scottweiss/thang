@@ -8,6 +8,7 @@ import type { Mood, Section } from '../types';
 
 const moodConsistencyReward: Record<Mood, number> = {
   ambient: 0.15,
+  plantasia: 0.15,
   downtempo: 0.35,
   lofi: 0.40,
   trance: 0.60,

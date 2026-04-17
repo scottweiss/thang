@@ -47,7 +47,8 @@ const JOURNEY_APPETITE: Record<Mood, number> = {
   syro:      0.45,   // IDM chromaticism
   trance:    0.30,   // trance lifts (dramatic but rare)
   xtal:      0.20,   // dreamy, stays close to home
-  ambient:   0.10,   // barely modulates
+  ambient:   0.10,   // barely modulates,
+  plantasia: 0.10,
 };
 
 /** Pivot degrees — chords that work in both the current and target key area */

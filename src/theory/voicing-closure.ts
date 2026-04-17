@@ -24,7 +24,8 @@ const CLOSURE_INTENSITY: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.45,  // strong — ambient breathing voicings
   syro:      0.20,  // weak — IDM voicings are unpredictable
-  ambient:   0.50,  // strong — spacious opening/closing
+  ambient:   0.50,  // strong — spacious opening/closing,
+  plantasia: 0.50,
 };
 
 /**

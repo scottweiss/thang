@@ -23,7 +23,8 @@ const CONTOUR_STRENGTH: Record<Mood, number> = {
   flim:      0.55,  // high — delicate
   xtal:      0.50,  // high
   syro:      0.30,  // moderate
-  ambient:   0.60,  // highest — breathing
+  ambient:   0.60,  // highest — breathing,
+  plantasia: 0.60,
 };
 
 /**

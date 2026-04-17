@@ -24,7 +24,8 @@ const ECHO_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.55,  // maximum echo responsiveness
   syro:      0.20,  // controlled
-  ambient:   0.60,  // spacious response
+  ambient:   0.60,  // spacious response,
+  plantasia: 0.60,
 };
 
 /**

@@ -27,7 +27,8 @@ const RHYTHM_SENSITIVITY: Record<Mood, number> = {
   flim:      0.20,   // delicate — subtle
   avril:     0.15,   // intimate — mostly stable
   xtal:      0.15,   // dreamy — gentle
-  ambient:   0.05,   // drone — rhythmically static
+  ambient:   0.05,   // drone — rhythmically static,
+  plantasia: 0.05,
 };
 
 /**

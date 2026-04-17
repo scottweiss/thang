@@ -24,7 +24,8 @@ const PIVOT_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.25,  // subtle
   syro:      0.45,  // IDM — energetic pivots
-  ambient:   0.15,  // minimal — gentle transitions
+  ambient:   0.15,  // minimal — gentle transitions,
+  plantasia: 0.15,
 };
 
 /**

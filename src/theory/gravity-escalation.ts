@@ -24,7 +24,8 @@ const ESCALATION_STRENGTH: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.30,  // subtle
   syro:      0.25,  // IDM — free melody OK
-  ambient:   0.15,  // minimal — floating
+  ambient:   0.15,  // minimal — floating,
+  plantasia: 0.15,
 };
 
 /**

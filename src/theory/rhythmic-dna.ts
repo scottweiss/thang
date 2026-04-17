@@ -134,6 +134,15 @@ const RHYTHMIC_DNA: Record<Mood, RhythmicCell[]> = {
       { hit: true, accent: 0.3 }, { hit: false, accent: 0 },
     ], length: 8 },
   ],
+  plantasia: [
+    // Floating: minimal hits
+    { pattern: [
+      { hit: true, accent: 0.5 }, { hit: false, accent: 0 },
+      { hit: false, accent: 0 }, { hit: false, accent: 0 },
+      { hit: false, accent: 0 }, { hit: false, accent: 0 },
+      { hit: true, accent: 0.3 }, { hit: false, accent: 0 },
+    ], length: 8 },
+  ],
 };
 
 /**
@@ -150,6 +159,7 @@ const DNA_TENDENCY: Record<Mood, number> = {
   xtal:      0.12,
   syro:      0.15,
   ambient:   0.08,
+  plantasia: 0.08,
 };
 
 /**

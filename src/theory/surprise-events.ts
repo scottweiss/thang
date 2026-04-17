@@ -116,7 +116,8 @@ const MOOD_SURPRISE_RATE: Record<Mood, number> = {
   downtempo: 0.025,  // gentle surprises
   avril:     0.02,   // intimate moments
   disco:     0.02,   // funky surprises
-  ambient:   0.01,   // very rare — space is sacred
+  ambient:   0.01,   // very rare — space is sacred,
+  plantasia: 0.01,
   trance:    0.01,   // mostly predictable by design
 };
 
@@ -140,5 +141,6 @@ const MOOD_SURPRISE_TYPES: Record<Mood, SurpriseType[]> = {
   avril:     ['octave-leap', 'brightness-flash'],
   disco:     ['register-shift', 'brightness-flash'],
   ambient:   ['brightness-flash'],
+  plantasia: ['brightness-flash'],
   trance:    ['brightness-flash'],
 };

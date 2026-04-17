@@ -24,7 +24,8 @@ const COMPLEMENTARITY: Record<Mood, number> = {
   flim:      0.45,  // strong
   xtal:      0.50,  // strong — ambient clarity
   syro:      0.30,  // moderate — IDM lets things clash
-  ambient:   0.60,  // strongest — pristine separation
+  ambient:   0.60,  // strongest — pristine separation,
+  plantasia: 0.60,
 };
 
 /**

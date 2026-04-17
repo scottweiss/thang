@@ -21,7 +21,8 @@ const PRIORITY_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.25,  // low — democracy
-  ambient:   0.30,  // low — layers are equal
+  ambient:   0.30,  // low — layers are equal,
+  plantasia: 0.30,
 };
 
 /**

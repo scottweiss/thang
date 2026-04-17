@@ -24,7 +24,8 @@ const REGULARITY_PREFERENCE: Record<Mood, number> = {
   flim:      0.25,  // low — irregular is fine
   xtal:      0.30,  // low — floating
   syro:      0.15,  // lowest — erratic preferred
-  ambient:   0.20,  // low — free timing
+  ambient:   0.20,  // low — free timing,
+  plantasia: 0.20,
 };
 
 /**

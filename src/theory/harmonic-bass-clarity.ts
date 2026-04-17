@@ -22,7 +22,8 @@ const BASS_CLARITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.45,  // moderate
-  ambient:   0.30,  // low — bass warmth
+  ambient:   0.30,  // low — bass warmth,
+  plantasia: 0.30,
 };
 
 /**

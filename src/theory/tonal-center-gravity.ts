@@ -24,7 +24,8 @@ const GRAVITY_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate — some wandering
   syro:      0.15,  // weakest — atonal freedom
-  ambient:   0.30,  // weak — floating
+  ambient:   0.30,  // weak — floating,
+  plantasia: 0.30,
 };
 
 /**

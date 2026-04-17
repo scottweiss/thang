@@ -52,7 +52,8 @@ const SEPARATION_STRENGTH: Record<Mood, number> = {
   avril:     0.35,   // intimate clarity
   flim:      0.30,   // delicate balance
   xtal:      0.25,   // wash OK for dreamy moods
-  ambient:   0.15,   // overlap is fine
+  ambient:   0.15,   // overlap is fine,
+  plantasia: 0.15,
 };
 
 /**

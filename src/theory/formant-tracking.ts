@@ -23,7 +23,8 @@ const FORMANT_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate — delicate formants
   xtal:      0.45,  // strong — crystalline vowels
   syro:      0.25,  // weak — sharp electronic
-  ambient:   0.55,  // strongest — singing pads
+  ambient:   0.55,  // strongest — singing pads,
+  plantasia: 0.55,
 };
 
 /**

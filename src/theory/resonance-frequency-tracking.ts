@@ -24,7 +24,8 @@ const TRACKING_ACCURACY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.60,  // strongest — acid-style tracking
-  ambient:   0.25,  // weak — gentle filtering
+  ambient:   0.25,  // weak — gentle filtering,
+  plantasia: 0.25,
 };
 
 /**

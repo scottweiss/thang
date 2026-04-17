@@ -24,7 +24,8 @@ import type { Mood, Section } from '../types';
 const PHASE_TENDENCY: Record<Mood, number> = {
   xtal:      0.40,  // dreamy phase textures
   syro:      0.35,  // experimental phase patterns
-  ambient:   0.30,  // slow phase evolution
+  ambient:   0.30,  // slow phase evolution,
+  plantasia: 0.30,
   flim:      0.25,  // organic phase drift
   downtempo: 0.15,  // subtle phase movement
   lofi:      0.12,  // occasional phase

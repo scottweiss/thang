@@ -25,7 +25,8 @@ const INERTIA_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate-strong
   xtal:      0.50,  // strong — ambient sustain
   syro:      0.20,  // weak — IDM loves rapid changes
-  ambient:   0.60,  // strongest — glacial harmony
+  ambient:   0.60,  // strongest — glacial harmony,
+  plantasia: 0.60,
 };
 
 /**

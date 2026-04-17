@@ -23,7 +23,8 @@ const SUSTAIN_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // organic
   xtal:      0.35,  // ambient
   syro:      0.45,  // IDM contrast
-  ambient:   0.25,  // gentle variation
+  ambient:   0.25,  // gentle variation,
+  plantasia: 0.25,
 };
 
 /**

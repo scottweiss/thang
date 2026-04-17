@@ -23,7 +23,8 @@ const RECALL_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // strong — crystalline themes
   syro:      0.20,  // weak — constant variation
-  ambient:   0.60,  // strongest — evolving themes
+  ambient:   0.60,  // strongest — evolving themes,
+  plantasia: 0.60,
 };
 
 /**

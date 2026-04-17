@@ -98,6 +98,16 @@ function applyMoodQualities(baseQualities: ChordQuality[], mood: Mood): ChordQua
         if (q === 'min') return 'min7';                  // minor becomes minor 7
         return q;
       });
+    case 'plantasia':
+      // Childlike, warm, Moog — strict diatonic triads, occasional add9 color.
+      // No sevenths: sevenths darken the mood, we want bright and plain.
+      return baseQualities.map((q, i) => {
+        if (i === 0 && Math.random() < 0.35) return 'add9'; // I → Iadd9 sometimes
+        if (i === 3 && Math.random() < 0.25) return 'add9'; // IV → IVadd9 sometimes
+        if (q === 'maj7' || q === 'dom7') return 'maj';
+        if (q === 'min7' || q === 'min9') return 'min';
+        return q;
+      });
   }
 }
 

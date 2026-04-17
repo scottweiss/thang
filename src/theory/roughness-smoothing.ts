@@ -24,7 +24,8 @@ const ROUGHNESS_TOLERANCE: Record<Mood, number> = {
   flim:      0.30,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.55,  // highest — IDM roughness is a feature
-  ambient:   0.15,  // lowest — smooth
+  ambient:   0.15,  // lowest — smooth,
+  plantasia: 0.15,
 };
 
 /**

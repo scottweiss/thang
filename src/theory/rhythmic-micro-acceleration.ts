@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const accelStrength: Record<Mood, number> = {
   ambient: 0.10,
+  plantasia: 0.10,
   downtempo: 0.25,
   lofi: 0.30,
   trance: 0.45,

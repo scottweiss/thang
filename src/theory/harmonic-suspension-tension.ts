@@ -22,7 +22,8 @@ const SUSPENSION_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.25,  // low — suspensions are normal
-  ambient:   0.50,  // high — suspensions float beautifully
+  ambient:   0.50,  // high — suspensions float beautifully,
+  plantasia: 0.50,
 };
 
 /**

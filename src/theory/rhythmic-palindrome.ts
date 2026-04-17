@@ -23,7 +23,8 @@ const PALINDROME_AFFINITY: Record<Mood, number> = {
   flim:      0.55,  // strong — delicate symmetry
   xtal:      0.60,  // strongest — crystalline symmetry
   syro:      0.15,  // weakest — asymmetric IDM
-  ambient:   0.50,  // strong — meditative symmetry
+  ambient:   0.50,  // strong — meditative symmetry,
+  plantasia: 0.50,
 };
 
 /**

@@ -24,7 +24,8 @@ const STRICTNESS: Record<Mood, number> = {
   flim:      0.50,  // strong
   xtal:      0.45,  // moderate
   syro:      0.30,  // moderate — some independence
-  ambient:   0.35,  // moderate
+  ambient:   0.35,  // moderate,
+  plantasia: 0.35,
 };
 
 /**

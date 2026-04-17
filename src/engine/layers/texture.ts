@@ -185,7 +185,7 @@ export class TextureLayer extends CachingLayer {
     // and evolve naturally via evolveForSection(). This prevents jarring
     // random pattern switches at every section boundary.
 
-    const loopTicks = { downtempo: 16, lofi: 16, trance: 20, avril: 24, xtal: 18, syro: 12, blockhead: 18, flim: 20, disco: 20 }[state.mood] ?? 16;
+    const loopTicks = { downtempo: 16, lofi: 16, trance: 20, avril: 24, xtal: 18, syro: 12, blockhead: 18, flim: 20, disco: 20, plantasia: 999 }[state.mood] ?? 16;
     if (this.ticksSinceLastGeneration(state) >= loopTicks) return true;
 
     return false;
@@ -263,6 +263,12 @@ export class TextureLayer extends CachingLayer {
 
       case 'disco':
         return this.buildDiscoPattern(density, gain * 0.9, room * 0.5, brightness, state.section, state.tick);
+
+      case 'plantasia':
+        // Plantasia is drumless — silent texture layer. Its gain multiplier is
+        // zeroed by MoodProfile.layers.neverActive, but we return a valid
+        // empty pattern as belt-and-braces.
+        return 'silence';
     }
   }
 

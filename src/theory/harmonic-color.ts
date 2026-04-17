@@ -81,7 +81,8 @@ export function shouldApplyHarmonicColor(mood: Mood): boolean {
  * 0 = fixed timbre, 1 = maximum timbral variation.
  */
 const MOOD_COLOR_DEPTH: Record<Mood, number> = {
-  ambient:   0.6,    // rich timbral movement
+  ambient:   0.6,    // rich timbral movement,
+  plantasia: 0.6,
   xtal:      0.5,    // dreamy color shifts
   flim:      0.5,    // delicate timbral expression
   avril:     0.4,    // subtle warmth variation

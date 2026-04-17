@@ -29,7 +29,8 @@ const RESOLUTION_DEPTH: Record<Mood, number> = {
   flim:      0.45,  // organic
   xtal:      0.35,  // gentle release
   syro:      0.20,  // controlled
-  ambient:   0.30,  // spacious release
+  ambient:   0.30,  // spacious release,
+  plantasia: 0.30,
 };
 
 /**

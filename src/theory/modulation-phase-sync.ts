@@ -24,7 +24,8 @@ const MOD_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // organic
   xtal:      0.50,  // maximum — ambient morphing
   syro:      0.45,  // IDM movement
-  ambient:   0.55,  // strongest — evolving textures
+  ambient:   0.55,  // strongest — evolving textures,
+  plantasia: 0.55,
 };
 
 /**

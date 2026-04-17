@@ -73,6 +73,8 @@ export function moodTalea(mood: Mood): TaleaStep[] {
       return [0.5, 0, 0.4, 0, 0, 0.3, 0, 0, 0];  // 9-step, sparse clicks
     case 'disco':
       return [0.7, 0.5, 0.6, 0.4, 0.7];          // 5-step, funky pulse
+    case 'plantasia':
+      return [0.55, 0, 0.4, 0, 0.35, 0, 0];       // 7-step, childlike openness
   }
 }
 
@@ -153,7 +155,8 @@ export function isorhythmToStrudel(
 
 /** Per-mood base probability of isorhythmic patterning */
 const MOOD_ISORHYTHM: Record<Mood, number> = {
-  ambient:   0.30,   // phasing is core to ambient
+  ambient:   0.30,   // phasing is core to ambient,
+  plantasia: 0.30,
   xtal:      0.25,   // crystalline evolving patterns
   flim:      0.20,   // delicate phase music
   syro:      0.40,   // IDM complexity — needs frequent phase variation

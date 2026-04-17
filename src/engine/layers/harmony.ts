@@ -1159,6 +1159,23 @@ export class HarmonyLayer implements Layer {
           .delaytime(0.334)
           .delayfeedback(0.15)
           .orbit(${this.orbit})`;
+
+      case 'plantasia':
+        // Warm Moog-like pad — soft attack, long release, gently breathing
+        return `${chordStart}
+          .sound("gm_pad_warm")
+          .attack(0.4)
+          .decay(1.2)
+          .sustain(0.45)
+          .release(1.4)
+          .slow(4)
+          .gain(${(gain * 0.65).toFixed(3)})
+          .hpf(200)
+          .lpf(${(1600 + brightness * 900).toFixed(0)})
+          .pan(sine.range(0.35, 0.65).slow(11))
+          .room(${(room * 0.45).toFixed(2)})
+          .roomsize(1.3)
+          .orbit(${this.orbit})`;
     }
   }
 }

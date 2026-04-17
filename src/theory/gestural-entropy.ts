@@ -38,7 +38,8 @@ const TARGET_ENTROPY: Record<Mood, number> = {
   flim:      0.55,  // organic unpredictability
   xtal:      0.65,  // floating, needs drift
   syro:      0.75,  // maximum variety
-  ambient:   0.40,  // slow evolution
+  ambient:   0.40,  // slow evolution,
+  plantasia: 0.40,
 };
 
 /**

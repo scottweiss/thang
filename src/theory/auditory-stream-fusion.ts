@@ -24,7 +24,8 @@ const FUSION_PREFERENCE: Record<Mood, number> = {
   flim:      0.25,  // organic — some separation
   xtal:      0.20,  // pointillistic — separation OK
   syro:      0.15,  // IDM — fragmentation is a feature
-  ambient:   0.10,  // minimal — floating layers
+  ambient:   0.10,  // minimal — floating layers,
+  plantasia: 0.10,
 };
 
 /**

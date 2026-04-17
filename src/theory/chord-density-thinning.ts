@@ -22,7 +22,8 @@ const THINNING_SENSITIVITY: Record<Mood, number> = {
   flim:      0.55,  // high — delicate
   xtal:      0.50,  // high
   syro:      0.25,  // low — complex OK
-  ambient:   0.65,  // highest — space is essential
+  ambient:   0.65,  // highest — space is essential,
+  plantasia: 0.65,
 };
 
 /**

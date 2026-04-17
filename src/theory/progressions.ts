@@ -7,6 +7,7 @@ import { getBorrowedChords } from './modal-interchange';
 // Probability of substituting a borrowed chord, per mood
 const BORROW_PROBABILITY: Record<Mood, number> = {
   ambient: 0.05,
+  plantasia: 0.05,
   downtempo: 0.1,
   lofi: 0.12,
   trance: 0.03,
@@ -21,6 +22,16 @@ const BORROW_PROBABILITY: Record<Mood, number> = {
 // Transition matrices: rows = current degree (0-6), columns = next degree
 const MOOD_MATRICES: Record<Mood, number[][]> = {
   ambient: [
+    // Very slow, stays close — I, IV, vi dominant
+    [3, 0, 0, 3, 2, 2, 0],
+    [3, 1, 1, 1, 2, 1, 0],
+    [2, 1, 1, 2, 1, 2, 0],
+    [3, 0, 0, 2, 3, 1, 0],
+    [4, 0, 0, 2, 1, 2, 0],
+    [2, 0, 1, 2, 2, 2, 0],
+    [3, 0, 0, 2, 2, 1, 0],
+  ],
+  plantasia: [
     // Very slow, stays close — I, IV, vi dominant
     [3, 0, 0, 3, 2, 2, 0],
     [3, 1, 1, 1, 2, 1, 0],

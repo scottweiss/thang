@@ -23,7 +23,8 @@ const BLEND_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.55,  // strongest — crystalline separation
   syro:      0.35,  // moderate
-  ambient:   0.25,  // weak — blending is character
+  ambient:   0.25,  // weak — blending is character,
+  plantasia: 0.25,
 };
 
 /**

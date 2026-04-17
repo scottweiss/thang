@@ -23,7 +23,8 @@ const ROTATION_DEPTH: Record<Mood, number> = {
   flim:      0.55,  // high — delicate interplay
   xtal:      0.45,  // moderate
   syro:      0.60,  // highest — maximal rotation
-  ambient:   0.25,  // low — gentle
+  ambient:   0.25,  // low — gentle,
+  plantasia: 0.25,
 };
 
 /**

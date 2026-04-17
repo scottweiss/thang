@@ -29,7 +29,8 @@ const COHERENCE_STRENGTH: Record<Mood, number> = {
   flim:      0.20,  // organic, imperfect
   xtal:      0.15,  // bell-like, inharmonic OK
   syro:      0.10,  // intentionally complex spectrum
-  ambient:   0.40,  // pure, meditative
+  ambient:   0.40,  // pure, meditative,
+  plantasia: 0.40,
 };
 
 /**

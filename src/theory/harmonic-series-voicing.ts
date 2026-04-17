@@ -26,7 +26,8 @@ const SERIES_PREFERENCE: Record<Mood, number> = {
   flim:      0.35,  // strong — bell-like
   xtal:      0.50,  // strong — crystalline overtones
   syro:      0.25,  // moderate — IDM FM play
-  ambient:   0.55,  // strongest — harmonic series pads
+  ambient:   0.55,  // strongest — harmonic series pads,
+  plantasia: 0.55,
 };
 
 /**

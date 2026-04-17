@@ -24,7 +24,8 @@ const ENTRAINMENT_RATE: Record<Mood, number> = {
   flim:      0.22,  // fast — organic surprise
   xtal:      0.12,  // slow — ambient patience
   syro:      0.30,  // fastest — IDM demands change
-  ambient:   0.05,  // slowest — repetition is meditative
+  ambient:   0.05,  // slowest — repetition is meditative,
+  plantasia: 0.05,
 };
 
 /**
@@ -40,7 +41,8 @@ const PLATEAU_THRESHOLD: Record<Mood, number> = {
   flim:      0.68,  // moderate
   xtal:      0.75,  // moderate-high
   syro:      0.60,  // lowest — break early
-  ambient:   0.90,  // highest — rarely break
+  ambient:   0.90,  // highest — rarely break,
+  plantasia: 0.90,
 };
 
 /**

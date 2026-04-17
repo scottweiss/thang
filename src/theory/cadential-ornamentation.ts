@@ -23,7 +23,8 @@ const ORNAMENT_PROB: Record<Mood, number> = {
   flim:      0.30,  // moderate — Aphex ornamental
   xtal:      0.20,  // moderate
   syro:      0.15,  // occasional — IDM embellishment
-  ambient:   0.10,  // rare — clean sustained tones
+  ambient:   0.10,  // rare — clean sustained tones,
+  plantasia: 0.10,
 };
 
 /**
@@ -45,6 +46,7 @@ const ORNAMENT_PREFERENCE: Record<Mood, Record<OrnamentType, number>> = {
   xtal:      { trill: 0.20, turn: 0.30, mordent: 0.20, appoggiatura: 0.30 },
   syro:      { trill: 0.30, turn: 0.20, mordent: 0.30, appoggiatura: 0.20 },
   ambient:   { trill: 0.40, turn: 0.25, mordent: 0.15, appoggiatura: 0.20 },
+  plantasia: { trill: 0.40, turn: 0.25, mordent: 0.15, appoggiatura: 0.20 },
 };
 
 /**

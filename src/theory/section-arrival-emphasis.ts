@@ -22,7 +22,8 @@ const ARRIVAL_EMPHASIS: Record<Mood, number> = {
   flim:      0.30,  // moderate
   xtal:      0.30,  // moderate
   syro:      0.20,  // low — seamless
-  ambient:   0.15,  // lowest — drifting
+  ambient:   0.15,  // lowest — drifting,
+  plantasia: 0.15,
 };
 
 /**

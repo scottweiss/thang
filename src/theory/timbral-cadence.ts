@@ -30,7 +30,8 @@ const TIMBRAL_CADENCE_STRENGTH: Record<Mood, number> = {
   flim:      0.20,  // organic timbral flow
   xtal:      0.15,  // dreamy — less timbral structure
   syro:      0.10,  // IDM — timbral chaos is intentional
-  ambient:   0.08,  // barely any timbral cadence
+  ambient:   0.08,  // barely any timbral cadence,
+  plantasia: 0.08,
 };
 
 /**

@@ -22,7 +22,8 @@ const VARIATION_RANGE: Record<Mood, number> = {
   flim:      0.55,  // high — IDM complexity
   xtal:      0.50,  // high — evolving textures
   syro:      0.60,  // highest — maximum variation
-  ambient:   0.30,  // low — gentle evolution
+  ambient:   0.30,  // low — gentle evolution,
+  plantasia: 0.30,
 };
 
 /**

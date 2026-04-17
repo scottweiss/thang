@@ -22,7 +22,8 @@ const OPENNESS_PREFERENCE: Record<Mood, number> = {
   flim:      0.55,  // moderate-open
   xtal:      0.70,  // very open — atmospheric
   syro:      0.45,  // moderate
-  ambient:   0.75,  // most open — spacious voicings
+  ambient:   0.75,  // most open — spacious voicings,
+  plantasia: 0.75,
 };
 
 /**

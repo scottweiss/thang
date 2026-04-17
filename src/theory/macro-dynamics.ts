@@ -34,7 +34,8 @@ const SECTION_DYNAMICS: Record<Section, { base: number; target: number }> = {
 
 /** How much each mood compresses dynamic range */
 const DYNAMIC_RANGE: Record<Mood, number> = {
-  ambient:   0.30,  // very compressed — always quiet
+  ambient:   0.30,  // very compressed — always quiet,
+  plantasia: 0.30,
   xtal:      0.40,  // gentle dynamics
   downtempo: 0.50,  // moderate range
   flim:      0.55,  // moderate

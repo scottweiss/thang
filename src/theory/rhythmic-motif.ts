@@ -25,7 +25,8 @@ const CELL_LENGTH: Record<Mood, number> = {
   flim:      5,   // odd-length organic
   xtal:      7,   // asymmetric, dreamy
   syro:      3,   // short complex cells
-  ambient:   8,   // long, breathing
+  ambient:   8,   // long, breathing,
+  plantasia: 8,
 };
 
 /**
@@ -42,7 +43,8 @@ const ADHERENCE: Record<Mood, number> = {
   flim:      0.35,  // organic variation
   xtal:      0.25,  // floating, less rigid
   syro:      0.30,  // complex variation
-  ambient:   0.15,  // barely recurring
+  ambient:   0.15,  // barely recurring,
+  plantasia: 0.15,
 };
 
 /**

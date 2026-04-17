@@ -18,6 +18,7 @@ const dropProb: Record<Mood, number> = {
   flim: 0.1,
   xtal: 0.05,
   ambient: 0,
+  plantasia: 0,
   avril: 0,
 };
 
@@ -27,6 +28,7 @@ const spotlightProb: Record<Mood, number> = {
   avril: 0.3,
   flim: 0.25,
   ambient: 0.2,
+  plantasia: 0.2,
   xtal: 0.15,
   trance: 0.1,
   disco: 0.1,

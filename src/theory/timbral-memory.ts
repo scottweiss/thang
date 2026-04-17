@@ -34,7 +34,8 @@ const RECALL_TENDENCY: Record<Mood, number> = {
   flim:      0.30,  // organic
   xtal:      0.20,  // floating, varied
   syro:      0.10,  // maximum timbral exploration
-  ambient:   0.35,  // meditative consistency
+  ambient:   0.35,  // meditative consistency,
+  plantasia: 0.35,
 };
 
 /**

@@ -35,7 +35,8 @@ const SATURATION_TENDENCY: Record<Mood, number> = {
   lofi:      0.20,  // subtle references
   xtal:      0.15,  // dreamy — less thematic insistence
   syro:      0.10,  // constantly mutating — resists saturation
-  ambient:   0.05,  // almost no thematic insistence
+  ambient:   0.05,  // almost no thematic insistence,
+  plantasia: 0.05,
 };
 
 /**

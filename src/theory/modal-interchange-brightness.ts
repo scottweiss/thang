@@ -23,7 +23,8 @@ const INTERCHANGE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.55,  // strong — crystalline color
   syro:      0.35,  // moderate
-  ambient:   0.60,  // strongest — modal color is key
+  ambient:   0.60,  // strongest — modal color is key,
+  plantasia: 0.60,
 };
 
 /**

@@ -31,7 +31,8 @@ const REHARM_TOLERANCE: Record<Mood, number> = {
   avril:     2,    // intimate — moderate
   xtal:      2,    // dreamy — moderate
   trance:    1,    // driving — prefer diatonic clarity
-  ambient:   1,    // static — minimal reharmonization
+  ambient:   1,    // static — minimal reharmonization,
+  plantasia: 1,
 };
 
 /**

@@ -23,7 +23,8 @@ const CHROMATIC_EMPHASIS: Record<Mood, number> = {
   flim:      0.35,  // moderate
   xtal:      0.30,  // moderate
   syro:      0.20,  // weak — IDM chords jump
-  ambient:   0.45,  // strong — smooth transitions
+  ambient:   0.45,  // strong — smooth transitions,
+  plantasia: 0.45,
 };
 
 /**

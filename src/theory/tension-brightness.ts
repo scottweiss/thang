@@ -22,7 +22,8 @@ import type { Mood } from '../types';
  * Expressed as a fraction of the current LPF value.
  */
 const MOOD_SENSITIVITY: Record<Mood, number> = {
-  ambient: 0.1,      // very subtle — ambient doesn't want dramatic shifts
+  ambient: 0.1,      // very subtle — ambient doesn't want dramatic shifts,
+  plantasia: 0.1,
   downtempo: 0.15,
   lofi: 0.12,
   trance: 0.25,      // strong — trance filter sweeps are a defining feature

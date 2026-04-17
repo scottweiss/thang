@@ -38,7 +38,8 @@ const VARIETY_APPETITE: Record<Mood, number> = {
   disco:     0.30,   // funk — groove consistency with some variety
   syro:      0.60,   // IDM — high variety
   trance:    0.20,   // EDM — repetition is a feature
-  ambient:   0.25,   // drone — slow variation
+  ambient:   0.25,   // drone — slow variation,
+  plantasia: 0.25,
 };
 
 /**

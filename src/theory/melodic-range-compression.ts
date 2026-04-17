@@ -24,7 +24,8 @@ const COMPRESSION_SENSITIVITY: Record<Mood, number> = {
   flim:      0.55,  // high — delicate dynamics
   xtal:      0.55,  // high
   syro:      0.20,  // low — always wide
-  ambient:   0.50,  // high — breathing range
+  ambient:   0.50,  // high — breathing range,
+  plantasia: 0.50,
 };
 
 /**

@@ -22,6 +22,7 @@ interface TimingCharacter {
 
 const MOOD_TIMING: Record<Mood, TimingCharacter> = {
   ambient:   { bias: 0,     amount: 0.15, variation: 0.8, swing: 0 },
+  plantasia: { bias: 0,     amount: 0.15, variation: 0.8, swing: 0 },
   downtempo: { bias: 0.3,   amount: 0.25, variation: 0.5, swing: 0.15 },
   lofi:      { bias: 0.5,   amount: 0.35, variation: 0.4, swing: 0.35 },
   trance:    { bias: -0.2,  amount: 0.10, variation: 0.3, swing: 0 },

@@ -155,7 +155,8 @@ export function nrDistance(
 
 /** How much each mood uses neo-Riemannian navigation (0-1) */
 const NR_TENDENCY: Record<Mood, number> = {
-  ambient:   0.45,  // floating, non-functional
+  ambient:   0.45,  // floating, non-functional,
+  plantasia: 0.45,
   xtal:      0.40,  // dreamy transitions
   flim:      0.30,  // organic color changes
   avril:     0.25,  // film-score progressions
@@ -207,7 +208,8 @@ export function suggestNRMove(
 
   // Weight transformations by mood character
   const weights: Record<Mood, Record<NRTransform, number>> = {
-    ambient:   { P: 3, R: 2, L: 3 },  // leading tone = dreamy
+    ambient:   { P: 3, R: 2, L: 3 },  // leading tone = dreamy,
+    plantasia: { P: 3, R: 2, L: 3 },
     xtal:      { P: 2, R: 3, L: 3 },
     flim:      { P: 2, R: 2, L: 3 },
     avril:     { P: 3, R: 3, L: 2 },  // relative = songwriter

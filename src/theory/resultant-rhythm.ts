@@ -67,6 +67,7 @@ export function selectPeriods(mood: Mood, section: Section): [number, number] {
   // Simple ratios for conventional moods, complex for experimental
   const moodPeriods: Record<Mood, [number, number][]> = {
     ambient:   [[3, 4], [4, 5]],
+    plantasia: [[3, 4], [4, 5]],
     xtal:      [[3, 4], [5, 4]],
     downtempo: [[3, 4], [3, 5]],
     lofi:      [[3, 4], [4, 5]],
@@ -94,7 +95,8 @@ const RESULTANT_TENDENCY: Record<Mood, number> = {
   xtal:      0.20,  // crystalline patterns
   lofi:      0.18,  // subtle groove
   downtempo: 0.15,  // gentle layering
-  ambient:   0.12,  // minimal
+  ambient:   0.12,  // minimal,
+  plantasia: 0.12,
   avril:     0.08,  // songwriter — rare
   disco:     0.06,  // straightforward
   trance:    0.04,  // on-the-grid

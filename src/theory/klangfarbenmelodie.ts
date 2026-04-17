@@ -43,7 +43,8 @@ const SLOT_PROFILES: Record<TimbralSlot, NoteTimbre> = {
 /** How much each mood uses Klangfarbenmelodie (0-1) */
 const KFM_TENDENCY: Record<Mood, number> = {
   xtal:      0.45,  // crystalline pointillism
-  ambient:   0.40,  // shimmering tones
+  ambient:   0.40,  // shimmering tones,
+  plantasia: 0.40,
   flim:      0.35,  // organic variety
   syro:      0.30,  // IDM timbral play
   avril:     0.15,  // occasional color

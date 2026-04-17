@@ -26,7 +26,8 @@ import type { Mood, Section } from '../types';
 const COMPOUND_TENDENCY: Record<Mood, number> = {
   xtal:      0.35,  // ethereal, Bach-like
   flim:      0.30,  // organic, detailed
-  ambient:   0.25,  // single voice implying many
+  ambient:   0.25,  // single voice implying many,
+  plantasia: 0.25,
   lofi:      0.20,  // jazz — implied bass lines
   avril:     0.18,  // songwriter — expressive
   downtempo: 0.15,  // gentle polyphony
@@ -129,7 +130,8 @@ export function compoundSeparation(mood: Mood, section: Section): number {
   const base: Record<Mood, number> = {
     xtal:      12,  // full octave — clear streams
     flim:      10,  // wide — detailed
-    ambient:   14,  // very wide — ethereal
+    ambient:   14,  // very wide — ethereal,
+    plantasia: 14,
     lofi:      9,   // sixth — jazz-like
     avril:     9,   // sixth — expressive
     downtempo: 10,  // moderate
@@ -162,6 +164,7 @@ export function compoundPattern(
     xtal:      0.7,
     flim:      0.6,
     ambient:   0.8,
+    plantasia: 0.8,
     lofi:      0.4,  // jazz prefers grouped arcs
     avril:     0.3,  // songwriter — melodic arcs
     downtempo: 0.5,

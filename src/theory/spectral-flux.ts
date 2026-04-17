@@ -23,7 +23,8 @@ const TARGET_FLUX: Record<Mood, number> = {
   flim:      0.55,  // high — delicate shifts
   xtal:      0.60,  // highest — crystalline shimmer
   syro:      0.45,  // moderate-high — IDM movement
-  ambient:   0.50,  // high — evolving textures
+  ambient:   0.50,  // high — evolving textures,
+  plantasia: 0.50,
 };
 
 /**

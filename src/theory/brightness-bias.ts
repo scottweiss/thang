@@ -27,7 +27,8 @@ const BRIGHTNESS_BIAS: Record<Mood, number> = {
   flim:      0.45,  // delicate brightness
   xtal:      0.30,  // floating, less directed
   syro:      0.15,  // complex, less biased
-  ambient:   0.20,  // gentle drift
+  ambient:   0.20,  // gentle drift,
+  plantasia: 0.20,
 };
 
 /**

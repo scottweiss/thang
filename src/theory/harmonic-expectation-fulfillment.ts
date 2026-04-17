@@ -22,7 +22,8 @@ const FULFILLMENT_EMPHASIS: Record<Mood, number> = {
   flim:      0.35,  // low-moderate
   xtal:      0.30,  // low
   syro:      0.15,  // lowest — subverts expectations
-  ambient:   0.25,  // low — no strong expectations
+  ambient:   0.25,  // low — no strong expectations,
+  plantasia: 0.25,
 };
 
 /**

@@ -21,7 +21,8 @@ import type { Mood, Section } from '../types';
 /** How much each mood uses heterophony (0-1) */
 const HETEROPHONY_TENDENCY: Record<Mood, number> = {
   xtal:      0.40,  // crystalline shimmer
-  ambient:   0.35,  // layered textures
+  ambient:   0.35,  // layered textures,
+  plantasia: 0.35,
   flim:      0.25,  // organic doubling
   avril:     0.20,  // singer-songwriter unison
   downtempo: 0.18,  // warm doubling
@@ -72,7 +73,8 @@ export function selectVariation(
   const variations: HeterophonyVariation[] = ['rhythmic', 'ornamental', 'octave', 'shadow'];
   // Mood biases certain variations
   const weights: Record<Mood, number[]> = {
-    ambient:   [1, 2, 3, 2],  // prefers octave doubling
+    ambient:   [1, 2, 3, 2],  // prefers octave doubling,
+    plantasia: [1, 2, 3, 2],
     xtal:      [1, 3, 2, 2],  // prefers ornamental
     flim:      [2, 2, 1, 3],  // prefers shadow
     downtempo: [2, 1, 2, 3],  // prefers shadow

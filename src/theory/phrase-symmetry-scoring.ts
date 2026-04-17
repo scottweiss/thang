@@ -22,7 +22,8 @@ const SYMMETRY_PREFERENCE: Record<Mood, number> = {
   flim:      0.25,  // low — IDM likes asymmetry
   xtal:      0.20,  // low — floating phrases
   syro:      0.15,  // lowest — anti-symmetry
-  ambient:   0.20,  // low — timeless
+  ambient:   0.20,  // low — timeless,
+  plantasia: 0.20,
 };
 
 /**

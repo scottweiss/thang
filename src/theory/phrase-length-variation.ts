@@ -22,7 +22,8 @@ const VARIATION_APPETITE: Record<Mood, number> = {
   flim:      0.60,  // highest — IDM asymmetry
   xtal:      0.55,  // high
   syro:      0.65,  // highest — maximum irregularity
-  ambient:   0.45,  // moderate — organic flow
+  ambient:   0.45,  // moderate — organic flow,
+  plantasia: 0.45,
 };
 
 /**

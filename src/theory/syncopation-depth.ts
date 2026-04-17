@@ -24,7 +24,8 @@ const SYNCOPATION_APPETITE: Record<Mood, number> = {
   flim:      0.45,  // moderate — irregular
   xtal:      0.35,  // moderate
   syro:      0.40,  // moderate — erratic but not syncopated
-  ambient:   0.15,  // lowest — drifting
+  ambient:   0.15,  // lowest — drifting,
+  plantasia: 0.15,
 };
 
 /**

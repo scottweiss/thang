@@ -23,7 +23,8 @@ const ANTICIPATION_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.30,  // moderate
   syro:      0.20,  // weak — bass is independent
-  ambient:   0.25,  // weak — bass drones
+  ambient:   0.25,  // weak — bass drones,
+  plantasia: 0.25,
 };
 
 /**

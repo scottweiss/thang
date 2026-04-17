@@ -46,7 +46,8 @@ export function divisionToSeconds(division: DelayDivision, cps: number): number 
  * Multiple options for variety — one is chosen at generation time.
  */
 const MOOD_DELAY_DIVISIONS: Record<Mood, DelayDivision[]> = {
-  ambient:   ['1/4', '3/16'],           // spacious echoes
+  ambient:   ['1/4', '3/16'],           // spacious echoes,
+  plantasia: ['1/4', '3/16'],
   downtempo: ['3/16', '1/4'],           // dotted-eighth bounce
   lofi:      ['3/16', '1/6'],           // swing/bounce
   trance:    ['1/8', '1/4'],            // tight rhythmic

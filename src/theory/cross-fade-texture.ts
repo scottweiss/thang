@@ -25,7 +25,8 @@ const CROSSFADE_SPEED: Record<Mood, number> = {
   flim:      0.45,  // organic morph
   xtal:      0.50,  // ambient transition
   syro:      0.20,  // IDM — quick
-  ambient:   0.60,  // slowest morph
+  ambient:   0.60,  // slowest morph,
+  plantasia: 0.60,
 };
 
 /**

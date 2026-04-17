@@ -21,7 +21,8 @@ import type { Mood, Section, NoteName } from '../types';
 
 /** How much each mood favors tonal ambiguity (0-1) */
 const AMBIGUITY_APPETITE: Record<Mood, number> = {
-  ambient:   0.60,   // dreamlike, floating
+  ambient:   0.60,   // dreamlike, floating,
+  plantasia: 0.60,
   xtal:      0.55,   // hazy, nostalgic
   avril:     0.30,   // songwriter — mostly clear, occasional haze
   downtempo: 0.35,   // laid-back, some drift

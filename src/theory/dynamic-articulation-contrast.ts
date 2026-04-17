@@ -23,7 +23,8 @@ const CONTRAST_STRENGTH: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.35,  // moderate
   syro:      0.25,  // weak — IDM layers are independent
-  ambient:   0.20,  // weak — everything sustains
+  ambient:   0.20,  // weak — everything sustains,
+  plantasia: 0.20,
 };
 
 /**

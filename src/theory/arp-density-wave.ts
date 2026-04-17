@@ -25,7 +25,8 @@ const ARP_BREATH_AMPLITUDE: Record<Mood, number> = {
   flim:      0.35,  // organic
   xtal:      0.45,  // maximum arp breathing
   syro:      0.20,  // controlled
-  ambient:   0.50,  // spacious breathing
+  ambient:   0.50,  // spacious breathing,
+  plantasia: 0.50,
 };
 
 /**
@@ -42,6 +43,7 @@ const ARP_BREATH_PERIOD: Record<Mood, number> = {
   xtal:      14,
   syro:      5,
   ambient:   16,
+  plantasia: 16,
 };
 
 /**

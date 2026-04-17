@@ -23,7 +23,8 @@ const COUPLING_STRENGTH: Record<Mood, number> = {
   flim:      0.30,  // organic
   xtal:      0.20,  // subtle
   syro:      0.40,  // IDM coupling
-  ambient:   0.10,  // minimal
+  ambient:   0.10,  // minimal,
+  plantasia: 0.10,
 };
 
 /**

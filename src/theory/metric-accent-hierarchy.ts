@@ -23,7 +23,8 @@ const HIERARCHY_DEPTH: Record<Mood, number> = {
   flim:      0.25,  // weak — floating
   xtal:      0.30,  // weak — ethereal
   syro:      0.15,  // weakest — no hierarchy
-  ambient:   0.20,  // weak — drifting
+  ambient:   0.20,  // weak — drifting,
+  plantasia: 0.20,
 };
 
 /**

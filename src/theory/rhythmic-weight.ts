@@ -26,7 +26,8 @@ const WEIGHT_DEPTH: Record<Mood, number> = {
   flim:      0.25,  // organic, less hierarchical
   xtal:      0.15,  // floating, minimal weight
   syro:      0.20,  // complex accents
-  ambient:   0.10,  // barely weighted
+  ambient:   0.10,  // barely weighted,
+  plantasia: 0.10,
 };
 
 /**

@@ -23,7 +23,8 @@ const DENSITY_RANGE: Record<Mood, number> = {
   flim:      0.55,  // strong — delicate density
   xtal:      0.60,  // strongest — crystalline variation
   syro:      0.45,  // moderate — IDM density play
-  ambient:   0.50,  // strong — sparse to dense
+  ambient:   0.50,  // strong — sparse to dense,
+  plantasia: 0.50,
 };
 
 /**

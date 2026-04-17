@@ -24,7 +24,8 @@ const MOMENTUM_SENSITIVITY: Record<Mood, number> = {
   flim:      0.55,  // strong — delicate contour
   xtal:      0.50,  // strong
   syro:      0.20,  // weak — erratic is fine
-  ambient:   0.55,  // strong — flowing lines
+  ambient:   0.55,  // strong — flowing lines,
+  plantasia: 0.55,
 };
 
 /**

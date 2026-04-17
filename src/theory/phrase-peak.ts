@@ -80,7 +80,8 @@ export function shouldPlacePeak(mood: Mood): boolean {
 }
 
 const MOOD_PEAK_POSITION: Record<Mood, number> = {
-  ambient:   0.5,    // early peak, then drift
+  ambient:   0.5,    // early peak, then drift,
+  plantasia: 0.5,
   downtempo: 0.6,    // moderate
   lofi:      0.65,   // classic golden section
   trance:    0.75,   // late peak (builds suspense)
@@ -93,7 +94,8 @@ const MOOD_PEAK_POSITION: Record<Mood, number> = {
 };
 
 const MOOD_PEAK_PROBABILITY: Record<Mood, number> = {
-  ambient:   0.4,    // gentle — peak adds direction even in drifting melodies
+  ambient:   0.4,    // gentle — peak adds direction even in drifting melodies,
+  plantasia: 0.4,
   downtempo: 0.6,    // moderate-high
   lofi:      0.75,   // frequent — jazzy phrasing needs clear climax
   trance:    0.55,   // moderate — melodic trance benefits from arc

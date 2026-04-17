@@ -22,7 +22,8 @@ const HANDOFF_STRENGTH: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.30,  // low — clustering OK
-  ambient:   0.50,  // moderate — space
+  ambient:   0.50,  // moderate — space,
+  plantasia: 0.50,
 };
 
 /**

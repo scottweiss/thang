@@ -23,7 +23,8 @@ const TEMPERATURE_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // strong
   xtal:      0.50,  // strong — crystalline temperature
   syro:      0.20,  // weak — electronic neutrality
-  ambient:   0.60,  // strongest — color is everything
+  ambient:   0.60,  // strongest — color is everything,
+  plantasia: 0.60,
 };
 
 /**

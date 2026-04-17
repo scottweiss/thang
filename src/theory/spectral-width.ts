@@ -23,7 +23,8 @@ const WIDTH_SENSITIVITY: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.55,  // strongest — detailed filtering
   syro:      0.35,  // moderate — acid filter
-  ambient:   0.50,  // strong — evolving filters
+  ambient:   0.50,  // strong — evolving filters,
+  plantasia: 0.50,
 };
 
 /**

@@ -25,7 +25,8 @@ const QUALITY_SENSITIVITY: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.50,  // high
   syro:      0.30,  // moderate
-  ambient:   0.60,  // highest — atmospheric
+  ambient:   0.60,  // highest — atmospheric,
+  plantasia: 0.60,
 };
 
 /**

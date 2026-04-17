@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const modulationStrength: Record<Mood, number> = {
   ambient: 0.05,
+  plantasia: 0.05,
   downtempo: 0.15,
   lofi: 0.20,
   trance: 0.30,

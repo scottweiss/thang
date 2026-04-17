@@ -23,7 +23,8 @@ const QA_STRENGTH: Record<Mood, number> = {
   flim:      0.50,  // strong — delicate phrasing
   xtal:      0.45,  // moderate
   syro:      0.15,  // weakest — fragmented phrases
-  ambient:   0.35,  // moderate — flowing phrases
+  ambient:   0.35,  // moderate — flowing phrases,
+  plantasia: 0.35,
 };
 
 /**

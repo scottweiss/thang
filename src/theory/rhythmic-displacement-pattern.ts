@@ -24,7 +24,8 @@ const DISPLACEMENT_PROB: Record<Mood, number> = {
   flim:      0.30,  // moderate — Aphex wonk
   xtal:      0.20,  // moderate
   syro:      0.45,  // strongest — IDM grid defiance
-  ambient:   0.05,  // minimal — time is dissolved
+  ambient:   0.05,  // minimal — time is dissolved,
+  plantasia: 0.05,
 };
 
 /**

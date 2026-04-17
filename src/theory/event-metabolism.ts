@@ -23,7 +23,8 @@ const TARGET_METABOLISM: Record<Mood, number> = {
   flim:      3.0,   // moderate — organic
   xtal:      1.5,   // low — ambient space
   syro:      4.5,   // highest — IDM density
-  ambient:   1.2,   // lowest — spacious
+  ambient:   1.2,   // lowest — spacious,
+  plantasia: 1.2,
 };
 
 /**
@@ -40,6 +41,7 @@ const FATIGUE_THRESHOLD: Record<Mood, number> = {
   xtal:      3.0,
   syro:      7.0,
   ambient:   2.5,
+  plantasia: 2.5,
 };
 
 /**

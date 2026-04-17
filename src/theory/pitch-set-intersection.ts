@@ -23,7 +23,8 @@ const COMMON_TONE_PREFERENCE: Record<Mood, number> = {
   flim:      0.45,  // moderate
   xtal:      0.40,  // moderate
   syro:      0.15,  // weakest — disjunct OK
-  ambient:   0.60,  // strongest — maximal smoothness
+  ambient:   0.60,  // strongest — maximal smoothness,
+  plantasia: 0.60,
 };
 
 /**

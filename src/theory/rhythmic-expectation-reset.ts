@@ -22,7 +22,8 @@ const REENTRY_EMPHASIS: Record<Mood, number> = {
   flim:      0.40,  // moderate
   xtal:      0.45,  // moderate
   syro:      0.30,  // low
-  ambient:   0.50,  // high — silence is meaningful
+  ambient:   0.50,  // high — silence is meaningful,
+  plantasia: 0.50,
 };
 
 /**

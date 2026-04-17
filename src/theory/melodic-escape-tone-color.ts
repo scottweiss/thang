@@ -9,6 +9,7 @@ import type { Mood, Section } from '../types';
 
 const escapeColorDepth: Record<Mood, number> = {
   ambient: 0.30,
+  plantasia: 0.30,
   downtempo: 0.25,
   lofi: 0.35,
   trance: 0.15,

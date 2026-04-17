@@ -21,7 +21,8 @@ import type { Mood } from '../types';
  * Higher = more dramatic spatial shifts.
  */
 const MOOD_SENSITIVITY: Record<Mood, number> = {
-  ambient: 0.2,      // moderate — ambient's reverb IS the instrument
+  ambient: 0.2,      // moderate — ambient's reverb IS the instrument,
+  plantasia: 0.2,
   downtempo: 0.15,
   lofi: 0.12,
   trance: 0.25,      // strong — trance builds compress space dramatically

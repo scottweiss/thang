@@ -24,7 +24,8 @@ const STRONG_MOTION_PREFERENCE: Record<Mood, number> = {
   flim:      0.25,  // weak — floating
   xtal:      0.30,  // weak — ambient motion
   syro:      0.20,  // weakest — any motion
-  ambient:   0.40,  // moderate — flowing bass
+  ambient:   0.40,  // moderate — flowing bass,
+  plantasia: 0.40,
 };
 
 /**
